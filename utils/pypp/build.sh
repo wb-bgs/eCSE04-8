@@ -3,15 +3,16 @@
 module -q load cray-python
 
 
+PYTHON_ROOT=${HOME/home/work}/utils/pypp
 PYTHON_VER=`echo ${CRAY_PYTHON_LEVEL} | cut -d'.' -f1-2`
-PYTHON_BIN=${PWD}/${CRAY_PYTHON_LEVEL}/bin
+PYTHON_BIN=${PYTHON_ROOT}/${CRAY_PYTHON_LEVEL}/bin
 PYTHON_ACTIVATE=${PYTHON_BIN}/activate
 PYTHON_DEACTIVATE=${PYTHON_BIN}/deactivate
 
 
 mkdir -p ${PYTHON_BIN}
 
-echo -e "#!/bin/bash\n" > ${PYTHON_ACTIVATE}
+echo -e '#!/bin/bash\n' > ${PYTHON_ACTIVATE}
 echo -e "module load cray-python/${CRAY_PYTHON_LEVEL}\n" >> ${PYTHON_ACTIVATE}
 echo -e "PYTHON_ROOT=${HOME/home/work}/utils/pypp\n" >> ${PYTHON_ACTIVATE}
 echo -e "export PIP_CACHE_DIR=\${PYTHON_ROOT}/.cache/pip" >> ${PYTHON_ACTIVATE}
@@ -20,7 +21,7 @@ echo -e "export PYTHONUSERBASE=\${PYTHON_ROOT}/${CRAY_PYTHON_LEVEL}" >> ${PYTHON
 echo -e "export PATH=\${PYTHONUSERBASE}/bin:${PATH}" >> ${PYTHON_ACTIVATE}
 echo -e "export PYTHONPATH=\${PYTHONUSERBASE}/lib/python${PYTHONVER}/site-packages:${PYTHONPATH}" >> ${PYTHON_ACTIVATE}
 
-echo -e "#!/bin/bash\n" > ${PYTHON_DEACTIVATE}
+echo -e '#!/bin/bash\n' > ${PYTHON_DEACTIVATE}
 echo -e "export PIP_CACHE_DIR=${PIP_CACHE_DIR}" >> ${PYTHON_DEACTIVATE}
 echo -e "export MPLCONFIGDIR=${MPLCONFIGDIR}\n" >> ${PYTHON_DEACTIVATE}
 echo -e "export PATH=${PATH}" >> ${PYTHON_DEACTIVATE}
