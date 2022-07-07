@@ -9,7 +9,7 @@ test cases.
 
 The GMT source is stored in this GitLab repo (alongside WMAM)
 for convenience. The [build.sh](build.sh) script builds
-the GMT suite for [ARCHER2](www.archer2.ac.uk).
+the GMT suite for [ARCHER2](https://www.archer2.ac.uk/).
 
 
 The instructions below show how to obtain the GMT source
