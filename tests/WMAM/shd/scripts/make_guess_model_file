@@ -1,0 +1,36 @@
+#!/bin/bash
+
+WMAM_DATA_ROOT=${HOME/home/work}/tests/WMAM/shd/data
+
+Lmax=$1
+
+echo "# deg1-${Lmax}: from run11, deg01-1440:0.0" \
+ > ./model.tmp
+echo "#lmax=      ${Lmax}" >> ./model.tmp
+echo "############" >> ./model.tmp
+echo "    -3652.0000000000000" >> ./model.tmp
+cat ${WMAM_DATA_ROOT}/model_No_P.out \
+ | egrep "^ c" \
+ | awk -v Lmax=$Lmax '{if (NR<=Lmax*(Lmax+2)) \
+     {printf("%2s %11i %11i %20.10f %20.10f\n", \
+                             $1,$2,$3,$4,0.0)}}' \
+ >> model.tmp
+
+if [ $Lmax -ge 1440 ]
+then
+  echo "1441 ${Lmax}" \
+   | awk '{for (n=$1;n<=$2;n++) { \
+             m=0;
+             for (i=-n;i<=n;i++) { \
+               printf("%2s %11i %11i %20.10f %20.10f\n","c",n,m,0.0,0.0); \
+               if (m==0) {m=1} \
+               else if (m>0) {m=-m} \
+               else {m=-m+1}}}}' \
+   >> ./model.tmp
+fi
+
+cat ./model.tmp | egrep -v "^ c" > ./model.in
+cat ./model.tmp \
+ | egrep "^ c" \
+ | awk '{printf("%7i %20s %20s\n",NR,$4,$5)}' \
+ >> ./model.in

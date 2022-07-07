@@ -1,0 +1,82 @@
+#!/bin/bash
+
+#SBATCH --job-name=WMAM
+#SBATCH -o /dev/null
+#SBATCH -e /dev/null
+#SBATCH --time=00:20:00
+#SBATCH --exclusive
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=64
+#SBATCH --cpus-per-task=1
+#SBATCH --account=ecsead08
+#SBATCH --partition=standard
+#SBATCH --qos=short
+
+
+ulimit -c unlimited
+
+
+module -q restore
+module -q load cpe/21.09
+module -q load PrgEnv-cray
+
+module -q load arm/forge/22.0.2
+
+export LD_LIBRARY_PATH=${CRAY_LD_LIBRARY_PATH}:${LD_LIBRARY_PATH}
+
+
+# setup resource-related environment
+NNODES=${SLURM_JOB_NUM_NODES}
+NTASKSPN=`echo "${SLURM_TASKS_PER_NODE}" | cut -d'(' -f1`
+NCORES=`expr ${NTASKSPN} \* ${SLURM_CPUS_PER_TASK}`
+if [ "${NNODES}" -gt "1" ]; then
+  NCORES=`expr ${NNODES} \* ${NCORES}`
+fi
+export OMP_NUM_THREADS=1
+
+
+PE_NAME=${PE_MPICH_FIXED_PRGENV}
+PE_VERSION=$(eval echo "\${PE_MPICH_GENCOMPILERS_${PE_NAME}}")
+
+ROOT=${HOME/home/work}
+DEGREE=200
+RESOLUTION=1.0
+SCHEME=1
+APP_NAME=WMAM
+APP_VERSION=1.9
+APP_MPI_LABEL=cmpich8
+APP_COMMS_LABEL=ofi
+APP_COMPILER_LABEL=cce12
+APP_RUN_ROOT=${ROOT}/tests/${APP_NAME}
+APP_RUN_PATH=${APP_RUN_ROOT}/results/${DEGREE}/${APP_COMPILER_LABEL}/${APP_MPI_LABEL}-${APP_COMMS_LABEL}/n${NNODES}/c${NCORES}
+APP_EXE_NAME=mod_wmam_020
+APP_EXE=${ROOT}/apps/${APP_NAME}/${APP_VERSION}/${PE_NAME}/${PE_VERSION}/armmap/bin/${APP_EXE_NAME}
+APP_PARAMS="${DEGREE} ${RESOLUTION} ${SCHEME}"
+APP_OUTPUT=${APP_RUN_PATH}/${APP_NAME}.o
+
+SRUN_PARAMS="--distribution=block:block --hint=nomultithread --unbuffered --chdir=${APP_RUN_PATH}"
+MAP_PARAMS="--profile"
+
+# setup app run directory
+mkdir -p ${APP_RUN_PATH}/Data
+cp ${APP_RUN_ROOT}/shd/${DEGREE}/* ${APP_RUN_PATH}/Data/
+mkdir ${APP_RUN_PATH}/Results
+
+
+# run app
+RUN_START=$(date +%s.%N)
+echo -e "Launching ${APP_EXE_NAME} ${APP_VERSION} (${APP_MPI_LABEL}-${APP_COMPILER_LABEL}) with l=${DEGREE} over ${NCORES} core(s) across ${NNODES} node(s).\n" > ${APP_OUTPUT}
+
+map ${MAP_PARAMS} srun ${SRUN_PARAMS} ${APP_EXE} ${APP_PARAMS} &>> ${APP_OUTPUT}
+
+RUN_STOP=$(date +%s.%N)
+RUN_TIME=$(echo "${RUN_STOP} - ${RUN_START}" | bc)
+echo -e "\nmap time: ${RUN_TIME}" >> ${APP_OUTPUT}
+
+
+# tidy up
+mkdir ${APP_RUN_PATH}/${SLURM_JOB_ID}
+mv ${APP_OUTPUT} ${APP_RUN_PATH}/${SLURM_JOB_ID}/
+mv ${APP_RUN_PATH}/Results ${APP_RUN_PATH}/${SLURM_JOB_ID}/
+rm -rf ${APP_RUN_PATH}/Data
+mv ${SLURM_SUBMIT_DIR}/${APP_EXE_NAME}_*.map ${APP_RUN_PATH}/${SLURM_JOB_ID}/

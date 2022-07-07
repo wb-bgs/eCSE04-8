@@ -1,0 +1,121 @@
+#!/bin/bash
+
+
+function set_compile_options {
+  MAKEFILE=$1
+  if [[ "${BUILD}" == "release" ]]; then
+    if [[ "${PRGENV}" == "cray" ]]; then
+      sed -i "s:FFLAGS =:FFLAGS = -O3:g" ${MAKEFILE}
+    elif [[ "${PRGENV}" == "gnu" ]]; then
+      sed -i "s:FFLAGS =:FFLAGS = -O3 -fallow-argument-mismatch:g" ${MAKEFILE}
+    elif [[ "${PRGENV}" == "aocc" ]]; then
+      sed -i "s:FFLAGS =:FFLAGS = -O3:g" ${MAKEFILE}
+    fi
+  elif [[ "${BUILD}" == "debug" ]]; then
+    if [[ "${PRGENV}" == "cray" ]]; then
+      sed -i "s:FFLAGS =:FFLAGS = -g -O0:g" ${MAKEFILE}
+    elif [[ "${PRGENV}" == "gnu" ]]; then
+      sed -i "s:FFLAGS =:FFLAGS = -g -O0 -fallow-argument-mismatch -fcheck=all -ffpe-trap=invalid,zero,overflow -fbacktrace:g" ${MAKEFILE}
+    elif [[ "${PRGENV}" == "aocc" ]]; then
+      sed -i "s:FFLAGS =:FFLAGS = -g -O0:g" ${MAKEFILE}
+    fi
+  elif [[ "${BUILD}" == "craypat" ]]; then
+    if [[ "${PRGENV}" == "cray" ]]; then
+      sed -i "s:FFLAGS =:FFLAGS= -g -O3 -h profile_generate:g" ${MAKEFILE}
+    elif [[ "${PRGENV}" == "gnu" ]]; then
+      sed -i "s:FFLAGS =:FFLAGS= -g -O3 -fallow-argument-mismatch -fcheck=all -ffpe-trap=invalid,zero,overflow -fbacktrace:g" ${MAKEFILE}
+    elif [[ "${PRGENV}" == "aocc" ]]; then
+      sed -i "s:FFLAGS =:FFLAGS= -g -O3:g" ${MAKEFILE}
+    fi
+  elif [[ "${BUILD}" == "armmap" ]]; then
+    if [[ "${PRGENV}" == "cray" ]]; then
+      sed -i "s:FFLAGS =:FFLAGS= -G2 -O3 -h ipa0:g" ${MAKEFILE}
+    elif [[ "${PRGENV}" == "gnu" ]]; then
+      sed -i "s:FFLAGS =:FFLAGS= -g1 -O3 -fallow-argument-mismatch -fno-inline -fno-optimize-sibling-calls:g" ${MAKEFILE}
+    elif [[ "${PRGENV}" == "aocc" ]]; then
+      sed -i "s:FFLAGS =:FFLAGS= -g1 -O3:g" ${MAKEFILE}
+    fi
+  elif [[ "${BUILD}" == "scalasca" ]]; then
+    if [[ "${PRGENV}" == "cray" ]]; then
+      sed -i "s:FFLAGS =:FFLAGS= -G2 -O3 -h ipa0:g" ${MAKEFILE}
+    elif [[ "${PRGENV}" == "gnu" ]]; then
+      sed -i "s:FFLAGS =:FFLAGS= -g1 -O3 -fallow-argument-mismatch -fno-inline -fno-optimize-sibling-calls:g" ${MAKEFILE}
+    elif [[ "${PRGENV}" == "aocc" ]]; then
+      sed -i "s:FFLAGS =:FFLAGS= -g1 -O3:g" ${MAKEFILE}
+    fi
+  fi
+}
+
+
+PE_RELEASE=21.09
+PRGENV=$1
+BUILD=$2
+VERSION=$3
+ERRMSG="Invalid syntax: build.sh cray|gnu|aocc release|debug|craypat|armmap|scalasca <version>"
+
+if [[ "${PRGENV}" != "cray" && "${PRGENV}" != "gnu" && "${PRGENV}" != "aocc" ]]; then
+  echo ${ERRMSG}
+  exit
+fi
+
+if [[ "${BUILD}" != "release" && "${BUILD}" != "debug" && "${BUILD}" != "craypat" && "${BUILD}" != "armmap" && "${BUILD}" != "scalasca" ]]; then
+  echo ${ERRMSG}
+  exit
+fi
+
+if [[ "${VERSION}" == "" ]]; then
+  echo ${ERRMSG}
+  exit
+fi
+
+PRFX=${HOME/home/work}
+GLOBLIB_LABEL=globlibi
+GLOBLIB_VERSION=${VERSION}
+GLOBLIB_NAME=${GLOBLIB_LABEL}-${GLOBLIB_VERSION}
+GLOBLIB_BUILD_ROOT=${PRFX}/eCSE04-8/libs/${GLOBLIB_LABEL}/src
+GLOBLIB_INSTALL_ROOT=${PRFX}/libs/${GLOBLIB_LABEL}/${GLOBLIB_VERSION}
+
+
+echo -e "\n\nBuilding ${GLOBLIB_LABEL} ${GLOBLIB_VERSION} (${BUILD}) using ${PRGENV} programming environment...\n\n"
+  
+module -q restore
+module -q load cpe/${PE_RELEASE}
+module -q load PrgEnv-${PRGENV}
+
+if [[ "${BUILD}" == "craypat" ]]; then
+  module -q load perftools-base
+  module -q load perftools
+elif [[ "${BUILD}" == "scalasca" ]]; then
+  module -q use /work/y23/shared/scalasca/modulefiles
+  if [[ "${PRGENV}" == "cray" ]]; then
+    module -q load scalasca/2.6-cce
+  elif [[ "${PRGENV}" == "gnu" ]]; then
+    module -q load scalasca/2.6-gcc10
+  else
+    echo "Error, ${PRGENV} not supported by scalasca, please try either cray or gnu."
+    exit
+  fi
+fi
+
+export LD_LIBRARY_PATH=${CRAY_LD_LIBRARY_PATH}:${LD_LIBRARY_PATH}
+
+
+PE_NAME=${PE_MPICH_FIXED_PRGENV}
+PE_VERSION=$(eval echo "\${PE_MPICH_GENCOMPILERS_${PE_NAME}}")
+GLOBLIB_INSTALL_PATH=${GLOBLIB_INSTALL_ROOT}/${PE_NAME}/${PE_VERSION}/${BUILD}/lib
+
+
+cd ${GLOBLIB_BUILD_ROOT}
+
+cp makefile.ARCHER2 makefile
+sed -i "s:libdir =:libdir = ${GLOBLIB_INSTALL_PATH}:g" ./makefile
+
+set_compile_options ./makefile
+
+if [[ "${BUILD}" == "scalasca" ]]; then
+  sed -i "s:\$(FC):scorep --user \$(FC):g" ./makefile
+fi
+
+make
+make install
+make clean

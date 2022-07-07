@@ -1,0 +1,24 @@
+#!/bin/bash
+
+WMAM_DATA_ROOT=${HOME/home/work}/tests/WMAM/shd/data
+
+echo "# Coeffs from BGGM2017 for 1990.0 up to degree 15." \
+ > ./coef_1990_15.dat
+echo "#" >> ./coef_1990_15.dat
+echo "#" >> ./coef_1990_15.dat
+echo "#" >> ./coef_1990_15.dat
+echo "#" >> ./coef_1990_15.dat
+echo "#" >> ./coef_1990_15.dat
+echo "############" >> ./coef_1990_15.dat
+echo "    1990.00" >> ./coef_1990_15.dat
+
+cat ${WMAM_DATA_ROOT}/bggm2017.dat \
+ | awk 'BEGIN {start="no"} \
+        {if ($0 ~ /^E 1990.0/) {start="no"}; \
+         if (start=="yes") {print $0}; \
+         if ($0 ~ /^M 1990.0/) {start="yes"}}' \
+ | sed 's/ /\n/g' \
+ | awk '{if (NF>0) {print $0}}' \
+ | awk '{if (NR<=15*17) {print $0}}' \
+ | awk '{printf("%s %5d %5d %10.2f %10.4f\n","x",1,NR,$1,0.0)}' \
+ >> ./coef_1990_15.dat

@@ -1,0 +1,11 @@
+--2021-12-01 15:44:08--  http://www.netlib.org/slatec/slatec4linux.tgz
+Resolving www.netlib.org (www.netlib.org)... 160.36.131.221
+Connecting to www.netlib.org (www.netlib.org)|160.36.131.221|:80... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 27754 (27K) [application/x-gzip]
+Saving to: ‘slatec4linux.tgz’
+
+     0K .......... .......... .......                         100%  247K=0.1s
+
+2021-12-01 15:44:08 (247 KB/s) - ‘slatec4linux.tgz’ saved [27754/27754]
+

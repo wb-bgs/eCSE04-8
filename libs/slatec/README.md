@@ -1,0 +1,44 @@
+SLATEC
+======
+
+The SLATEC Common Mathematical Library, Version 4.1, July 1993
+is a comprehensive software library containing over 1400 general
+purpose mathematical and statistical routines written in Fortran 77.
+
+SLATEC is required by the World Magnetic Anomaly Model code (WMAM)
+and by the iterative version of the global model fitting library (globlibi).
+
+The SLATEC source is stored in this GitLab repo (alongside WMAM and
+globlibi) for convenience. The [build.sh](build.sh) script builds
+the SLATEC library for [ARCHER2](www.archer2.ac.uk).
+
+
+The instructions below show how to obtain the SLATEC source
+code from [netlib.org](http://www.netlib.org/slatec).
+
+```bash
+PRFX=${HOME/home/work}/eCSE04-8/libs
+SLATEC_LABEL=slatec
+SLATEC_VERSION=4.1
+SLATEC_VERSION_MAJOR=`echo ${SLATEC_VERSION} | cut -d'.' -f1`
+SLATEC_NAME=${SLATEC_LABEL}-${SLATEC_VERSION}
+SLATEC_ARC_MAKE=${SLATEC_LABEL}${SLATEC_VERSION_MAJOR}linux.tgz
+SLATEC_ARC_SRC=${SLATEC_LABEL}_src.tgz
+
+mkdir -p ${PRFX}/${SLATEC_LABEL}/src
+cd ${PRFX}/${SLATEC_LABEL}/src
+
+wget http://www.netlib.org/${SLATEC_LABEL}/${SLATEC_ARC_MAKE}
+tar -xvzf ${SLATEC_ARC_MAKE}
+rm ${SLATEC_ARC_MAKE}
+
+cp makefile makefile.ARCHER2
+cp ./static/makefile ./static/makefile.sav
+cp ./dynamic/makefile ./dynamic/makefile.sav
+
+wget http://www.netlib.org/${SLATEC_LABEL}/${SLATEC_ARC_SRC}
+tar -xvzf ${SLATEC_ARC_SRC}
+rm ${SLATEC_ARC_SRC}
+mv ./src/* ./
+rmdir src
+```
