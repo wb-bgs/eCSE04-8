@@ -10,11 +10,11 @@ and by the iterative version of the global model fitting library (globlibi).
 
 The SLATEC source is stored in this GitLab repo (alongside WMAM and
 globlibi) for convenience. The [build.sh](build.sh) script builds
-the SLATEC library for [ARCHER2](www.archer2.ac.uk).
+the SLATEC library for [ARCHER2](https://www.archer2.ac.uk/).
 
 
 The instructions below show how to obtain the SLATEC source
-code from [netlib.org](http://www.netlib.org/slatec).
+code from [netlib.org](http://www.netlib.org/slatec/).
 
 ```bash
 PRFX=${HOME/home/work}/eCSE04-8/libs
