@@ -1,3 +1,5 @@
 apps/WMAM/src/makefile
 libs/globlibi/src/makefile
 libs/slatec/src/makefile
+libs/slatec/src/static/makefile
+libs/slatec/src/dynamic/makefile
