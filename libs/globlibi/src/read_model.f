@@ -18,44 +18,51 @@ c          a dummy real (usually the parameter variance)
 c       
 c
 c       input:
-c         nom		file name to read
-c         nl            Maximum number of line to read
+c         fname		file name to read
+c         ncoeffs       Maximum number of line to read
 c
 c       output:
-c         refyear       ref year for model in Julian days
-c         rar           real array (nr)
-c         nl            number of data line
+c         ryg           ref year for model in Julian days
+c         ncoeffs       number of data line
+c         bc            real array (ncoeffs)
 c         
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-	subroutine read_model(nom,refyear,rar,nl)
+	subroutine read_model(fname, ryg, ncoeffs, bc)
 c
         implicit none
 c
-	character nom*100,ligne*80,cd
-        integer nl,i,id
-        real*8 rar(*),rd,refyear,ry
+	character fname*100
+        integer ryg, ncoeffs
+        real*8 bc(*)
+c        
+        character ligne*80, cd
+        integer i, id
+        real*8 ry, rd
 c
-	open(10,file=nom,status='old')
+	open(10, file=fname, status='old')
 c
+c  read header       
         ligne(1:2)='  '
-        do while (ligne(1:2).ne.'##')
-          read(10,*)ligne
+        do while (ligne(1:2) .ne. '##')
+          read(10,*) ligne
         enddo
 c
-        read(10,*)ry
-        call dy2mjd(ry,refyear)
+c  read year
+        read(10,*) ry
+        call dy2mjd(ry, ryg)
 c
+c  read coefficients
         i=0
-        do while (i.le.nl)
+        do while (i .le. ncoeffs)
           i=i+1
-          read(10,*,END=22222)cd,id,id,rar(i),rd
+          read(10,*,END=22222) cd,id,id,bc(i),rd
         enddo
 c
-        write(*,*)'ERROR READING INPUT FILE (NL > NLMAX)'
+        write(*,*) 'ERROR READING INPUT FILE (NL > NLMAX)'
         close(10)
         stop
 c
-22222   nl=i-1
+22222   ncoeffs=i-1
         close(10)
 c
         return

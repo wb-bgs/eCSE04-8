@@ -22,6 +22,9 @@ c
 c    Subroutines:
 c       init_sph_wmam()    initialise the global variables
 c       fini_sph_wmam()    deallocate global arrays
+c       mpi_read_ref_model()
+c       mpi_read_model()
+c       mpi_read_data()
 c       sub_sph_wmam()     model subroutine
 c       sub_sph_wmam_l()   linearized model subroutine
 c       wmam_norm()
@@ -31,6 +34,10 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
         implicit none
 c
+        integer, parameter :: NUM_OF_PTCOMPS = 4
+        integer, parameter :: SIZE_OF_REAL = 8
+        integer, parameter :: SIZE_OF_PT = NUM_OF_PTCOMPS*SIZE_OF_REAL
+c        
         integer ilg
         real*8 ryg, rag
         real*8, allocatable :: d2a(:), d3a(:)
@@ -142,6 +149,419 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         deallocate(dalphaa, dbetaa)
         deallocate(d4a, d5a, d6a) 
         end subroutine fini_sph_wmam
+c
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c    subroutine mpi_read_ref_model
+c
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+        subroutine mpi_read_ref_model(fname, ncoeffs, bc)
+c
+        implicit none
+c
+        include 'mpif.h'
+c
+	character fname*100
+        integer ncoeffs
+        real*8 bc(*)
+c
+        integer, parameter :: ndims = 1
+c
+        integer, dimension(ndims) :: array_of_sizes
+        integer, dimension(ndims) :: array_of_subsizes
+        integer, dimension(ndims) :: array_of_starts
+        integer subarray
+c
+        integer rank, ierr
+        integer fhandle, fsize, nreals, nread
+        integer (kind=MPI_OFFSET_KIND) :: disp = 0
+        integer fstat(MPI_STATUS_SIZE)
+c
+        logical file_open, buf_allocated
+        logical subarray_type_committed
+c       
+        character mpifunc*40 
+        real*8, allocatable :: buf(:)
+c
+c
+        call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
+c
+        file_open = .false.
+        buf_allocated = .false.
+        subarray_type_committed = .false.
+c
+        do while (.true.)
+c
+          call MPI_File_open(MPI_COMM_WORLD, fname,
+     >                       MPI_MODE_RDONLY, MPI_INFO_NULL,
+     >                       fhandle, ierr)
+          if (ierr .eq. MPI_SUCCESS) then
+            file_open = .true.
+          else
+            mpifunc = 'MPI_File_open'
+            exit
+          endif 
+c        
+          call MPI_File_get_size(fhandle, fsize, ierr)
+          if (ierr .eq. MPI_SUCCESS) then
+            nreals = fsize / SIZE_OF_REAL
+          else
+            nreals = 0
+            mpifunc = 'MPI_File_get_size'
+            exit
+          endif
+
+          if (nreals .gt. 1+ncoeffs) then
+            if (rank .eq. 0) then
+              write(*,*) 'Error, ref model file should have ',
+     >                   'no more than 1 +', ncoeffs, ' reals.'
+            endif
+            ncoeffs = 0
+            exit
+          endif
+
+          allocate(buf(nreals))
+          buf_allocated = .true.
+          
+          array_of_sizes(1) = nreals
+          array_of_subsizes(1) = array_of_sizes(1)
+          array_of_starts(1) = 0
+
+          call MPI_Type_create_subarray(ndims, array_of_sizes,
+     >                                  array_of_subsizes,
+     >                                  array_of_starts,
+     >                                  MPI_ORDER_FORTRAN,
+     >                                  MPI_DOUBLE_PRECISION,
+     >                                  subarray, ierr)
+          if (ierr .ne. MPI_SUCCESS) then
+            mpifunc = 'MPI_Type_create_subarray'
+            exit
+          endif
+
+          call MPI_Type_commit(subarray, ierr)
+          if (ierr .eq. MPI_SUCCESS) then
+            subarray_type_committed = .true.
+          else
+            mpifunc = 'MPI_Type_commit'
+            exit 
+          endif
+          
+          call MPI_File_set_view(fhandle, disp,
+     >                           MPI_DOUBLE_PRECISION,
+     >                           subarray, 'native', 
+     >                           MPI_INFO_NULL, ierr)
+          if (ierr .ne. MPI_SUCCESS) then
+            mpifunc = 'MPI_File_set_view'
+            exit
+          endif
+
+          call MPI_File_read_all(fhandle, buf, 1,
+     >                           subarray, fstat, ierr)
+          if (ierr .ne. MPI_SUCCESS) then
+            mpifunc = 'MPI_File_read_all'
+            exit
+          endif
+
+          call MPI_Get_count(fstat, subarray, nread, ierr)
+          if (ierr .eq. MPI_SUCCESS) then
+            if (nread .eq. 1) then
+              call dy2mjd(buf(1), ryg)
+              ncoeffs = nreals-1
+              bc(1:ncoeffs) = buf(2:nreals)
+            else
+              if (rank .eq. 0) then
+                write(*,*) 'Error, unable to read 1 +', ncoeffs,
+     >                     ' reals from ref model file.'
+              endif
+              ncoeffs = 0
+            endif
+          else
+            mpifunc = 'MPI_Get_count'
+            exit
+          endif
+
+          exit
+        enddo
+
+        if (ierr .ne. MPI_SUCCESS) then
+          if (rank .eq. 0) then
+            write(*,*) 'Error ', mpifunc, '() returned ', ierr
+          endif
+          ncoeffs = 0
+        endif
+
+        if (subarray_type_committed) then
+          call MPI_Type_free(subarray, ierr)
+        endif
+
+        if (buf_allocated) then
+          deallocate(buf)
+        endif
+
+        if (file_open) then
+          call MPI_File_close(fhandle, ierr)
+        endif
+
+        end
+c
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c    subroutine mpi_read_model
+c
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+        subroutine mpi_read_model(fname, nparams, bc)
+c
+        implicit none
+c
+        include 'mpif.h'
+c
+	character fname*100
+        integer nparams
+        real*8 bc(*)
+c
+        integer, parameter :: ndims = 1
+c
+        integer, dimension(ndims) :: array_of_sizes
+        integer, dimension(ndims) :: array_of_subsizes
+        integer, dimension(ndims) :: array_of_starts
+        integer subarray
+c
+        integer rank, ierr
+        integer fhandle, fsize, nreals, nread
+        integer (kind=MPI_OFFSET_KIND) :: disp = 0
+        integer fstat(MPI_STATUS_SIZE)
+c
+        logical file_open
+        logical subarray_type_committed
+c       
+        character mpifunc*40  
+c
+c
+        call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
+c
+        file_open = .false.
+        subarray_type_committed = .false.
+c
+        do while (.true.)
+c
+          call MPI_File_open(MPI_COMM_WORLD, fname,
+     >                       MPI_MODE_RDONLY, MPI_INFO_NULL,
+     >                       fhandle, ierr)
+          if (ierr .eq. MPI_SUCCESS) then
+            file_open = .true.
+          else
+            mpifunc = 'MPI_File_open'
+            exit
+          endif 
+c        
+          call MPI_File_get_size(fhandle, fsize, ierr)
+          if (ierr .eq. MPI_SUCCESS) then
+            nreals = fsize / SIZE_OF_REAL
+          else
+            nreals = 0
+            mpifunc = 'MPI_File_get_size'
+            exit
+          endif
+
+          if (nreals .ne. nparams) then
+            if (rank .eq. 0) then
+              write(*,*) 'Error, model file should have',
+     >                   nparams, ' reals.'
+            endif
+            nparams = 0
+            exit
+          endif
+
+          array_of_sizes(1) = nparams
+          array_of_subsizes(1) = array_of_sizes(1)
+          array_of_starts(1) = 0
+
+          call MPI_Type_create_subarray(ndims, array_of_sizes,
+     >                                  array_of_subsizes,
+     >                                  array_of_starts,
+     >                                  MPI_ORDER_FORTRAN,
+     >                                  MPI_DOUBLE_PRECISION,
+     >                                  subarray, ierr)
+          if (ierr .ne. MPI_SUCCESS) then
+            mpifunc = 'MPI_Type_create_subarray'
+            exit
+          endif
+
+          call MPI_Type_commit(subarray, ierr)
+          if (ierr .eq. MPI_SUCCESS) then
+            subarray_type_committed = .true.
+          else
+            mpifunc = 'MPI_Type_commit'
+            exit 
+          endif
+          
+          call MPI_File_set_view(fhandle, disp,
+     >                           MPI_DOUBLE_PRECISION,
+     >                           subarray, 'native', 
+     >                           MPI_INFO_NULL, ierr)
+          if (ierr .ne. MPI_SUCCESS) then
+            mpifunc = 'MPI_File_set_view'
+            exit
+          endif
+
+          call MPI_File_read_all(fhandle, bc, 1,
+     >                           subarray, fstat, ierr)
+          if (ierr .ne. MPI_SUCCESS) then
+            mpifunc = 'MPI_File_read_all'
+            exit
+          endif
+
+          call MPI_Get_count(fstat, subarray, nread, ierr)
+          if (ierr .eq. MPI_SUCCESS) then
+            if (nread .ne. 1) then
+              if (rank .eq. 0) then
+                write(*,*) 'Error, unable to read', nparams,
+     >                     ' reals from ref model file.'
+              endif
+              nparams = 0
+            endif
+          else
+            mpifunc = 'MPI_Get_count'
+            exit
+          endif
+
+          exit
+        enddo
+
+        if (ierr .ne. MPI_SUCCESS) then
+          if (rank .eq. 0) then
+            write(*,*) 'Error ', mpifunc, '() returned ', ierr
+          endif
+          nparams = 0
+        endif
+
+        if (subarray_type_committed) then
+          call MPI_Type_free(subarray, ierr)
+        endif
+
+        if (file_open) then
+          call MPI_File_close(fhandle, ierr)
+        endif
+
+        end
+c
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c    subroutine mpi_read_data
+c
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+        subroutine mpi_read_data(fname, nd, ndatpts, nlocdatpts,
+     >                           imin_locdatpts, ppos)
+c
+        implicit none
+c
+        include 'mpif.h'
+c
+	character fname*100
+        integer nd, ndatpts, nlocdatpts, imin_locdatpts
+        real*8 ppos(nd+1,*)
+c
+        integer i, j, rank, ierr
+        integer fhandle, fsize, npts, nread, nlocreals
+        integer (kind=MPI_OFFSET_KIND) :: disp = 0
+        integer fstat(MPI_STATUS_SIZE)
+c
+        logical file_open, buf_allocated
+c       
+        character mpifunc*40 
+        real*8, allocatable :: buf(:)
+c
+c
+        call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
+c
+        file_open = .false.
+        buf_allocated = .false.
+c
+        do while (.true.)
+c
+          call MPI_File_open(MPI_COMM_WORLD, fname,
+     >                       MPI_MODE_RDONLY, MPI_INFO_NULL,
+     >                       fhandle, ierr)
+          if (ierr .eq. MPI_SUCCESS) then
+            file_open = .true.
+          else
+            mpifunc = 'MPI_File_open'
+            exit
+          endif
+c        
+          call MPI_File_get_size(fhandle, fsize, ierr)
+          if (ierr .eq. MPI_SUCCESS) then
+            npts = (fsize / SIZE_OF_PT)
+          else
+            npts = 0
+            mpifunc = 'MPI_File_get_size'
+            exit
+          endif
+
+          if (npts .ne. ndatpts) then
+            if (rank .eq. 0) then
+              write(*,*) 'Error, data file should have',
+     >                   ndatpts, ' points.'
+            endif
+            nlocdatpts = 0
+            exit
+          endif
+
+          nlocreals = nlocdatpts*NUM_OF_PTCOMPS
+          allocate(buf(nlocreals))
+          buf_allocated = .true.
+
+          disp = (imin_locdatpts-1)*SIZE_OF_PT
+          call MPI_File_read_at(fhandle, disp,
+     >                          buf, nlocreals,
+     >                          MPI_DOUBLE_PRECISION,
+     >                          fstat, ierr)
+          if (ierr .ne. MPI_SUCCESS) then
+            mpifunc = 'MPI_File_read_at'
+            exit
+          endif
+
+          call MPI_Get_count(fstat, MPI_DOUBLE_PRECISION, 
+     >                       nread, ierr)
+          if (ierr .eq. MPI_SUCCESS) then
+            if (nread .eq. nlocreals) then
+              j=1
+              do i=1,nlocdatpts
+                ppos(1,i) = 90.0d0 - buf(j+1)
+                ppos(2,i) = buf(j)
+                ppos(3,i) = buf(j+2)
+                ppos(4,i) = ryg
+                ppos(nd+1,i) = buf(j+3)
+                j=j+4
+              enddo
+            else
+              if (rank .eq. 0) then
+                write(*,*) 'Error, unable to read', nlocdatpts,
+     >                     ' points from data file.'
+              endif
+              nlocdatpts = 0
+            endif
+          else
+            mpifunc = 'MPI_Get_count'
+            exit
+          endif
+
+          exit
+        enddo
+
+        if (ierr .ne. MPI_SUCCESS) then
+          if (rank .eq. 0) then
+            write(*,*) 'Error ', mpifunc, '() returned ', ierr
+          endif
+          nlocdatpts = 0
+        endif
+
+        if (buf_allocated) then
+          deallocate(buf)
+        endif
+
+        if (file_open) then
+          call MPI_File_close(fhandle, ierr)
+        endif
+
+        end
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c    subroutine sub_sph_wmam
