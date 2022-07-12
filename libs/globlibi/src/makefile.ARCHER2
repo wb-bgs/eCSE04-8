@@ -20,11 +20,11 @@ SOURCES = \
 	cptAtWAds_p.f cpt_dat.f cpt_dat_vals.f cpt_dat_vals_p.f \
 	cptstd_d2.f cptstd_dp.f damp_rien.f degree_sincos.f \
 	dy2mjd.f gauleg.f gc_step_p.f l2_norm.f l2_std.f l2_var.f \
-	lsearch_p.f misc.f mkArows.f mkdlf_F.f mk_lf_dlf.f \
-	mklf_F.f opt_ghc_p2.f opt_pr_p3.f Psph_bi.f read_model.f \
-	set_FG_sampling.f sph_bi.f ssqgh_d.f ssqgh_dp.f \
-	thread_segmenter.f write_comp.f Xsph_bi.f XYZsph_bi0.f \
-	Ysph_bi.f Zsph_bi.f
+	lsearch_p.f misc.f mkArows.f mkdlf_F.f mk_lf_dlf.f mklf_F.f \
+	mpi_status_types.f opt_ghc_p2.f opt_pr_p3.f \
+	Psph_bi.f read_model.f set_FG_sampling.f sph_bi.f ssqgh_d.f \
+	ssqgh_dp.f thread_segmenter.f write_comp.f Xsph_bi.f \
+	XYZsph_bi0.f Ysph_bi.f Zsph_bi.f
 
 # a list of all the object files
 OBJECT_LIST = $(SOURCES:%.f=%.o)

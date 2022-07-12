@@ -32,26 +32,21 @@ c    subroutine init_sph_wmam
 c
 c       V. Lesur 16/09/2006
 c
-c  Set initial vlues for global data and define the model vector bc(*)
+c  Set ilg, ryg (based on 1990) and rag
 c
-c  output:
-c       nb    : integer  : number of parameters in the model
-c       bc(nb): real*8   : array of initial parameters
+c  input:
+c       shdeg : integer  : spherical harmonic degree
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine init_sph_wmam(nb,bc)
+        subroutine init_sph_wmam(shdeg)
 c
         implicit none
 c
-        integer nb,i
-        real*8 bc(*)
+        integer shdeg
 c
         call dy2mjd(1990.d0,ryg)
         rag=6371.2d0
-        ilg=200
-c
-        nb=ilg*(ilg+2)
-        bc(1:nb)=1.0d0
+        ilg=shdeg
 c
         return
         end subroutine init_sph_wmam
@@ -195,7 +190,7 @@ c  setting
 c
 c    calculate internal field component
           call XYZsph_bi0(ilg,rag,bp,dwx,dwy,dwz)
-c
+c       
 c    calulate field (lithos & core)
           dx=dot_product(dwx(1:nb),bc(1:nb))
           dy=dot_product(dwy(1:nb),bc(1:nb))

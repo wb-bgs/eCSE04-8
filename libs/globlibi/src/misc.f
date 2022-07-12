@@ -242,9 +242,11 @@ C**** Y2K initial check : 25th January 1999, E.Clarke
 C**** Y2K final check   : 
 C
       SUBROUTINE DAYSIN(MON,IYEAR,NDAYS)
+      INTEGER N
       DIMENSION MDAYS(12)
       DATA MDAYS /31,-99,31,30,31,30,31,31,30,31,30,31/
 C
+      N=365
       CALL DAMON(31,12,IYEAR,N,1)
       IF(N .EQ. 365) THEN
          MDAYS(2) = 28
@@ -614,6 +616,12 @@ C**** Y2K final check   :
 C
       SUBROUTINE BROT(IDAY,MON,IYR,IROT,IDNO)
 C
+      INTEGER NDAY0,NDAY1,NDAY2
+
+      NDAY0=0
+      NDAY1=0
+      NDAY2=0
+      
       CALL DAMON(7,2,1832,NDAY0,1)
       IYR1 = IYR
       CALL DAMON(IDAY,MON,IYR,NDAY2,1)

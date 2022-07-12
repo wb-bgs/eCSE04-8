@@ -9,8 +9,8 @@ c   more or less equal parts. (replace the usual segmentation used
 c   in v.lesur's codes that can fail for small nn)
 c
 c   input:
-c      size INTEGER number of threads available (from MPI)
-c      nn   INTEGER array length in question
+c      nranks INTEGER number of threads available (from MPI)
+c      nelems INTEGER array length in question
 c
 c   output:
 c      proc_np(*) INTEGER  block lengths (dim min = size)
@@ -21,31 +21,33 @@ c      1- no checks at 'proc_np' and 'proc_ip', content overwritten,
 c         correct dimension etc. is assumed.
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine thread_segmenter(size,nn,proc_np,proc_ip)
+        subroutine thread_segmenter(nranks,nelems,proc_np,proc_ip)
 c
         implicit none
 c
-        integer ,intent(in)    :: size,nn
+        integer ,intent(in)    :: nranks,nelems
         integer ,intent(out)   :: proc_np(*),proc_ip(*)
 c
         integer                :: i,k,n
 c
-        proc_np(1:size)=0 
-        proc_ip(1:size)=0
+        proc_np(1:nranks)=0 
+        proc_ip(1:nranks)=0
 c
 c Define segment size & remaining
-        k=int(nn/size)
-        n=mod(nn,size)
+        k=int(nelems/nranks)
+        n=mod(nelems,nranks)
 c
 c Init by identical elements of width k
-        proc_np(1:size)=k       
+        proc_np(1:nranks)=k       
 c
 c Deal with remaining part
         if (n.gt.0) proc_np(1:n)=proc_np(1:n)+1
 c
 c Set integer pointers
-        proc_ip(1)=1
-        do i=2,size
+c proc_ip now holds displacement values in order
+c to be compatible with mpi allgatherv
+        proc_ip(1)=0
+        do i=2,nranks
           proc_ip(i)=proc_ip(i-1)+proc_np(i-1) 
         enddo
 c

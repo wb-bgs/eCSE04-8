@@ -12,20 +12,19 @@ c
 c       input:
 c         nom		file name to write
 c         nl            number of data line to write
-c         npm           number max of data point
 c         nd            number of space dimmension
 c         nt(*)         data type (dim nl)
 c         ts            type selected
-c         ddat(nd+1,*)  position and data (dim (nd+1,npm))      
+c         ddat(nd+1,*)  position and data (dim (nd+1,*))      
 c         xyzf(*)       fit to data (dim nl)
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-	subroutine write_comp(nom,nl,npm,nd,nt,ts,ddat,xyzf)
+	subroutine write_comp(nom,nl,nd,nt,ts,ddat,xyzf)
 c
         implicit none
 c
 	character nom*100,theformat*15
-        integer i,j,nl,npm,nd,nt(*),ts,nb,nd1,nd2
+        integer i,j,nl,nd,nt(*),ts,nb,nd1,nd2
         real*8 ddat(*),xyzf(*),adif,sdif
 c
 	open(10,file=nom,status='unknown')

@@ -23,15 +23,16 @@ c
 c     input:
 c         iunit         integer unit number for I/O
 c         npmax         number max of data point with correlated errors
-c         npm           Maximum total number of data points
 c         nd            space dimension
 c         npt           Total Number of data
+c         proc_np(*)    block lengths
+c         proc_ip(*)    data pointers
 c         ppos          data point position in ndD
 c         ddat          data values
 c         nb            Number or base function to use
-c         BC            Estimate of Base function coefficients
-c         BS            Base subroutine to use
-c         FSTD          std Function
+c         bc            Estimate of Base function coefficients
+c         sub_base      Base subroutine to use
+c         fun_std       std Function
 c         nt(*)         data type 
 c         cov(*)        covariance matrix in SLAP Column format
 c         icov/jcov     Integer vector describing cov format
@@ -45,14 +46,17 @@ c         stp           recommended step in direction ds(*)
 c         std           STD value for given BC+stp*DS
 c         xyzf(*)       Forward modelling for given BC+stp*DS
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine gc_step_p(iunit,npm,npmax,nd,npt,ppos,ddat,nb,bc
-     >              ,FSTD,BS,nt,cov,icov,jcov,std,gj,ghj,ds,stp,xyzf)
+        subroutine gc_step_p(iunit, npmax, nd, npt,
+     >                       proc_np, proc_ip, ppos, ddat, nb, bc,
+     >                       fun_std, sub_base, nt, cov, icov, jcov,
+     >                       std, gj, ghj, ds, stp, xyzf)
 c
         implicit none
 c
         include 'mpif.h'
 c
-        integer nd,npt,nb,nt(*),icov(*),jcov(*),npm,npmax,iunit
+        integer nd,npt,nb,nt(*),icov(*),jcov(*),npmax,iunit
+        integer proc_np(*),proc_ip(*)
         real*8 ppos(*),ddat(*),bc(*),cov(*),std,xyzf(*)
         real*8 gj(*),ghj(*),ds(*),stp
 c
@@ -60,8 +64,8 @@ c
 c
         real*8, allocatable :: bcn(:),zz(:) 
 c
-        real*8 FSTD
-        external BS,FSTD
+        real*8 fun_std
+        external sub_base,fun_std
 c
 c All: Defining parallel enviroment
         integer ierr,rank
@@ -70,7 +74,8 @@ c
 c All: Calculate  sqrt(w).A.DS 
         allocate(zz(1:npt))
         zz(1:npt)=0.0d0
-        call cpt_dat_vals_p(nd,npm,npt,nt,ppos,nb,ds,BS,zz)
+        call cpt_dat_vals_p(nd, proc_np, proc_ip,
+     >                      nt, ppos, nb, ds, sub_base, zz)
 c
         do i=1,npt
           zz(i)=zz(i)/dsqrt(cov(jcov(i)))
@@ -82,7 +87,7 @@ c  All: calculate step
         stp=stp/2.d0
         deallocate(zz)
 c
-        if(rank.eq.0) write(iunit,*)'GC_STEP :',stp
+        if (rank.eq.0) write(iunit,*) 'GC_STEP :',stp
 c
 c ALL: Estimate the new set of parameter for a step stp in direction ds
         allocate(bcn(1:nb))
@@ -90,8 +95,11 @@ c ALL: Estimate the new set of parameter for a step stp in direction ds
 c
 c ALL: Do the forward modelling
         xyzf(1:npt)=0.0d0
-        call cpt_dat_vals_p(nd,npm,npt,nt,ppos,nb,bcn,BS,xyzf)
-        call cptstd_dp(npmax,npt,nt,icov,jcov,cov,ddat,xyzf,FSTD,std)
+        call cpt_dat_vals_p(nd, proc_np, proc_ip,
+     >                      nt, ppos, nb, bcn, sub_base, xyzf)
+        call cptstd_dp(npmax, proc_np, proc_ip,
+     >                 nt, icov, jcov, cov, ddat,
+     >                 xyzf, fun_std, std)
 c
         deallocate(bcn)
 c

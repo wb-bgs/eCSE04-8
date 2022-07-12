@@ -14,29 +14,29 @@ c
 c  Input:
 c       nub             base number 
 c       nb              Number of bases
-c       BS              Base subroutine to use (real*8 external function)
-c       BC		Base coeff such that data= SUM{i} BC(i)*BS(i)
-c       BP              Base parameters for spatial and temporal positions
+c       _base           Base subroutine to use (real*8 external function)
+c       bc		Base coeff such that data= SUM{i} BC(i)*BS(i)
+c       bp              Base parameters for spatial and temporal positions
 c  Output:
 c	ddat		ddat value = SUM{i} DW(i)
-c       DW              WORK ARRAY that contains BS output
+c       dw              WORK ARRAY that contains BS output
 c                       (i.e. DW(i)=BC(i)*BS(i) most of the time)
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-	recursive subroutine cpt_dat(nub,nb,BS,BC,BP,ddat,DW)
+	subroutine cpt_dat(nub,nb,sub_base,bc,bp,ddat,dw)
 c
         implicit none
 c
         integer :: nub,nb,ib
-        real*8 :: BC(*),BP(*),ddat,DW(*)
+        real*8 :: bc(*),bp(*),ddat,dw(*)
 c
-        external BS
+        external sub_base
 c
-        call BS('f',nub,nb,BC,BP,DW) 
+        call sub_base('f',nub,nb,bc,bp,dw) 
 c
         ddat=0.0d0
         do ib=1,nb
-          ddat=ddat+DW(ib)
+          ddat=ddat+dw(ib)
         enddo
 c
         return

@@ -9,36 +9,35 @@ c       calculate the condition matrix for NP data points.
 c       call recurcive subroutines
 c
 c	input:
-c	  NP		Number of data points
-c         npm           not used anymore
-c         NT(NP)	Type of data (1->X,2->Y,3->Z,4->F ...) dim min (NP) 
-c         ND		space dimension
+c	  np		Number of data points
+c         nt(np)	Type of data (1->X,2->Y,3->Z,4->F ...) dim min (NP) 
+c         nd		space dimension
 c         nb            Number of base functions
 c         ppos		point position in ndD
-c         BS            the "Base functions" subroutine to use
-c         XYZF          X,Y,Z component and total field dim min (NP,4)
+c         sub_base      the "Base functions" subroutine to use
+c         xyzf          X,Y,Z component and total field dim min (NP,4)
 c		
 c       output:
-c	  AA(NP,NB)	matrix of conditions
+c	  aa(NP,NB)	matrix of conditions
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-	subroutine mkArows(np,npm,nt,nd,nb,ppos,bs,bc,AA)
+	subroutine mkArows(np,nt,nd,nb,ppos,sub_base,bc,aa)
 c
         implicit none
 c
-	integer np,npm,nt(*),nd,nb
-        real*8 ppos(nd+1,*),AA(np,*),bc(*)
+	integer np,nt(*),nd,nb
+        real*8 ppos(nd+1,*),aa(np,*),bc(*)
         real*8, allocatable :: row(:)
 c
-        integer ip,ib,j
+        integer ip,ib
 c
-        external bs
+        external sub_base
         allocate(row(1:nb))
 c
         do ip=1,np
-          call BS('i',nt(ip),nb,bc,ppos(1,ip),row)
+          call sub_base('i',nt(ip),nb,bc,ppos(1,ip),row)
           do ib=1,nb
-            AA(ip,ib)=row(ib)
+            aa(ip,ib)=row(ib)
           enddo
         enddo
         deallocate(row)

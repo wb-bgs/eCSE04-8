@@ -15,23 +15,23 @@ c          icov/jcov      integer arrays describing cov format
 c          cov            Covariance matrix in SLAP column format
 c          ddat           data vector
 c          xyzf           result of forward modelling
-c          fstd           std function
+c          fun_std        std function
 c
 c       output:
 c          std            STD value
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine cptstd_d2(npmax,ipg,npt,nt,icov,jcov,cov
-     >                                            ,ddat,xyzf,fstd,std)
+        subroutine cptstd_d2(npmax, ipg, npt, nt, icov, jcov, cov,
+     >                       ddat, xyzf, fun_std, std)
 c
         implicit none
 c
-        integer ip,ipg,npt,np,npmax,icov(*),jcov(*),id,i,nt(*),ipl
+        integer ip,ipg,npt,np,npmax,icov(*),jcov(*),i,nt(*),ipl
         real*8 std,ddat(*),xyzf(*),cov(*),std0
         real*8, allocatable :: dwgh(:),ddif(:)
 c
-        real*8 fstd
-        external fstd
+        real*8 fun_std
+        external fun_std
 c
         allocate(dwgh(1:npmax))
         allocate(ddif(1:npmax))
@@ -55,7 +55,7 @@ c  calculate the delta data
 c
 c  Calculate STD
           std0=std
-          std=fstd(nt(ipl),ip-1,np,std0,ddif,dwgh)
+          std=fun_std(nt(ipl),ip-1,np,std0,ddif,dwgh)
 c
           ip=ip+np
         enddo
