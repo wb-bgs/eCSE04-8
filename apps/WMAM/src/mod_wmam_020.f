@@ -13,7 +13,7 @@ c
 c
         include 'mpif.h'
 c
-        character(len=*), parameter :: VERSION="2.2.0"
+        character(len=*), parameter :: VERSION="3.0.0"
 c
         integer, parameter :: POLAK_RIBIERE=1
         integer, parameter :: CONJUGATE_GRADIENT=2
@@ -22,13 +22,12 @@ c
 c
         character fname*100
         character buf*100
+        integer fhandle
         integer i, j, ix, iy, il, im
         integer nx, ny
         integer itmax(3), nub
         real*8  std, stdt, dd, dl(3), wgh
         real*8  resdeg
-        real*8  longitude, colatitude
-        real*8  radius, magscalar
         integer shdeg, scheme
         integer ncoeffs, nparams
         integer ndatpts, nsampts, npts
@@ -46,6 +45,7 @@ c
         real*8, allocatable :: ppos(:,:), bc(:), cov(:), dw(:)
         real*8, allocatable :: gg(:,:), bb(:)
         real*8, allocatable :: err(:)
+        real*8 diff(4)
 c
 c  globlibi functions
         real*8 dsind, l2_std, l2_norm
@@ -162,44 +162,26 @@ c  Array allocations
         allocate(dw(nlocpts))
         
 c
-c  Read in reference field
+c  Read in reference model
         bc(1:nparams)=1.0d0
-        fname='./Data/coef_1990_15.dat'
+        fname='./Data/coef_1990_15.dat.bin'
         if (rank.eq.0) write(*,*)
-     >    'Reading in reference field, ', fname
-        call read_model(fname, ryg, bc, ncoeffs)
+     >    'Reading in reference model, ', fname
+        call mpi_read_ref_model(fname, ncoeffs, bc)
         if (rank.eq.0) then
           write(*,*) 'Coefficients: ', ncoeffs
           write(*,*) ''
         endif
+        if (ncoeffs .eq. 0) stop
 
+c
 c  Read in data
-        fname='./Data/wdmam_geocentric.dat'
-        if (rank.eq.0) then
-          write(*,*) 'Reading in data, ', fname
-          write(*,*) ''
-        endif
-        open(10,file=fname,status='old')
-          i=1
-          j=1
-          do ix=1,nx
-            do iy=1,ny
-              read(10,*) longitude, colatitude, radius, magscalar
-
-              if (i .ge. imin_locdatpts .and.
-     >            i .le. imax_locdatpts) then
-                ppos(1,j) = 90.0d0 - colatitude
-                ppos(2,j) = longitude
-                ppos(3,j) = radius
-                ppos(4,j) = ryg
-                ppos(ND+1,j) = magscalar
-                j=j+1
-              endif
-
-              i=i+1
-            enddo
-          enddo
-        close(10)
+        fname='./Data/wdmam_geocentric.dat.bin'
+        if (rank.eq.0) write(*,*)
+     >    'Reading in data, ', fname
+        call mpi_read_data(fname, ND, ndatpts, nlocdatpts,
+     >                     imin_locdatpts, ppos)
+        if (nlocdatpts .eq. 0) stop
         
 c
 c  Calculate CM4 components 
@@ -248,7 +230,6 @@ c  Add smoothing equations
      >                        imin_locpts, imin_locsampts,
      >                        ND, ncoeffs, shdeg, wgh, bc,
      >                        ijcov, cov, ppos)
-c
 
 c
 c  Finalise covariance matrix
@@ -256,21 +237,11 @@ c  Finalise covariance matrix
 
 c
 c  Read in starting model
-        fname='./Data/model.in'
-        if (rank.eq.0) then
-          write(*,*) 'Reading in starting model, ', fname
-          write(*,*) ''
-        endif
-        bc(1:nparams)=0.0d0
-        open(10,file=fname,status='old')
-          read(10,*)buf
-          read(10,*)buf
-          read(10,*)buf
-          read(10,*)buf
-          do i=1,nparams
-            read(10,*) j, bc(i), dd
-          enddo
-        close(10)
+        fname='./Data/model.in.bin'
+        if (rank.eq.0) write(*,*)
+     >    'Reading in starting model, ', fname
+        call mpi_read_model(fname, nparams, bc)
+        if (nparams .eq. 0) stop
 
 c
 c  Invert data
@@ -317,19 +288,51 @@ c
         deallocate(bb)
         deallocate(gg)
 c
+
         if (rank.eq.0) then
           write(*,'(A)')' '
           write(*,'(A,e15.7)') 'The L2 STD is: ',stdt
           write(*,'(A)')' '
+        endif
+
+        do i=0,nranks-1
+          if (rank .eq. i) then
+            call write_comp('./Results/fit_No_P.out',
+     >                      ND, 1, nlocdatpts,
+     >                      ppos, dw, diff(1:2))
+            call write_comp('./Results/fit_damp.out',
+     >                      ND, nlocdatpts+1, nlocpts,
+     >                      ppos, dw, diff(3:4))
+          endif
+          if (i .lt. nranks-1) then
+            call MPI_Barrier(MPI_COMM_WORLD, ierr)
+          else     
+            if (rank .eq. 0) then
+              call MPI_Reduce(MPI_IN_PLACE, diff, 4,
+     >                        MPI_DOUBLE_PRECISION,
+     >                        MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+            else
+              call MPI_Reduce(diff, diff, 4,
+     >                        MPI_DOUBLE_PRECISION,
+     >                        MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+            endif
+          endif
+        enddo
+        
+        if (rank .eq. 0) then
+          diff(1)=diff(1)/ndatpts
+          diff(2)=dsqrt((diff(2)-ndatpts*diff(1)**2)/ndatpts)
 c
-c  Writing fit to data per component
-          fname='./Results/fit_No_P.out'
-          call write_comp(fname,nlocpts,ND,1,nlocdatpts,ppos,dw)
-          fname='./Results/fit_damp.out'
-          call write_comp(fname,nlocpts,ND,nlocdatpts+1,nlocpts,
-     >                    ppos,dw)
+          write(*,'(2(A,f16.7))')'Residual average : ',diff(1)
+     >                          ,' with L2 std : ',diff(2)
+
+          diff(3)=diff(3)/nsampts
+          diff(4)=dsqrt((diff(4)-nsampts*diff(3)**2)/nsampts)
 c
-          
+          write(*,'(2(A,f16.7))')'Residual average : ',diff(3)
+     >                          ,' with L2 std : ',diff(4)
+
+c
           std=stdt*npts/(npts-nparams)
           allocate(err(1:nparams))
           err(1:nparams)=std

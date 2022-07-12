@@ -13,7 +13,7 @@ Example submission scripts can be found under [./tests/WMAM/submit](./tests/WMAM
 Input data for the L=200, 300 and 720 cases (where L is the spherical harmonic degree)
 can be found under [./tests/WMAM/shd](./tests/WMAM/shd).
 
-The input data for the L=1440 and L=2000 are too big to store within a git repo.
+The input data for L=1440 and L=2000 are too big to store within a git repo.
 
 Please note, it is recommended that you first copy the `./tests/WMAM` folder to
 `${HOME/home/work}/tests/WMAM`, submitting your jobs from a location outside the
