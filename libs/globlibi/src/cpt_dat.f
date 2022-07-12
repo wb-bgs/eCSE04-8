@@ -14,7 +14,7 @@ c
 c  Input:
 c       nub             base number 
 c       nb              Number of bases
-c       _base           Base subroutine to use (real*8 external function)
+c       sub_base        Base subroutine to use (real*8 external function)
 c       bc		Base coeff such that data= SUM{i} BC(i)*BS(i)
 c       bp              Base parameters for spatial and temporal positions
 c  Output:

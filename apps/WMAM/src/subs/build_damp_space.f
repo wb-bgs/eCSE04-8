@@ -53,8 +53,7 @@ c  MPI, determine rank
         integer ierr,rank
         call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
 c
-        r2=6371.2d0
-        r2=r2**2
+        r2=rag**2
         qpi=16.d0*datan(1.d0)
 c
 c  Define sampling points
@@ -65,7 +64,7 @@ c  Define sampling points
         do i=1,nsampts
           vrt(1,i)=dw2(1,i)
           vrt(2,i)=dw2(2,i)
-          vrt(3,i)=6371.2d0
+          vrt(3,i)=rag
           vrt(4,i)=ryg
         enddo
         deallocate (dw2)

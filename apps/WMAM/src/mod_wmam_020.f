@@ -13,7 +13,7 @@ c
 c
         include 'mpif.h'
 c
-        character(len=*), parameter :: VERSION="2.0.0"
+        character(len=*), parameter :: VERSION="2.1.0"
 c
         integer, parameter :: POLAK_RIBIERE=1
         integer, parameter :: CONJUGATE_GRADIENT=2
@@ -310,6 +310,8 @@ c  Deallocate arrays
         deallocate(dw)
         deallocate(proc_np,proc_ip)
         deallocate(proc_nsp,proc_isp)
+c
+        call fini_sph_wmam()
 c
         call MPI_Finalize(ierr)
 c

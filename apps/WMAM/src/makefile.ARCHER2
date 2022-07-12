@@ -11,9 +11,11 @@ RANLIB = ranlib
 
 VPATH=.:subs
 #--------------------------------------
-# rule to make .o from .f files
+# rule to make .o from .f and .F files
 .f.o:
-	 $(FC) $(FFLAGS) $< -c
+	$(FC) $(FFLAGS) $< -c
+.F.o:
+	$(FC) $(FFLAGS) $< -c
 #--------------------------------------
 OBJ=\
 sph_wmam.o\

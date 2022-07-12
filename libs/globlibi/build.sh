@@ -50,7 +50,7 @@ function set_compile_options {
 PE_RELEASE=21.09
 PRGENV=$1
 BUILD=$2
-VERSION=2.0
+VERSION=2.1
 ERRMSG="Invalid syntax: build.sh cray|gnu|aocc release|debug|craypat|armmap|scalasca <version>"
 
 if [[ "${PRGENV}" != "cray" && "${PRGENV}" != "gnu" && "${PRGENV}" != "aocc" ]]; then
