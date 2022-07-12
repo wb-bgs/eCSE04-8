@@ -23,8 +23,8 @@ c         iunit         unit to write outputs
 c         itm           Maximum number of iterations
 c         npmax         number max of data point with correlated errors
 c         nd            space dimension
-c         proc_np(*)    block lengths
-c         proc_ip(*)    data pointers
+c         nlocdatpts    number of data points local to rank
+c         proc_np       number of data+sampling points for all ranks
 c         ppos          data point position in ndD
 c         ddat          data values
 c         nb            Number or base function to use
@@ -33,9 +33,8 @@ c         src_stat      MPI gradient search status
 c         dl(3)         control lsearch process & damping
 c         sub_base      Base subroutine to use
 c         fun_std       std Function
-c         nt(*)         data type 
 c         cov(*)        covariance matrix in SLAP Column format
-c         icov/jcov     Integer vector describing cov format
+c         jcov          Integer vector describing cov format
 c         std           STD value for given BC
 c         ds(*)         gradient direction
 c
@@ -45,11 +44,9 @@ c         std           STD value for given BC+stp*DS
 c         xyzf(*)       Forward modelling for given BC+stp*DS
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine lsearch_p(iunit, itm, npmax, nd, 
-     >                       proc_np, proc_ip, ppos, ddat,
+     >                       nlocdatpts, proc_np, ppos, ddat,
      >                       nb, bc, src_stat, MPI_SEARCH_STATUS,
-     >                       dl, sub_base,
-     >                       fun_std, nt,
-     >                       cov, icov, jcov,
+     >                       dl, sub_base, fun_std, cov, jcov,
      >                       std, ds, stp, xyzf)
 c
         implicit none
@@ -57,24 +54,29 @@ c
         include 'mpif.h'
         include 'mpi_status_types.h'
 c
-        integer iunit,itm,npmax,nd,nb,nt(*),icov(*),jcov(*)
-        integer proc_np(*),proc_ip(*)
-        real*8 ppos(*),ddat(*),bc(*),cov(*),std,xyzf(*),ds(*),dl(*),stp
+        integer iunit,itm,npmax,nd,nlocdatpts,proc_np(*)
+        real*8 ppos(*),ddat(*)
+        integer nb
+        real*8 bc(*)
         type(search_status) src_stat
         integer MPI_SEARCH_STATUS
+        real*8 dl(*),cov(*)
+        integer jcov(*)
+        real*8 std,ds(*),stp,xyzf(*)
+c
+        real*8 fun_std
+        external sub_base,fun_std
 c
         integer i,im1,im2,it
+        integer ierr,rank,nlocpts
         real*8 dj(3),st(3),fct,fctt,fctl,fcts,dd,rt
         real*8 epss,stp1,stp2,gr,gl,numer,denom
         real*8, allocatable :: bcn(:)
         character yon_rf
 c
-        real*8 fun_std
-        external sub_base,fun_std
-c
 c  All defining parallel enviroment
-        integer ierr,rank
         call MPI_Comm_rank(MPI_COMM_WORLD,rank,ierr)
+        nlocpts = proc_np(rank+1)
 
         src_stat%stp=stp
 c
@@ -111,11 +113,11 @@ c               write(*,*)'lsearch_p: 1'
                 call MPI_BCAST(src_stat, 1, MPI_SEARCH_STATUS,
      >                         0, MPI_COMM_WORLD, ierr)
                 bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
-                call cpt_dat_vals_p(nd, proc_np, proc_ip,
-     >                              nt, ppos, nb, bcn,
-     >                              sub_base, xyzf)
-                call cptstd_dp(npmax, proc_np, proc_ip,
-     >                         nt, icov, jcov, cov, ddat,
+                call cpt_dat_vals_p2(nd, nlocdatpts, nlocpts,
+     >                               ppos, nb, bcn,
+     >                               sub_base, xyzf)
+                call cptstd_dp(npmax, proc_np,
+     >                         jcov, cov, ddat,
      >                         xyzf, fun_std, std)
                 dj(3)=std
                 dd=dabs(dj(3)-dj(1))/dj(1)
@@ -145,12 +147,12 @@ c                       write(*,*)'lsearch_p: 2'
                         call MPI_BCAST(src_stat, 1, MPI_SEARCH_STATUS,
      >                                 0, MPI_COMM_WORLD, ierr)
                         bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
-                        call cpt_dat_vals_p(nd, proc_np, proc_ip,
-     >                                      nt, ppos, nb, bcn,
-     >                                      sub_base, xyzf)
-                        call cptstd_dp(npmax, proc_np, proc_ip,
-     >                                 nt, icov, jcov, cov,
-     >                                 ddat, xyzf, fun_std, std)
+                        call cpt_dat_vals_p2(nd, nlocdatpts, nlocpts,
+     >                                       ppos, nb, bcn,
+     >                                       sub_base, xyzf)
+                        call cptstd_dp(npmax, proc_np,
+     >                                 jcov, cov, ddat,
+     >                                 xyzf, fun_std, std)
                         dj(i)=std
                         st(i)=src_stat%stp
                         it=it+1
@@ -177,12 +179,12 @@ c                       write(*,*)'lsearch_p: 3'
                         call MPI_BCAST(src_stat, 1, MPI_SEARCH_STATUS,
      >                                 0, MPI_COMM_WORLD, ierr)
                         bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
-                        call cpt_dat_vals_p(nd, proc_np, proc_ip,
-     >                                      nt, ppos, nb, bcn,
-     >                                      sub_base, xyzf)
-                        call cptstd_dp(npmax, proc_np, proc_ip,
-     >                                 nt, icov, jcov, cov,
-     >                                 ddat, xyzf, fun_std, std)
+                        call cpt_dat_vals_p2(nd, nlocdatpts, nlocpts,
+     >                                       ppos, nb, bcn,
+     >                                       sub_base, xyzf)
+                        call cptstd_dp(npmax, proc_np,
+     >                                 jcov, cov, ddat,
+     >                                 xyzf, fun_std, std)
                         dj(im2)=std
                         st(im2)=src_stat%stp
                         it=it+1
@@ -259,12 +261,12 @@ c                   write(*,*)'lsearch_p: 4'
                     call MPI_BCAST(src_stat, 1, MPI_SEARCH_STATUS,
      >                             0, MPI_COMM_WORLD, ierr)
                     bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
-                    call cpt_dat_vals_p(nd, proc_np, proc_ip,
-     >                                  nt, ppos, nb, bcn,
-     >                                  sub_base, xyzf)
-                    call cptstd_dp(npmax, proc_np, proc_ip,
-     >                             nt, icov, jcov, cov,
-     >                             ddat, xyzf, fun_std, std)
+                    call cpt_dat_vals_p2(nd, nlocdatpts, nlocpts,
+     >                                   ppos, nb, bcn,
+     >                                   sub_base, xyzf)
+                    call cptstd_dp(npmax, proc_np,
+     >                             jcov, cov, ddat,
+     >                             xyzf, fun_std, std)
 
                     if (src_stat%stp.gt.st(im1)) then
                         if (std.ge.dj(im1)) then
@@ -322,11 +324,11 @@ c           write(*,*)'lsearch_p: 5'
             call MPI_BCAST(src_stat, 1, MPI_SEARCH_STATUS,
      >                     0, MPI_COMM_WORLD, ierr)
             bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
-            call cpt_dat_vals_p(nd, proc_np, proc_ip,
-     >                          nt, ppos, nb, bcn,
-     >                          sub_base, xyzf)
-            call cptstd_dp(npmax, proc_np, proc_ip,
-     >                     nt, icov, jcov, cov, ddat,
+            call cpt_dat_vals_p2(nd, nlocdatpts, nlocpts,
+     >                           ppos, nb, bcn,
+     >                           sub_base, xyzf)
+            call cptstd_dp(npmax, proc_np,
+     >                     jcov, cov, ddat,
      >                     xyzf, fun_std, std)
 c
 c
@@ -342,13 +344,13 @@ c  SP while asked to do some work
 c  SP  Receive bcn value from master
 c  SP do the work
                 bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
-                call cpt_dat_vals_p(nd, proc_np, proc_ip,
-     >                              nt, ppos, nb, bcn,
-     >                              sub_base, xyzf)
+                call cpt_dat_vals_p2(nd, nlocdatpts, nlocpts,
+     >                               ppos, nb, bcn,
+     >                               sub_base, xyzf)
 
-                call cptstd_dp(npmax, proc_np, proc_ip,
-     >                         nt, icov, jcov, cov,
-     >                         ddat, xyzf, fun_std, std)
+                call cptstd_dp(npmax, proc_np,
+     >                         jcov, cov, ddat,
+     >                         xyzf, fun_std, std)
 
 c  SP wait for info on next iteration
                 call MPI_BCAST(src_stat, 1, MPI_SEARCH_STATUS,
@@ -358,12 +360,12 @@ c  SP wait for info on next iteration
 c  SP receive final stp from master & does the final piece of work 
             bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
 
-            call cpt_dat_vals_p(nd, proc_np, proc_ip,
-     >                          nt, ppos, nb, bcn,
-     >                          sub_base, xyzf)
+            call cpt_dat_vals_p2(nd, nlocdatpts, nlocpts,
+     >                           ppos, nb, bcn,
+     >                           sub_base, xyzf)
 
-            call cptstd_dp(npmax, proc_np, proc_ip,
-     >                     nt, icov, jcov, cov, ddat,
+            call cptstd_dp(npmax, proc_np,
+     >                     jcov, cov, ddat,
      >                     xyzf, fun_std, std)
         endif
 c

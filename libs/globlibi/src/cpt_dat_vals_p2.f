@@ -8,8 +8,8 @@ c       Called: cpt_dat_vals
 c
 c       input:
 c         nd            Space dimension
-c         np            number of data points
-c         nt            basis number for each point
+c         nlocdatpts    number of data points local to rank
+c         nlocpts       number of data+sampling points local to rank
 c         ppos(nd+1,*)  point position in ndD
 c         nb            Number of base functions
 c         bc            base coefficients
@@ -19,18 +19,19 @@ c       output:
 c         XYZF(*)       X,Y,Z or F value at point position
 c        
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine cpt_dat_vals_p(nd, np, nt, ppos, nb, bc,
-     >                            sub_base, xyzf)
+        subroutine cpt_dat_vals_p2(nd, nlocdatpts, nlocpts, ppos,
+     >                             nb, bc, sub_base, xyzf)
 c
         implicit none
 c
-        integer :: nd,np,nt,nb
-        real*8  :: ppos(nd+1,*),bc(*),xyzf(*)
+        integer :: nd, nb
+        integer :: nlocdatpts, nlocpts
+        real*8  :: ppos(nd+1,*), bc(*), xyzf(*)
 c
         external sub_base
 c
-        call cpt_dat_vals(nd, np, nt, ppos,
-     >                    nb, bc, sub_base, xyzf)
- 
+        call cpt_dat_vals2(nd, nlocdatpts, nlocpts, ppos,
+     >                     nb, bc, sub_base, xyzf)
+c 
         return
         end

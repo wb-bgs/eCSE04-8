@@ -23,10 +23,8 @@ c       Called: cptstd_d2, MPI_ALLGATHER
 c
 c       input:
 c          npmax          number max of data point with correlated errors
-c          proc_np(*)     block lengths
-c          proc_ip(*)     data pointers
-c          nt             array of data type
-c          icov/jcov      integer arrays describing cov format
+c          proc_np        number of data+sampling points for all ranks
+c          jcov           integer arrays describing cov format
 c          cov            Covariance matrix in SLAP column format
 c          ddat           data vector
 c          xyzf           result of forward modelling
@@ -36,36 +34,34 @@ c       output:
 c          std            STD value
 c        
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine cptstd_dp(npmax, proc_np, proc_ip, nt,
-     >                       icov, jcov, cov, ddat, xyzf,
+        subroutine cptstd_dp(npmax, proc_np, jcov, cov, ddat, xyzf,
      >                       fun_std, std)
 c
         implicit none
 c
         include 'mpif.h'
 c
-        integer :: npmax,icov(*),jcov(*),nt(*)
-        integer :: ip,np
-        integer :: proc_np(*),proc_ip(*)
-        real*8  :: cov(*),ddat(*),xyzf(*),std,dw
-        real*8, allocatable :: vstd(:),vnp(:)
-c
+        integer :: npmax,proc_np(*),jcov(*)
+        real*8  :: cov(*),ddat(*),xyzf(*)       
         real*8 fun_std
         external fun_std
-c
+        real*8 std
+
+        integer ip,np,nlocpts
         integer ierr,rank,nranks
+        real*8 dw
+        real*8, allocatable :: vstd(:),vnp(:)
+c
         call MPI_Comm_size(MPI_COMM_WORLD,nranks,ierr)
         call MPI_Comm_rank(MPI_COMM_WORLD,rank,ierr)
+        nlocpts = proc_np(rank+1)
 c
         allocate(vstd(1:nranks),vnp(1:nranks))
 c
-c  All: find out what are the data to work with
-        np=proc_np(rank+1)
-        ip=proc_ip(rank+1)+1
-c
 c  All: Now does the work
-        call cptstd_d2(npmax, ip, np, nt, icov, jcov,
-     >                 cov, ddat, xyzf, fun_std, std)
+        call cptstd_d2(npmax, 1, nlocpts, jcov,
+     >                 cov, ddat, xyzf,
+     >                 fun_std, std)
 c
 c  All: Gather the results from other Processes
         vstd(rank+1)=std
@@ -77,7 +73,7 @@ c  ALL: put together all STDs
         vnp=dble(proc_np(1:nranks))
         np=-nranks
         ip=0
-        std=fun_std(nt,ip,np,dw,vstd,vnp)
+        std=fun_std(ip,np,dw,vstd,vnp)
 c
         deallocate(vstd,vnp)
         return

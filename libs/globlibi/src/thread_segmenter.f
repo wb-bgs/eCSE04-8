@@ -14,7 +14,7 @@ c      nelems INTEGER array length in question
 c
 c   output:
 c      proc_np(*) INTEGER  block lengths (dim min = size)
-c      proc_ip(*) INTEGER  data pointers (dim min = size)
+c      proc_ip(*) INTEGER  data indexes (dim min = size)
 c
 c   remarks:
 c      1- no checks at 'proc_np' and 'proc_ip', content overwritten,
@@ -43,10 +43,8 @@ c
 c Deal with remaining part
         if (n.gt.0) proc_np(1:n)=proc_np(1:n)+1
 c
-c Set integer pointers
-c proc_ip now holds displacement values in order
-c to be compatible with mpi allgatherv
-        proc_ip(1)=0
+c Set indexes
+        proc_ip(1)=1
         do i=2,nranks
           proc_ip(i)=proc_ip(i-1)+proc_np(i-1) 
         enddo

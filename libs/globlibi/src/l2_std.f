@@ -19,42 +19,44 @@ c
 c       All stds are computed with an L2 norm
 c
 c     input np>0:
-c       nub     type of data
 c       npt     np total number of point used to compute std
-c       std     values of std computed with npt points
 c       np      number of point added in this itteration
+c       std     values of std computed with npt points
 c	mv	misfit vector dimmin np
 c       wgh	vector of 1/variances dimmin np
 c     input np<0:
-c       nub     type of data
 c       np      (-1*) number of std to be added
 c	mv	std values  dimmin -np
 c       wgh	number of point used to compute stds dimmin -np
 c    
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-	real*8 function l2_std(nub,npt,np,std,mv,wgh) 
+        real*8 function l2_std(npt, np, std, mv, wgh) 
 c
         implicit none
 c
-        integer npt,np,i,nub(*),nn
-        real*8 mv(*),std,wgh(*),dd
+        integer npt, np, i, nn
+        real*8 mv(*), std, wgh(*), dd
 c
-        if(np.ge.0)then
+        if (np.ge.0) then
+
           dd=dble(npt)*std**2
           do i=1,np
-            dd=dd+wgh(i)*mv(i)**2
+            dd = dd+wgh(i)*mv(i)**2
           enddo
 c
-          l2_std=dsqrt(dd/dble(npt+np))
+          l2_std = dsqrt(dd/dble(npt+np))
+
         else
-          dd=0.0d0
-          nn=0
+
+          dd = 0.0d0
+          nn = 0
           do i=1,-np
-            dd=dd+wgh(i)*mv(i)**2
-            nn=nn+idnint(wgh(i))
+            dd = dd + wgh(i)*mv(i)**2
+            nn = nn + idnint(wgh(i))
           enddo
 c
-          l2_std=dsqrt(dd/dble(nn))
+          l2_std = dsqrt(dd/dble(nn))
+
         endif
 c
         return

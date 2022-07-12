@@ -9,35 +9,34 @@ c
 c       input:
 c          npmax          number max of data point with correlated errors
 c          nd             space dimension
-c          proc_np(*)     block lengths
-c          proc_ip(*)     data pointers
+c          nlocdatpts     number of data points local to rank
+c          nlocpts        number of data+sampling points local to rank
 c          ppos           data point position in ndD
 c          nb             Number or base function to use
 c          fun_mf         misfit function (like l2_norm.f)
 c          sub_base       the "Base functions" subroutine to use
 c          bc             Estimation of Base function coefficients
 c          ds             current descent direction
-c          icov/jcov      integer arrays describing cov format
+c          jcov           integer arrays describing cov format
 c          cov            Covariance matrix in SLAP column format
 c          ddat           data vector
-c          nt             vector indicating data type
 c          xyzf           result of forward modelling
 c
 c       output:
 c          zz             Vector A^t.W.A.ds (nb)
 c        
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine cptAtWAds_p(npmax, nd, proc_np, proc_ip,
+        subroutine cptAtWAds_p(npmax, nd, nlocdatpts, nlocpts,
      >                         ppos, nb, fun_mf, sub_base, bc, ds,
-     >                         icov, jcov, cov, ddat, nt,
+     >                         jcov, cov, ddat,
      >                         xyzf, zz)
 c
         implicit none
 c
         include 'mpif.h'
 c
-        integer npmax,nd,nb,icov(*),jcov(*),nt(*)
-        integer proc_np(*),proc_ip(*)
+        integer npmax,nd,nb,jcov(*)
+        integer nlocdatpts,nlocpts
         real*8 ddat(*),xyzf(*),cov(*),ppos(*),bc(*),ds(*)
         real*8 zz(*)
 c
@@ -50,15 +49,13 @@ c  All defining parallel enviroment
         integer ierr,rank
         call MPI_Comm_rank(MPI_COMM_WORLD,rank,ierr)
 c
-c  All: find out what are the data to work with
-        np=proc_np(rank+1)
-        ip=proc_ip(rank+1)+1
-c
 c  All: Now does the work
-        call cptAtWAds(npmax, np, ip, nd, ppos, nb,
+        call cptAtWAds(npmax, nlocdatpts, nlocpts, 1,
+     >                 nd, ppos, nb,
      >                 fun_mf, sub_base, bc, ds,
-     >                 icov, jcov, cov, ddat, nt,
+     >                 jcov, cov, ddat,
      >                 xyzf, zz)
+
 c
 c  All: Gather & SUM the zzt results from ALL the other Processes
         call MPI_ALLREDUCE(MPI_IN_PLACE, zz, nb, MPI_DOUBLE_PRECISION,

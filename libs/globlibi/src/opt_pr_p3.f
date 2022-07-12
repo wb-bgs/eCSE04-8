@@ -50,10 +50,9 @@ c         path          path where should be writen outputs
 c         itmax(3)      array for Maximum number of iterations
 c         npmax         number max of data point with correlated errors
 c         nd            space dimension
-c         npt           Total Number of data
 c         nb            Number of parameters
-c         proc_np(*)    block lengths
-c         proc_ip(*)    data pointers
+c         nlocdatpts    number of data points local to rank
+c         proc_np       number of data+sampling points for all ranks
 c         ppos          data point position in ndD + data value
 c         bc            Estimate of Base function coefficients
 c         dl(3)         control process + damping factor
@@ -61,9 +60,8 @@ c         fun_mf        misfit function (like l2_norm.f)
 c         sub_base      Base subroutine to use
 c         fun_std       std Function
 c         sub_damp      damping -- not implemented
-c         nt(*)         data type 
 c         cov(*)        covariance matrix in SLAP Column format
-c         icov/jcov     Integer vector describing cov format
+c         jcov          Integer vector describing cov format
 c         stdt          target STD value
 c
 c       output:
@@ -71,30 +69,33 @@ c         stdt          STD value for given BC
 c         xyzf(*)       Forward modelling for given BC
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine opt_pr_p3(path, itmax, npmax, nd, npt, nb,
-     >                       proc_np, proc_ip, ppos, bc, dl,
+        subroutine opt_pr_p3(path, itmax, npmax, nd, nb,
+     >                       nlocdatpts, proc_np, ppos, bc, dl,
      >                       fun_mf, sub_base, fun_std, sub_damp,
-     >                       nt, cov, icov, jcov, stdt, xyzf,
-     >                       bb, gg)
+     >                       cov, jcov, stdt, xyzf, bb, gg)
 c
         implicit none
 c
         include 'mpif.h'
         include 'mpi_status_types.h'
 c
-        integer itmax(*),npmax,nd,npt,nb,nt(*),icov(*),jcov(*)
-        integer proc_np(*),proc_ip(*)
-        real*8 ppos(*),bc(*),cov(*),stdt,xyzf(*),dl(*)
+        integer itmax(*),npmax,nd,nb,nlocdatpts,proc_np(*)
+        real*8 ppos(*),bc(*),dl(*),cov(*)
+        integer jcov(*)
+        real*8 stdt,xyzf(*)
+        real*8, optional :: bb(:),gg(:)
         character path*100
 c
+        real*8 fun_mf,fun_std
+        external fun_mf,sub_base,fun_std,sub_damp     
+c
         integer i,ip,it,itm,iunit,ipth,itm_l,itm_r
+        integer ierr,rank,nlocpts
         real*8 stdo,stp,std,epss,dd,cond,dm,beta
 c
         type(inversion_status) inv_stat
         type(search_status) src_stat
         integer MPI_INVERSION_STATUS, MPI_SEARCH_STATUS
-c
-        real*8, optional :: gg(:),bb(:)
 c
 c       inv_stat%yon(1:1) => yon_it
 c       inv_stat%yon(2:2) => yon_fwd
@@ -106,13 +107,11 @@ c
         real*8, allocatable :: gj(:),gjo(:)
         real*8, allocatable :: ghj(:),ghjo(:)
 c
-        real*8 fun_mf,fun_std
-        external fun_mf,sub_base,fun_std,sub_damp
-
-c
 c All defining parallel enviroment
-        integer ierr,rank
+
         call MPI_Comm_rank(MPI_COMM_WORLD,rank,ierr)
+        nlocpts = proc_np(rank+1)
+
 c
 c Commit the inversion and gradient search MPI status types
         call init_mpi_status_types(nb,bc,inv_stat,src_stat,
@@ -126,10 +125,10 @@ c
         allocate (ds(1:nb))
         allocate (gj(1:nb))
         allocate (ghj(1:nb))
-        allocate (ddat(1:npt))
+        allocate (ddat(1:nlocpts))
 c
 c Open file for linear search outputs
-        if( rank.eq.0) then
+        if (rank.eq.0) then
             ipth=0
             do while (path(ipth+1:ipth+1).ne.' ')
                 ipth=ipth+1
@@ -163,9 +162,10 @@ c Starting conditions
         if (itm.eq.0) inv_stat%yon(3:4)='nn'
 c
 c All define data set
-        do ip=1,npt
+        do ip=1,nlocpts
             ddat(ip)=ppos(ip*(nd+1))
         enddo
+
 c
 c All start iteration
         do while (inv_stat%yon(1:1).eq.'y')
@@ -173,12 +173,14 @@ c All start iteration
 c All: do their part in forward modelling
             if (inv_stat%yon(2:2).eq.'y') then
 c               if(rank.eq.0)write(*,*)'opt_pr_p3: 1'
-                call cpt_dat_vals_p(nd, proc_np, proc_ip,
-     >                              nt, ppos, nb, inv_stat%bc,
-     >                              sub_base, xyzf)
-                call cptstd_dp(npmax, proc_np, proc_ip,
-     >                         nt, icov, jcov, cov,
-     >                         ddat, xyzf, fun_std, std)
+                
+                call cpt_dat_vals_p2(nd, nlocdatpts, nlocpts,
+     >                               ppos, nb, inv_stat%bc,
+     >                               sub_base, xyzf)
+c
+                call cptstd_dp(npmax, proc_np,
+     >                         jcov, cov, ddat, xyzf,
+     >                         fun_std, std)
                 stdo=std
             endif
 c
@@ -191,11 +193,11 @@ c All: do their part in finding GJ, DH
 c
                 if (itmax(1).ge.0.or.it.ne.1) then
 c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 2'
-                    call ssqgh_dp(npmax, nd, proc_np, proc_ip,
+                    call ssqgh_dp(npmax, nd, nlocdatpts, nlocpts,
      >                            ppos, nb, fun_mf, sub_base,
      >                            inv_stat%bc,
-     >                            icov, jcov, cov, ddat,
-     >                            nt, xyzf, gj, dh)
+     >                            jcov, cov, ddat,
+     >                            xyzf, gj, dh)
                 else
                     if (present(bb)) then
                         gj(1:nb)=bb(1:nb)
@@ -283,30 +285,31 @@ c ALL: search minimum in descent direction
      >              inv_stat%yon(5:5) .eq. 'r') then
                     if (itmax(3).ge.0) then
 c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 4'
-                        call gc_step_p(iunit, npmax, nd, npt,
-     >                                 proc_np, proc_ip, ppos, ddat,
+                        call gc_step_p(iunit, npmax, nd,
+     >                                 nlocdatpts, proc_np,
+     >                                 ppos, ddat,
      >                                 nb, inv_stat%bc,
      >                                 fun_std, sub_base,
-     >                                 nt, cov, icov, jcov, std,
+     >                                 cov, jcov, std,
      >                                 gj, ghj, ds, stp, xyzf)
                     else
 c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 5'
                         call lsearch_p(iunit, itm_l, npmax, nd, 
-     >                                 proc_np, proc_ip, ppos, ddat,
+     >                                 nlocdatpts, proc_np, ppos, ddat,
      >                                 nb, inv_stat%bc,
      >                                 src_stat, MPI_SEARCH_STATUS,
      >                                 dl, sub_base, fun_std,
-     >                                 nt, cov, icov, jcov,
+     >                                 cov, jcov,
      >                                 std, ds, stp, xyzf)
                     endif
                 else
 c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 6'
                     call lsearch_p(iunit, itm_l, npmax, nd, 
-     >                             proc_np, proc_ip, ppos, ddat,
+     >                             nlocdatpts, proc_np, ppos, ddat,
      >                             nb, inv_stat%bc,
      >                             src_stat, MPI_SEARCH_STATUS,
      >                             dl, sub_base, fun_std,
-     >                             nt, cov, icov, jcov,
+     >                             cov, jcov,
      >                             std, ds, stp, xyzf)
                 endif
 

@@ -13,17 +13,16 @@ c
 c       input:
 c          npmax          number max of data point with correlated errors
 c          nd             space dimension
-c          proc_np(*)     block lengths
-c          proc_ip(*)     data pointers
+c          nlocdatpts     number of data points local to rank
+c          nlocpts        number of data+sampling points local to rank
 c          ppos           data point position in ndD
 c          nb             Number or base function to use
 c          fun_mf         misfit function (like l2_norm.f)
 c          sub_base       the "Base functions" subroutine to use
 c          bc             Estimation of Base function coefficients
-c          icov/jcov      integer arrays describing cov format
+c          jcov           integer arrays describing cov format
 c          cov            Covariance matrix in SLAP column format
 c          ddat           data vector
-c          nt             vector indicating data type
 c          xyzf           result of forward modelling
 c
 c       output:
@@ -31,21 +30,21 @@ c          gj             gradient of the weighted sum of squares (nb)
 c          hj             diagonal of the Hessian (nb)
 c        
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine ssqgh_dp(npmax, nd, proc_np, proc_ip,
+        subroutine ssqgh_dp(npmax, nd, nlocdatpts, nlocpts,
      >                      ppos, nb, fun_mf, sub_base, bc,
-     >                      icov, jcov, cov, ddat,
-     >                      nt, xyzf, gj, hj)
+     >                      jcov, cov, ddat,
+     >                      xyzf, gj, hj)
 c
         implicit none
 c
         include 'mpif.h'
 c
-        integer npmax,nd,nb,icov(*),jcov(*),nt(*)
-        integer proc_np(*),proc_ip(*)
+        integer npmax,nd,nb,jcov(*)
+        integer nlocdatpts,nlocpts
         real*8 ddat(*),xyzf(*),cov(*),ppos(*),bc(*)
         real*8 gj(*),hj(*)
 c
-        integer :: ip,np,nb2
+        integer :: nb2
         real*8, allocatable :: gj_hj(:)
 c
         real*8 fun_mf
@@ -55,18 +54,15 @@ c  All defining parallel enviroment
         integer ierr,rank
         call MPI_Comm_rank(MPI_COMM_WORLD,rank,ierr)
 c
-c  All: find out what are the data to work with
-        np=proc_np(rank+1)
-        ip=proc_ip(rank+1)+1
-c
 c  All: Now does the work
         nb2=nb*2
         allocate(gj_hj(1:nb2))
 c
-        call ssqgh_d(npmax, np, ip, nd, ppos, nb,
+        call ssqgh_d(npmax, nlocdatpts, nlocpts, 1,
+     >               nd, ppos, nb,
      >               fun_mf, sub_base, bc,
-     >               icov, jcov, cov,
-     >               ddat, nt, xyzf,
+     >               jcov, cov,
+     >               ddat, xyzf,
      >               gj_hj(1), gj_hj(nb+1))
 c
 c  All: Gather & SUM the GJ and HJ results from ALL the other Processes

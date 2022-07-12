@@ -27,7 +27,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
         implicit none
 c
-        integer :: nub,nb,ib
+        integer :: nub,nb,i
         real*8 :: bc(*),bp(*),ddat,dw(*)
 c
         external sub_base
@@ -35,8 +35,8 @@ c
         call sub_base('f',nub,nb,bc,bp,dw) 
 c
         ddat=0.0d0
-        do ib=1,nb
-          ddat=ddat+dw(ib)
+        do i=1,nb
+          ddat=ddat+dw(i)
         enddo
 c
         return

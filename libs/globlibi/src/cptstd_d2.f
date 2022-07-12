@@ -10,8 +10,7 @@ c       input:
 c          npmax          number max of data points handled together
 c          ipg            number of the starting point
 c          npt            number of data points
-c          nt             array of data type
-c          icov/jcov      integer arrays describing cov format
+c          jcov           integer arrays describing cov format
 c          cov            Covariance matrix in SLAP column format
 c          ddat           data vector
 c          xyzf           result of forward modelling
@@ -21,12 +20,12 @@ c       output:
 c          std            STD value
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine cptstd_d2(npmax, ipg, npt, nt, icov, jcov, cov,
+        subroutine cptstd_d2(npmax, ipg, npt, jcov, cov,
      >                       ddat, xyzf, fun_std, std)
 c
         implicit none
 c
-        integer ip,ipg,npt,np,npmax,icov(*),jcov(*),i,nt(*),ipl
+        integer ip,ipg,npt,np,npmax,jcov(*),i,ipl
         real*8 std,ddat(*),xyzf(*),cov(*),std0
         real*8, allocatable :: dwgh(:),ddif(:)
 c
@@ -55,7 +54,7 @@ c  calculate the delta data
 c
 c  Calculate STD
           std0=std
-          std=fun_std(nt(ipl),ip-1,np,std0,ddif,dwgh)
+          std=fun_std(ip-1,np,std0,ddif,dwgh)
 c
           ip=ip+np
         enddo

@@ -20,7 +20,8 @@ c       subroutines
 c
 c       input:
 c          npmax          number max of data points handled together
-c          npt            total number of data points
+c          nlocdatpts     number of data points local to rank
+c          nlocpts        number of data+sampling points local to rank
 c          ipg            where to start in data file!
 c          nd             space dimension
 c          ppos           data point position in ndD
@@ -28,10 +29,11 @@ c          nb             Number or base function to use
 c          fun_mf         misfit function (like l2_norm.f)
 c          sub_base       the "Base functions" subroutine to use
 c          bc             Estimation of Base function coefficients
-c          icov/jcov      integer arrays describing cov format
+c          jcov           integer arrays describing cov format
 c          cov            Covariance matrix in SLAP column format
 c          ddat           data vector
-c          nt             vector indicating data type 
+c          ntv(2)         basis number for each point
+c          ntn(2)         point count for each basis number
 c          xyzf           result of forward modelling
 c
 c       output:
@@ -39,18 +41,21 @@ c          gj             gradient of the weighted sum of squares (nb)
 c          hj             diagonal of the Hessian (nb)
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine ssqgh_d(npmax, npt, ipg, nd, ppos, nb,
-     >                     fun_mf, sub_base, bc, icov, jcov, cov,
-     >                     ddat, nt, xyzf, gj, hj)
+        subroutine ssqgh_d(npmax, nlocdatpts, nlocpts, ipg,
+     >                     nd, ppos, nb,
+     >                     fun_mf, sub_base, bc, jcov, cov,
+     >                     ddat, xyzf, gj, hj)
 c
         implicit none
 c
-        integer ip,npt,np,npmax,nd,nb,icov(*),jcov(*)
-        integer i,ipg,ipl,nt(*)
+        integer ip,nlocdatpts,nlocpts
+        integer np,npmax,nd,nb,jcov(*)
+        integer i,ipg,ipl
+        integer, allocatable :: ntval(:)
         real*8 ddat(*),xyzf(*),cov(*),ppos(nd+1,*),bc(*)
         real*8 gj(*),hj(*)
-        real*8, allocatable :: dwgh(:),vmf(:)
-        real*8, allocatable :: ddif(:),aa(:)
+c       real*8, allocatable :: vmf(:)
+        real*8, allocatable :: dwgh(:),ddif(:),aa(:)
 c
         real*8 fun_mf
         external fun_mf,sub_base
@@ -58,19 +63,33 @@ c
 c  ipg : ip global
 c  ipl : ip local
 c
-        allocate(dwgh(1:npmax),vmf(1:npmax))
-        allocate(ddif(1:npmax),aa(1:npmax*nb))
+c       allocate(vmf(1:npmax))
+        allocate(dwgh(1:npmax),ddif(1:npmax),aa(1:npmax*nb))
+        allocate(ntval(1:npmax))
 c
         gj(1:nb)=0.0d0
         hj(1:nb)=0.0d0
+        ntval(1:npmax)=0
+c
 c
         ip=1
-        do while (ip.le.npt) 
+        do while (ip.le.nlocpts) 
           ipl=ipg+ip-1
-          np=min0(npt-ip+1,npmax)
+          np=min0(nlocpts-ip+1,npmax)
+
+          do i=1,np
+            if (ip-1+i .le. nlocdatpts) then
+c  data points
+              ntval(i)=1
+            else
+c  sampling points
+              ntval(i)=100
+            endif
+          enddo
+c        
 c
 c Calculate the equations of condition
-          call mkArows(np,nt(ipl),nd,nb,ppos(1,ipl),sub_base,bc,aa)
+          call mkArows(np,ntval,nd,nb,ppos(1,ipl),sub_base,bc,aa)
 c
 c  calculate the delta data
           do i=1,np
@@ -83,19 +102,21 @@ c  Calculate the inverse covariance matrix
           enddo
 c
 c Calculate msft vector
-          do i=1,np
-            vmf(i)=ddif(i)*dsqrt(dwgh(i))
-          enddo
+c         do i=1,np
+c            vmf(i)=ddif(i)*dsqrt(dwgh(i))
+c         enddo
+
 c
 c Update the G matrix and B vector
-          call concoct_GJ(nt(ipl),fun_mf,nb,np,vmf,dwgh,aa,ddif,gj)
-          call concoct_HJ(nt(ipl),fun_mf,nb,np,vmf,dwgh,aa,hj)
+          call concoct_GJ(fun_mf,nb,np,dwgh,aa,ddif,gj)
+          call concoct_HJ(fun_mf,nb,np,dwgh,aa,hj)
 c
-          ip=ip+np
+          ip = ip + np
         enddo
 c
-        deallocate(dwgh,vmf)
-        deallocate(ddif,aa)
+        deallocate(dwgh,ddif,aa)
+        deallocate(ntval)
+c       deallocate(vmf)
 c
         return
         end

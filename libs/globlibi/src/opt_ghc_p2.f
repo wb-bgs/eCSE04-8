@@ -15,10 +15,9 @@ c         path          path where should be writen outputs
 c         itmax(3)      array for Maximum number of iterations
 c         npmax         number max of data point with correlated errors
 c         nd            space dimension
-c         npt           Total Number of data
 c         nb            Number of parameters
-c         proc_np(*)    block lengths
-c         proc_ip(*)    data pointers
+c         nlocdatpts    number of data points local to rank
+c         proc_np       number of data+sampling points for all ranks
 c         ppos          data point position in ndD + data value
 c         BC            Estimate of Base function coefficients
 c         dl(3)         control process parameter
@@ -26,9 +25,8 @@ c         fun_mf        misfit function (like l2_norm.f)
 c         sub_base      Base subroutine to use
 c         fun_std       std Function
 c         sub_damp      damping -- not implemented
-c         nt(*)         data type 
 c         cov(*)        covariance matrix in SLAP Column format
-c         icov/jcov     Integer vector describing cov format
+c         jcov          Integer vector describing cov format
 c         stdt          target STD value
 c
 c       output:
@@ -36,26 +34,31 @@ c         stdt          STD value for given BC
 c         xyzf(*)       Forward modelling for given BC
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine opt_ghc_p2(path, itmax, npmax, nd, npt, nb,
-     >                        proc_np, proc_ip, ppos, bc, dl,
+        subroutine opt_ghc_p2(path, itmax, npmax, nd, nb,
+     >                        nlocdatpts, proc_np, ppos, bc, dl,
      >                        fun_mf, sub_base, fun_std, sub_damp,
-     >                        nt, cov, icov, jcov, stdt,
+     >                        cov, jcov, stdt,
      >                        xyzf, bb, gg)
 c
         implicit none
 c
         include 'mpif.h'
 c
-        integer itmax(*),npmax,nd,npt,nb,nt(*),icov(*),jcov(*)
-        integer proc_np(*),proc_ip(*)
-        real*8 ppos(*),bc(*),cov(*),stdt,xyzf(*),dl(*)
+        integer itmax(*),npmax,nd,nb,nlocdatpts
+        integer proc_np(*)
+        real*8 ppos(*),bc(*),dl(*),cov
+        integer jcov(*)
+        real*8 stdt,xyzf(*)
+        real*8, optional :: bb(:),gg(:)
         character path*100
 c
+        real*8 fun_mf,fun_std
+        external fun_mf,fun_std,sub_base,sub_damp 
+c
         integer i,ip,it,itm,iunit,ipth,itm_r
+        integer ierr,rank,nlocpts
         real*8 stdo,stp,std,epss,dd,cond,dm,beta
         character yon*5
-c
-        real*8, optional :: gg(:),bb(:)
 c
 c       yon(1:1)    => restart iteration
 c       yon(2:2)    => forward modelling
@@ -67,12 +70,9 @@ c
         real*8, allocatable :: gj(:),gjo(:)
         real*8, allocatable :: ghj(:),ghjo(:)
 c
-        real*8 fun_mf,fun_std
-        external fun_mf,fun_std,sub_base,sub_damp
-c
 c All defining parallel enviroment
-        integer ierr,rank
         call MPI_Comm_rank(MPI_COMM_WORLD,rank,ierr)
+        nlocpts = proc_np(rank+1)
 c
         if (rank.eq.0) allocate (gjo(1:nb),ghjo(1:nb))
         allocate (zz(1:nb))
@@ -80,7 +80,7 @@ c
         allocate (gj(1:nb))
         allocate (ghj(1:nb))
         allocate (dh(1:nb))
-        allocate (ddat(1:npt))
+        allocate (ddat(1:nlocpts))
 c
 c Open file for linear search outputs
         if(rank.eq.0) then
@@ -117,7 +117,7 @@ c
         endif
 c
 c All define data set
-        do ip=1,npt
+        do ip=1,nlocpts
             ddat(ip)=ppos(ip*(nd+1))
         enddo
 c
@@ -128,19 +128,20 @@ c
 c All: do their part in forward modelling
             if (yon(2:2).eq.'y') then
                 stdo=std
-                call cpt_dat_vals_p(nd, proc_np, proc_ip,
-     >                              nt, ppos, nb, bc, sub_base, xyzf)
-                call cptstd_dp(npmax, proc_np, proc_ip,
-     >                         nt, icov, jcov, cov, ddat, xyzf,
+                call cpt_dat_vals_p2(nd, nlocdatpts, nlocpts,
+     >                               ppos, nb, bc,
+     >                               sub_base, xyzf)
+                call cptstd_dp(npmax, proc_np,
+     >                         jcov, cov, ddat, xyzf,
      >                         fun_std, std)
             endif
 c
 c All: do their part in finding GJ, DH
             if (yon(3:3).eq.'y') then
                 ip=1
-                call ssqgh_dp(npmax, nd, proc_np, proc_ip,
+                call ssqgh_dp(npmax, nd, nlocdatpts, nlocpts,
      >                        ppos, nb, fun_mf, sub_base, bc,
-     >                        icov, jcov, cov, ddat, nt, xyzf,
+     >                        jcov, cov, ddat, xyzf,
      >                        gj, dh)
 c All: check ZEROgradiant
                 ip=0
@@ -197,9 +198,9 @@ c ALL: Find GC step
                 stp=0.d0
 c ALL: compute zz=2.A^t.W.A.ds
                 ip=1
-                call cptAtWAds_p(npmax, nd, proc_np, proc_ip,
+                call cptAtWAds_p(npmax, nd, nlocdatpts, nlocpts,
      >                           ppos, nb, fun_mf, sub_base, bc, ds,
-     >                           icov, jcov, cov, ddat, nt,
+     >                           jcov, cov, ddat,
      >                           xyzf, zz)
 c MP:  compute step
                 if (rank.eq.0) then

@@ -10,7 +10,8 @@ c       call recurcive subroutines
 c
 c	input:
 c	  np		Number of data points
-c         nt(np)	Type of data (1->X,2->Y,3->Z,4->F ...) dim min (NP) 
+c         nt  	        Type of data (1->X,2->Y,3->Z,4->F ...) 
+c         ntv(np)       basis number for each point (1->X,2->Y,3->Z,4->F ...)
 c         nd		space dimension
 c         nb            Number of base functions
 c         ppos		point position in ndD
@@ -21,25 +22,27 @@ c       output:
 c	  aa(NP,NB)	matrix of conditions
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-	subroutine mkArows(np,nt,nd,nb,ppos,sub_base,bc,aa)
+	subroutine mkArows(np,ntv,nd,nb,ppos,sub_base,bc,aa)
 c
         implicit none
 c
-	integer np,nt(*),nd,nb
+	integer np,ntv(*),nd,nb
         real*8 ppos(nd+1,*),aa(np,*),bc(*)
         real*8, allocatable :: row(:)
 c
         integer ip,ib
 c
         external sub_base
+
         allocate(row(1:nb))
 c
         do ip=1,np
-          call sub_base('i',nt(ip),nb,bc,ppos(1,ip),row)
+          call sub_base('i',ntv(ip),nb,bc,ppos(1,ip),row)
           do ib=1,nb
             aa(ip,ib)=row(ib)
           enddo
         enddo
+
         deallocate(row)
 c
         return

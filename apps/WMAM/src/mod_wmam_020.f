@@ -13,7 +13,7 @@ c
 c
         include 'mpif.h'
 c
-        character(len=*), parameter :: VERSION="2.1.0"
+        character(len=*), parameter :: VERSION="2.2.0"
 c
         integer, parameter :: POLAK_RIBIERE=1
         integer, parameter :: CONJUGATE_GRADIENT=2
@@ -27,17 +27,25 @@ c
         integer itmax(3), nub
         real*8  std, stdt, dd, dl(3), wgh
         real*8  resdeg
+        real*8  longitude, colatitude
+        real*8  radius, magscalar
         integer shdeg, scheme
         integer ncoeffs, nparams
-        integer npts, nsampts
+        integer ndatpts, nsampts, npts
+        integer nlocdatpts, imin_locdatpts, imax_locdatpts
+        integer nlocsampts, imin_locsampts
+        integer nlocpts, imin_locpts
 c
         character(100) :: argstr
 c
-        integer, allocatable :: proc_np(:), proc_ip(:)
+        integer, allocatable :: proc_ndp(:), proc_idp(:)
         integer, allocatable :: proc_nsp(:), proc_isp(:)
-        integer, allocatable :: nt(:), ijcov(:,:)
+        integer, allocatable :: proc_np(:), proc_ip(:)
+c
+        integer, allocatable :: ijcov(:,:)
         real*8, allocatable :: ppos(:,:), bc(:), cov(:), dw(:)
         real*8, allocatable :: gg(:,:), bb(:)
+        real*8, allocatable :: err(:)
 c
 c  globlibi functions
         real*8 dsind, l2_std, l2_norm
@@ -81,37 +89,78 @@ c  Settings
         nparams=shdeg*(shdeg+2)
         ny=int(1.0/resdeg)*360
         nx=int(1.0/resdeg)*180-1
-        npts=nx*ny
+        ndatpts=nx*ny
         nsampts=(shdeg+1)*(2*shdeg+1)
         ncoeffs=nparams
+        npts=ndatpts+nsampts
 
         if (rank.eq.0) then
           write(*,*) 'MPI Ranks:', nranks
           write(*,*) 'Parameters: ', nparams
           write(*,*) 'nx: ', nx
           write(*,*) 'ny: ', ny
-          write(*,*) 'Data points: ', npts
+          write(*,*) 'Data points: ', ndatpts
           write(*,*) 'Sampling points: ', nsampts
-          write(*,*) 'Data+Sampling points: ', npts+nsampts
+          write(*,*) 'Data+Sampling points: ', npts
+          write(*,*) ''
+        endif
+
+c
+c  Partition workload
+        allocate(proc_ndp(nranks),proc_idp(nranks))
+        call thread_segmenter(nranks,ndatpts,proc_ndp,proc_idp)
+        nlocdatpts = proc_ndp(rank+1)
+        imin_locdatpts = proc_idp(rank+1)
+        imax_locdatpts = imin_locdatpts + nlocdatpts - 1
+
+        allocate(proc_nsp(nranks),proc_isp(nranks))        
+        call thread_segmenter(nranks,nsampts,proc_nsp,proc_isp)
+        nlocsampts = proc_nsp(rank+1)
+        imin_locsampts = proc_isp(rank+1)
+
+        allocate(proc_np(nranks),proc_ip(nranks))
+c  initialise proc_np and proc_ip arrays, so that the vnp array
+c  used by the cptstd_dp subroutine (from the globlibi library)
+c  can be setup correctly
+        proc_np(1:nranks)=proc_ndp(1:nranks)+proc_nsp(1:nranks)
+        proc_ip(1)=1
+        do i=2,nranks
+          proc_ip(i)=proc_ip(i-1)+proc_np(i-1)
+        enddo
+        nlocpts = proc_np(rank+1)
+        imin_locpts = proc_ip(rank+1)
+
+        deallocate(proc_ndp,proc_idp)
+        deallocate(proc_nsp,proc_isp)
+
+
+        if (rank.eq.0) then
+          write(*,*) ''
+          write(*,*) 'MPI Rank:', rank
+          write(*,*) ''
+          write(*,*) 'Local Data points: ', nlocdatpts
+          write(*,*) 'Global Index for Data points: ',
+     >               imin_locdatpts
+          write(*,*) ''
+          write(*,*) 'Local Sampling points: ', nlocsampts
+          write(*,*) 'Global Index for Sampling points: ',
+     >               imin_locsampts
+          write(*,*) ''
+          write(*,*) 'Local Data+Sampling points: ', nlocpts
+          write(*,*) 'Global Index for Data+Sampling points: ',
+     >               imin_locpts
+          write(*,*) ''
           write(*,*) ''
         endif
 
 c
 c  Array allocations
         allocate(bc(nparams))
-        allocate(ppos(ND+1,npts+nsampts))
-        allocate(nt(npts+nsampts))
-        allocate(cov(npts+nsampts))
-        allocate(ijcov(npts+nsampts,2))
-        allocate(dw(npts+nsampts))
-        allocate(proc_np(nranks),proc_ip(nranks))
-        allocate(proc_nsp(nranks),proc_isp(nranks))
+        allocate(ppos(ND+1,nlocpts))
+        allocate(cov(nlocpts))
+        allocate(ijcov(nlocpts,2))
+        allocate(dw(nlocpts))
         
-c
-c  Partition workloads
-        call thread_segmenter(nranks,npts,proc_np,proc_ip)
-        call thread_segmenter(nranks,nsampts,proc_nsp,proc_isp)
-
 c
 c  Read in reference field
         bc(1:nparams)=1.0d0
@@ -131,40 +180,47 @@ c  Read in data
           write(*,*) ''
         endif
         open(10,file=fname,status='old')
-          i=0
+          i=1
+          j=1
           do ix=1,nx
             do iy=1,ny
+              read(10,*) longitude, colatitude, radius, magscalar
+
+              if (i .ge. imin_locdatpts .and.
+     >            i .le. imax_locdatpts) then
+                ppos(1,j) = 90.0d0 - colatitude
+                ppos(2,j) = longitude
+                ppos(3,j) = radius
+                ppos(4,j) = ryg
+                ppos(ND+1,j) = magscalar
+                j=j+1
+              endif
+
               i=i+1
-              read(10,*)ppos(2,i),ppos(1,i),ppos(3,i),ppos(ND+1,i)
-              ppos(1,i)=90.0d0-ppos(1,i)
-              ppos(4,i)=ryg
             enddo
           enddo
         close(10)
         
 c
-c  Calculate CM4 components
+c  Calculate CM4 components 
         if (rank.eq.0) write(*,*) 'Calculating CM4 components'
 
-        nt(1:npts)=1
         dw=0.0d0
-        call cpt_dat_vals_p(ND,proc_np,proc_ip,nt,
-     >                      ppos,ncoeffs,bc,sph_bi,dw)
-        ppos(5,1:npts)=dw(1:npts)
+        call cpt_dat_vals_p(ND, nlocdatpts, 1, ppos, ncoeffs,
+     >                      bc, sph_bi, dw)
+        ppos(5,1:nlocdatpts)=dw(1:nlocdatpts)
         if (rank.eq.0) write(*,*) ' X CM4 component calculated'
         
-        nt(1:npts)=2
         dw=0.0d0
-        call cpt_dat_vals_p(ND,proc_np,proc_ip,nt,
-     >                      ppos,ncoeffs,bc,sph_bi,dw)
-        ppos(6,1:npts)=dw(1:npts)
+        call cpt_dat_vals_p(ND, nlocdatpts, 2, ppos, ncoeffs,
+     >                      bc, sph_bi, dw)
+        ppos(6,1:nlocdatpts)=dw(1:nlocdatpts)
         if (rank.eq.0) write(*,*) ' Y CM4 component calculated'
 
-        nt(1:npts)=3
         dw=0.0d0
-        call cpt_dat_vals_p(ND,proc_np,proc_ip,nt,
-     >                      ppos,ncoeffs,bc,sph_bi,dw)
-        ppos(7,1:npts)=dw(1:npts)
+        call cpt_dat_vals_p(ND, nlocdatpts, 3, ppos, ncoeffs,
+     >                      bc, sph_bi, dw)
+        ppos(7,1:nlocdatpts)=dw(1:nlocdatpts)
         if (rank.eq.0) then
           write(*,*) ' Z CM4 component calculated'
           write(*,*) ''
@@ -175,33 +231,28 @@ c  Define covariance matrix: sin(colat) weight
           write(*,*) 'Define covariance matrix'
           write(*,*) ''
         endif
-        nt(1:npts)=1
-        do i=1,npts
+        j=imin_locpts
+        do i=1,nlocdatpts
           cov(i)=dsind(ppos(1,i))
-          ijcov(i,1)=i
-          ijcov(i,2)=i
           cov(i)=1.d0/cov(i)
+          ijcov(i,1)=j
+          ijcov(i,2)=j
+          j=j+1
         enddo
 
 c
 c  Add smoothing equations
         if (rank.eq.0) write(*,*) 'Define regularisation'
-        nub=100
         wgh=5.0d0
-        call build_damp_space(nub, npts, nsampts, ND,
-     >                        proc_nsp, proc_isp,
-     >                        ncoeffs, shdeg, wgh, bc,
-     >                        nt, ijcov, cov, ppos)
+        call build_damp_space(nlocdatpts, nlocsampts,
+     >                        imin_locpts, imin_locsampts,
+     >                        ND, ncoeffs, shdeg, wgh, bc,
+     >                        ijcov, cov, ppos)
 c
-c  Add sampling point count(s) to npts, proc_np and proc_ip
-        npts=npts+nsampts
-        do i=1,nranks
-          proc_np(i)=proc_np(i)+proc_nsp(i)
-          proc_ip(i)=proc_ip(i)+proc_isp(i)
-        enddo
+
 c
 c  Finalise covariance matrix
-        call DS2Y(npts,npts,ijcov(1,1),ijcov(1,2),cov,0)
+        call DS2Y(nlocpts,nlocpts,ijcov(1,1),ijcov(1,2),cov,0)
 
 c
 c  Read in starting model
@@ -220,6 +271,7 @@ c  Read in starting model
             read(10,*) j, bc(i), dd
           enddo
         close(10)
+
 c
 c  Invert data
         itmax(1)=7
@@ -247,17 +299,17 @@ c
 
 c
         if (scheme.eq.POLAK_RIBIERE) then
-          call opt_pr_p3(fname, itmax, NPMAX, ND, npts, nparams,
-     >                   proc_np, proc_ip, ppos, bc, dl,
+          call opt_pr_p3(fname, itmax, NPMAX, ND, nparams,
+     >                   nlocdatpts, proc_np, ppos, bc, dl,
      >                   l2_norm, sub_sph_wmam_l, l2_std, damp_rien,
-     >                   nt, cov, ijcov(1,1), ijcov(1,2),
+     >                   cov, ijcov(1,2),
      >                   stdt, dw, bb, gg)
         else
 c         CONJUGATE_GRADIENT
-          call opt_ghc_p2(fname, itmax, NPMAX, ND, npts, nparams,
-     >                    proc_np, proc_ip, ppos, bc, dl,
+          call opt_ghc_p2(fname, itmax, NPMAX, ND, nparams,
+     >                    nlocdatpts, proc_np, ppos, bc, dl,
      >                    l2_norm, sub_sph_wmam_l, l2_std, damp_rien,
-     >                    nt, cov, ijcov(1,1), ijcov(1,2),
+     >                    cov, ijcov(1,2),
      >                    stdt, dw, bb, gg)
         endif
 
@@ -272,12 +324,15 @@ c
 c
 c  Writing fit to data per component
           fname='./Results/fit_No_P.out'
-          call write_comp(fname,npts,ND,nt,1,ppos,dw)
+          call write_comp(fname,nlocpts,ND,1,nlocdatpts,ppos,dw)
           fname='./Results/fit_damp.out'
-          call write_comp(fname,npts,ND,nt,100,ppos,dw)
+          call write_comp(fname,nlocpts,ND,nlocdatpts+1,nlocpts,
+     >                    ppos,dw)
 c
+          
           std=stdt*npts/(npts-nparams)
-          dw(1:nparams)=std
+          allocate(err(1:nparams))
+          err(1:nparams)=std
 c
 c  Saving update base coefficients
           fname='./Results/model_No_P.out'
@@ -290,26 +345,26 @@ c  Saving update base coefficients
             do il=1,shdeg
               im=0
               i=i+1
-              write(10,*) 'c', il, im, bc(i), dw(i)
+              write(10,*) 'c', il, im, bc(i), err(i)
               do im=1,il
                 i=i+1
-                write(10,*) 'c', il, im, bc(i), dw(i)
+                write(10,*) 'c', il, im, bc(i), err(i)
                 i=i+1
-                write(10,*) 'c', il, -im, bc(i), dw(i)
+                write(10,*) 'c', il, -im, bc(i), err(i)
               enddo
             enddo
           close(10)
+
+          deallocate(err)
         endif
 c
 c  Deallocate arrays
-        deallocate(nt)
         deallocate(ppos)
         deallocate(bc)
         deallocate(cov)
         deallocate(ijcov)
         deallocate(dw)
         deallocate(proc_np,proc_ip)
-        deallocate(proc_nsp,proc_isp)
 c
         call fini_sph_wmam()
 c
