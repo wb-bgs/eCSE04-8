@@ -67,7 +67,6 @@ c  Read in command line arguments
           read(argstr,*) shdeg
           call GET_COMMAND_ARGUMENT(2,argstr)
           read(argstr,*) resdeg
-          resdeg = nint(resdeg * 1000.0) * 1E-3
           call GET_COMMAND_ARGUMENT(3,argstr)
           read(argstr,*) scheme
         else
@@ -87,8 +86,8 @@ c
 c  Settings
         call init_sph_wmam(shdeg)
         nparams=shdeg*(shdeg+2)
-        ny=int(1.0/resdeg)*360
-        nx=int(1.0/resdeg)*180-1
+        nx=nint(1.0/resdeg)*180-1
+        ny=nint(1.0/resdeg)*360
         ndatpts=nx*ny
         nsampts=(shdeg+1)*(2*shdeg+1)
         ncoeffs=nparams
