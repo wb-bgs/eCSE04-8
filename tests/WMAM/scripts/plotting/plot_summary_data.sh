@@ -1,19 +1,23 @@
-# ./plot_summary_data.sh 1440 0.1 1.6
+# ./plot_summary_data.sh 200 1.0 3.0 scaling
+# ./plot_summary_data.sh 300 0.5 3.0 scaling
+# ./plot_summary_data.sh 720 0.25 3.0 scaling
+# ./plot_summary_data.sh 1440 0.1 3.0 scaling
 
 
 ROOT=${HOME/home/work}
 PYPP_HOME=${ROOT}/utils/pypp/3.9.4.1
 SCRIPTS_HOME=${ROOT}/tests/scripts
 
+DEGREE=$1
+RESOLUTION=$2
+
 APP_LABEL=WMAM
 APP_VERSION=$3
 APP_NAME="${APP_LABEL} ${APP_VERSION}"
-DEGREE=$1
-RESOLUTION=$2
 TARGET_PATH=cce12/cmpich8-ofi
-RESULTS_SUFFIX="${APP_VERSION}_scaling"
-RESULTS_HOME=${ROOT}/tests/${APP_LABEL}/results.${RESULTS_SUFFIX}/${DEGREE}
-PLOTS_HOME=${ROOT}/tests/${APP_LABEL}/plots.${RESULTS_SUFFIX}
+RESULTS_TYPE=$4
+RESULTS_HOME=${ROOT}/tests/${APP_LABEL}/results/${RESULTS_TYPE}/${APP_VERSION}/${DEGREE}
+PLOTS_HOME=${ROOT}/tests/${APP_LABEL}/plots/${RESULTS_TYPE}/${APP_VERSION}
 SUMMARY_DATA=${RESULTS_HOME}/${TARGET_PATH}/summary.txt
 SCRIPTS_HOME=${ROOT}/tests/${APP_LABEL}/scripts/plotting
 

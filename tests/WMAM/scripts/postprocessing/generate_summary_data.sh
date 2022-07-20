@@ -1,15 +1,15 @@
-# ./generate_summary_data.sh 1440 1.6
+# ./generate_summary_data.sh 200 3.0 scaling
 
 
 ROOT=${HOME/home/work}
+DEGREE=$1
 APP_LABEL=WMAM
 APP_VERSION=$2
-DEGREE=$1
-RESULTS_SUFFIX="${APP_VERSION}_scaling"
+RESULTS_TYPE=$3
 TARGET_PATH=cce12/cmpich8-ofi
 PYPP_HOME=${ROOT}/utils/pypp/3.9.4.1
 SCRIPTS_HOME=${ROOT}/tests/${APP_LABEL}/scripts/postprocessing
-RESULTS_HOME=${ROOT}/tests/${APP_LABEL}/results.${RESULTS_SUFFIX}/${DEGREE}
+RESULTS_HOME=${ROOT}/tests/${APP_LABEL}/results/${RESULTS_TYPE}/${APP_VERSION}/${DEGREE}
 
 
 . ${PYPP_HOME}/bin/activate
