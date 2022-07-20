@@ -37,14 +37,14 @@ def convertModelFile(fpath):
       if not ln or 0 == len(ln):
         break
 
-      if ' ' == ln[0]:
+      if '#' == ln[0]:
+        continue
+      else:
         lnp = ln.split()
         if 3 != len(lnp):
           continue
         # convert coefficent 
         fb.write(struct.pack('d',float(lnp[1])))
-      else:
-        continue
 
   return
 

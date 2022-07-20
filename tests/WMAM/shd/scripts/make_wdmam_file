@@ -22,16 +22,16 @@ LD_LIBRARY_PATH=${GMT_ROOT}/lib64:${LD_LIBRARY_PATH}
 
 cat ${WMAM_DATA_ROOT}/wdmam.asc \
  | awk '{print $1,$2,$3}' \
- | gmt blockmedian -I$DEG_INTERVAL -R-180/180/-90/90 -C \
+ | gmt blockmedian -I${DEG_INTERVAL} -R-180/180/-90/90 -C \
  > ./wdmam0p2_gdlo-gdla-dF.tmp
-cat ./wdmam.asc \
+cat ${WMAM_DATA_ROOT}/wdmam.asc \
  | awk '{print $1,$2,$4}' \
- | gmt blockmedian -I$DEG_INTERVAL -R-180/180/-90/90 -C \
+ | gmt blockmedian -I${DEG_INTERVAL} -R-180/180/-90/90 -C \
  > ./wdmam0p2_gdlo-gdla-id.tmp
 
 paste ./wdmam0p2_gdlo-gdla-id.tmp \
       ./wdmam0p2_gdlo-gdla-dF.tmp \
- | awk '{if ($1<180) {print $0}}' \
+ | awk '{if ($1<=180) {print $0}}' \
  | awk '{if ($2>-90 && $2<90) {print $0}}' \
  | awk 'BEGIN {height=-99999} \
         {if ($3>=11.5) {height=5.0} \
