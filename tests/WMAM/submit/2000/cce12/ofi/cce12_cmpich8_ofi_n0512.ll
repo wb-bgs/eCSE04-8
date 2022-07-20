@@ -5,12 +5,12 @@
 #SBATCH -e /dev/null
 #SBATCH --time=24:00:00
 #SBATCH --exclusive
-#SBATCH --nodes=8
+#SBATCH --nodes=512
 #SBATCH --ntasks-per-node=128
 #SBATCH --cpus-per-task=1
 #SBATCH --account=ecsead08
 #SBATCH --partition=standard
-#SBATCH --qos=standard
+#SBATCH --qos=lowpriority
 
 
 ulimit -c unlimited
@@ -37,11 +37,11 @@ PE_NAME=${PE_MPICH_FIXED_PRGENV}
 PE_VERSION=$(eval echo "\${PE_MPICH_GENCOMPILERS_${PE_NAME}}")
 
 ROOT=${HOME/home/work}
-DEGREE=1440
-RESOLUTION=0.1
+DEGREE=2000
+RESOLUTION=0.05
 SCHEME=1
 APP_NAME=WMAM
-APP_VERSION=1.2
+APP_VERSION=3.0
 APP_EXE_NAME=mod_wmam_020
 APP_EXE=${ROOT}/apps/${APP_NAME}/${APP_VERSION}/${PE_NAME}/${PE_VERSION}/release/bin/${APP_EXE_NAME}
 APP_MPI_LABEL=cmpich8
