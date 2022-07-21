@@ -7,6 +7,9 @@ and differences to BGS "true" model.
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+import glob
+import os
+import sys
 
 
 def coef2spec(coef, *, n_max=None):
@@ -71,29 +74,38 @@ def plot_power_spectrum(spectrum, labels, title):
     -------
     fig : :class:`matplotlib.figure.Figure`
         Matplotlib figure.
-    axes : :class:`matplotlib.axes.Axes`
+    ax : :class:`matplotlib.axes.Axes`
         A single axes instance.
     """
 
-    degrees = np.arange(1, spectrum.shape[0] + 1, step=1.0)
-
-    # Make sure spectrum is positive if differences given
-    #spectrum[spectrum == 0] = np.nan  # remove non-positive values for log
-    spectrum = np.abs(spectrum)
+    """Expecting list of different length arrays now, but keep compatibility if
+    given array"""
+    if type(spectrum) is not list:
+        spectrum = [spectrum]
 
     # create axis handle
-    fig, ax = plt.subplots(1, 1, sharex=True, sharey=True, figsize=(8,6))
+    fig, ax = plt.subplots(1, 1, sharex=True, sharey=True, figsize=(11,6))
 
-    h = ax.semilogy(degrees, spectrum)
+    h = []
+    max_deg = 0
+    for i, s in enumerate(spectrum):
+        degrees = np.arange(1, s.shape[0] + 1, step=1.0)
+        max_deg = max([max_deg, max(degrees)])
+        # Make sure spectrum is positive if differences given
+        s = np.abs(s)
+        h.append(ax.semilogy(degrees, s, label=labels[i]))
+
     ax.set_title(title)
     ax.grid(visible=True, which='minor', linestyle=':')
     ax.grid(visible=True, which='major', linestyle='-', axis='both')
     ax.set(ylabel="nT^2", xlabel='degree')
 
     ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
-    plt.xlim((0, degrees[-1]))
+    plt.xlim((0, max_deg))
+    h, l = ax.get_legend_handles_labels()
+    plt.legend(h, l, loc='center left', ncol=2,
+               bbox_to_anchor=(1, 0.5))
     plt.tight_layout()
-    plt.legend(h, labels)
 
     return fig, ax
 
@@ -151,6 +163,44 @@ def load_tabbed(fname):
 
     return coef
 
+###############################################################################
+
+# Find all model output files below a given dir
+dir_results = '/users/globmod/eCSE_2021/outputs/3.0'  # don't use "~" for home!
+paths = glob.glob(os.path.join(dir_results ,"**", "model_No_P.out"),
+                  recursive=True)
+
+# BGS degree 1440 model to use as benchmark
+truth = load_tabbed("/users/globmod/eCSE_2021/outputs/BGS1440/model_No_P.out")
+T = coef2spec(truth)
+
+P = []
+labels = []
+P.append(T)
+labels.append("BGS1440")
+for path in paths:
+    coef = load_starred_csv(path)
+    P.append(coef2spec(coef))
+    """Will only work for current path setup! Should use regex if this
+    directory naming convention is consistent."""
+    labels.append('_'.join([path.split('/')[i] for i in [5,6,9,10]]))
+
+fig, _ = plot_power_spectrum(P, labels, "Power spectra")
+fig.savefig("power_spectra.png", format="png", dpi=300)
+
+D = P[1:]
+for i, d in enumerate(D):
+    if len(d) <= len(T):
+        D[i] = d - T[:len(d)]
+    else:
+        D[i] = d[:len(T)] - T
+fig, _ = plot_power_spectrum(D, labels[1:], "Power spectra relative to BGS1440")
+fig.savefig("power_spectra_diff.png", format="png", dpi=300)
+
+
+sys.exit()
+###############################################################################
+# Initial model files analysis plots:
 
 # Load files
 # BGS degree 1440 model to use as benchmark
