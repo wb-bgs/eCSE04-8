@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# set job submission directory
+
+DEGREE=200
+APP_RUN_ROOT=${HOME/home/work}/tests/WMAM
+APP_RUN_PATH=${APP_RUN_ROOT}/results/${DEGREE}/cce12/cmpich8-ofi/n1/c64
+
+mkdir -p ${APP_RUN_PATH}/Data
+cp ${APP_RUN_ROOT}/shd/${DEGREE}/* ${APP_RUN_PATH}/Data/
+cd ${APP_RUN_PATH}

@@ -50,10 +50,10 @@ function set_compile_options {
 PE_RELEASE=21.09
 PRGENV=$1
 BUILD=$2
-VERSION=3.0
-GLOBLIBI_VERSION=3.0
+VERSION=3.1
+GLOBLIBI_VERSION=3.1
 SLATEC_VERSION=4.1
-ERRMSG="Invalid syntax: build.sh cray|gnu|aocc release|debug|craypat|armmap|scalasca <version> <globlibi version>"
+ERRMSG="Invalid syntax: build.sh cray|gnu|aocc release|debug|craypat|armmap|scalasca"
 
 if [[ "${PRGENV}" != "cray" && "${PRGENV}" != "gnu" && "${PRGENV}" != "aocc" ]]; then
   echo ${ERRMSG}

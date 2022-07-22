@@ -13,7 +13,7 @@ c
 c
         include 'mpif.h'
 c
-        character(len=*), parameter :: VERSION="3.0.0"
+        character(len=*), parameter :: VERSION="3.1.0"
 c
         integer, parameter :: POLAK_RIBIERE=1
         integer, parameter :: CONJUGATE_GRADIENT=2
@@ -26,9 +26,9 @@ c
         integer i, j, ix, iy, il, im
         integer nx, ny
         integer itmax(3), nub
-        real*8  std, stdt, dd, dl(3), wgh
+        real*8  std, stdt, dd, dl(3), dampfac
         real*8  resdeg
-        integer shdeg, scheme
+        integer cmdcnt, shdeg, scheme
         integer ncoeffs, nparams
         integer ndatpts, nsampts, npts
         integer nlocdatpts, imin_locdatpts, imax_locdatpts
@@ -62,17 +62,30 @@ c  Initialize MPI, determine rank
         call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
 c
 c  Read in command line arguments
-        if (COMMAND_ARGUMENT_COUNT().eq.3) then
+        cmdcnt = COMMAND_ARGUMENT_COUNT()
+        if (cmdcnt.ge.1) then
           call GET_COMMAND_ARGUMENT(1,argstr)
           read(argstr,*) shdeg
+        else
+          shdeg=200
+        endif
+        if (cmdcnt.ge.2) then
           call GET_COMMAND_ARGUMENT(2,argstr)
           read(argstr,*) resdeg
+        else
+          resdeg=1.0
+        endif
+        if (cmdcnt.ge.3) then
           call GET_COMMAND_ARGUMENT(3,argstr)
           read(argstr,*) scheme
         else
-          shdeg=200
-          resdeg=1.0
           scheme=POLAK_RIBIERE
+        endif
+        if (cmdcnt.ge.4) then
+          call GET_COMMAND_ARGUMENT(4,argstr)
+          read(argstr,*) dampfac
+        else
+          dampfac=5.0d0
         endif
         if (rank.eq.0) then
           write(*,*) 'WMAM v', VERSION
@@ -80,8 +93,10 @@ c  Read in command line arguments
           write(*,*) 'shdeg: ', shdeg
           write(*,*) 'resdeg: ', resdeg
           write(*,*) 'scheme: ', scheme
+          write(*,*) 'dampfac: ', dampfac 
           write(*,*) ''
         endif
+
 c
 c  Settings
         call init_sph_wmam(shdeg)
@@ -224,11 +239,10 @@ c  Define covariance matrix: sin(colat) weight
 c
 c  Add smoothing equations
         if (rank.eq.0) write(*,*) 'Define regularisation'
-        wgh=5.0d0
         call build_damp_space(nlocdatpts, nlocsampts,
      >                        imin_locpts, imin_locsampts,
-     >                        ND, ncoeffs, shdeg, wgh, bc,
-     >                        ijcov, cov, ppos)
+     >                        ND, ncoeffs, shdeg, dampfac,
+     >                        bc, ijcov, cov, ppos)
 
 c
 c  Finalise covariance matrix
@@ -256,8 +270,6 @@ c
 c
         if (rank.eq.0) then
           write(*,*) 'Start Inversion'
-          write(*,*) ' npts: ', npts
-          write(*,*) ' wgh: ', wgh
           write(*,*) ' itmax: ', itmax(1:3)
           write(*,*) ' dl: ', dl(1:3)
           write(*,*) ''

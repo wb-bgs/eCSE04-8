@@ -12,6 +12,17 @@ The SLATEC source is stored in this GitLab repo (alongside WMAM and
 globlibi) for convenience. The [build.sh](build.sh) script builds
 the SLATEC library for [ARCHER2](https://www.archer2.ac.uk/).
 
+Simply run `./build.sh <programming environment> <build type>` to build the SLATEC library.
+
+The programming environment can be `cray`, `gnu` or `aocc`; these are the three programming
+environments provided by ARCHER2
+
+The build type can be `release`, `debug`, `craypat`, `armmap` or `scalasca`; the last three
+build types refer to profiling tools, [Cray PAT](https://docs.archer2.ac.uk/user-guide/profile/#craypat), [Arm MAP](https://docs.archer2.ac.uk/data-tools/arm-forge/) and [Scalasca](https://www.archer2.ac.uk/training/courses/220509-scalasca/).
+
+Once the build has completed the library file(s) will be written to
+`${HOME/home/work}/libs/slatec/`.
+
 
 The instructions below show how to obtain the SLATEC source
 code from [netlib.org](http://www.netlib.org/slatec/).

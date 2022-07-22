@@ -3,14 +3,14 @@
 #SBATCH --job-name=WMAM
 #SBATCH -o /dev/null
 #SBATCH -e /dev/null
-#SBATCH --time=00:20:00
+#SBATCH --time=05:00:00
 #SBATCH --exclusive
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=64
+#SBATCH --nodes=8
+#SBATCH --ntasks-per-node=128
 #SBATCH --cpus-per-task=1
 #SBATCH --account=ecsead08
 #SBATCH --partition=standard
-#SBATCH --qos=short
+#SBATCH --qos=lowpriority
 
 
 ulimit -c unlimited
@@ -19,6 +19,8 @@ ulimit -c unlimited
 module -q restore
 module -q load cpe/21.09
 module -q load PrgEnv-cray
+
+module -q load arm/forge/22.0.2
 
 export LD_LIBRARY_PATH=${CRAY_LD_LIBRARY_PATH}:${LD_LIBRARY_PATH}
 
@@ -37,8 +39,8 @@ PE_NAME=${PE_MPICH_FIXED_PRGENV}
 PE_VERSION=$(eval echo "\${PE_MPICH_GENCOMPILERS_${PE_NAME}}")
 
 ROOT=${HOME/home/work}
-DEGREE=200
-RESOLUTION=1.0
+DEGREE=720
+RESOLUTION=0.25
 SCHEME=1
 DAMPFAC=5.0
 APP_NAME=WMAM
@@ -48,28 +50,13 @@ APP_COMMS_LABEL=ofi
 APP_COMPILER_LABEL=cce12
 APP_RUN_ROOT=${ROOT}/tests/${APP_NAME}
 APP_RUN_PATH=${APP_RUN_ROOT}/results/${DEGREE}/${APP_COMPILER_LABEL}/${APP_MPI_LABEL}-${APP_COMMS_LABEL}/n${NNODES}/c${NCORES}
-APP_EXE_NAME=mod_wmam_020+pat
-APP_EXE=${ROOT}/apps/${APP_NAME}/${APP_VERSION}/${PE_NAME}/${PE_VERSION}/craypat/bin/${APP_EXE_NAME}
-#APP_EXE=${APP_RUN_PATH}/1008306/${APP_EXE_NAME}
+APP_EXE_NAME=mod_wmam_020
+APP_EXE=${ROOT}/apps/${APP_NAME}/${APP_VERSION}/${PE_NAME}/${PE_VERSION}/armmap/bin/${APP_EXE_NAME}
 APP_PARAMS="${DEGREE} ${RESOLUTION} ${SCHEME} ${DAMPFAC}"
 APP_OUTPUT=${APP_RUN_PATH}/${APP_NAME}.o
 
 SRUN_PARAMS="--distribution=block:block --hint=nomultithread --unbuffered --chdir=${APP_RUN_PATH}"
-
-export PAT_RT_SUMMARY=0
-export PAT_RT_TRACE_API=1
-export PAT_RT_EXPDIR_NAME=pat
-
-#export PAT_RT_PERFCTR=stalls
-#export PAT_RT_PERFCTR=PAPI_L1_ICM,PAPI_L1_DCA
-#export PAT_RT_PERFCTR=PAPI_L2_ICH,PAPI_L2_ICR,PAPI_L2_ICM,PAPI_L2_DCH,PAPI_L2_DCR,PAPI_L2_DCM
-#export PAT_RT_PERFCTR=PAPI_TLB_DM,PAPI_TLB_IM,PAPI_BR_TKN,PAPI_BR_MSP
-#export PAT_RT_PERFCTR=PAPI_TOT_CYC,PAPI_TOT_INS,PAPI_BR_INS,PAPI_FP_INS,PAPI_FP_OPS
-
-#export PAT_RT_PERFCTR=PAPI_L1_ICM,PAPI_L1_DCA,PAPI_L2_ICH,PAPI_L2_ICR,PAPI_L2_ICM,PAPI_L2_DCH,PAPI_L2_DCR,PAPI_L2_DCM,PAPI_TLB_DM,PAPI_TLB_IM,PAPI_BR_TKN,PAPI_BR_MSP,PAPI_TOT_CYC,PAPI_TOT_INS,PAPI_BR_INS,PAPI_FP_INS,PAPI_FP_OPS
-
-
-export PAT_RT_PERFCTR=PAPI_L1_DCA,PAPI_FP_OPS
+MAP_PARAMS="--profile"
 
 # setup app run directory
 mkdir -p ${APP_RUN_PATH}/Data
@@ -81,16 +68,16 @@ mkdir ${APP_RUN_PATH}/Results
 RUN_START=$(date +%s.%N)
 echo -e "Launching ${APP_EXE_NAME} ${APP_VERSION} (${APP_MPI_LABEL}-${APP_COMPILER_LABEL}) with l=${DEGREE} over ${NCORES} core(s) across ${NNODES} node(s).\n" > ${APP_OUTPUT}
 
-srun ${SRUN_PARAMS} ${APP_EXE} ${APP_PARAMS} &>> ${APP_OUTPUT}
+map ${MAP_PARAMS} srun ${SRUN_PARAMS} ${APP_EXE} ${APP_PARAMS} &>> ${APP_OUTPUT}
 
 RUN_STOP=$(date +%s.%N)
 RUN_TIME=$(echo "${RUN_STOP} - ${RUN_START}" | bc)
-echo -e "\nsrun time: ${RUN_TIME}" >> ${APP_OUTPUT}
+echo -e "\nmap time: ${RUN_TIME}" >> ${APP_OUTPUT}
 
 
 # tidy up
 mkdir ${APP_RUN_PATH}/${SLURM_JOB_ID}
 mv ${APP_OUTPUT} ${APP_RUN_PATH}/${SLURM_JOB_ID}/
 mv ${APP_RUN_PATH}/Results ${APP_RUN_PATH}/${SLURM_JOB_ID}/
-mv ${APP_RUN_PATH}/pat ${APP_RUN_PATH}/${SLURM_JOB_ID}/
 rm -rf ${APP_RUN_PATH}/Data
+mv ${SLURM_SUBMIT_DIR}/${APP_EXE_NAME}_*.map ${APP_RUN_PATH}/${SLURM_JOB_ID}/
