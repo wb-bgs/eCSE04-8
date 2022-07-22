@@ -15,4 +15,4 @@ how to generate the input data.
 
 Generating input data requires running [various scripts](./scripts).
 There is a script for creating the reference model file ([`coef_1990_15.dat`](./scripts/make_ref_model_file)), the observational data file ([`wdmam_geocentric.dat`](./scripts/make_wdmam_file)) and the starting model file ([`model.in`](./scripts/make_guess_model_file)). In addition, there is a script for converting these
-three files from ASCII to binary ([`make_binary_files.sh`](./scripts/make_binary_files.sh)), allowing parallel processes to read the data. 
+three files from ASCII to binary ([`make_binary_files.sh`](./scripts/make_binary_files.sh)), making it possible for MPI parallel processes to read the data files. 
