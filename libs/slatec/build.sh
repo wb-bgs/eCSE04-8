@@ -35,7 +35,7 @@ function set_compile_options {
     elif [[ "${PRGENV}" == "aocc" ]]; then
       sed -i "s:FFLAGS= -O2:FFLAGS= -g1 -O1:g" ${MAKEFILE}
     fi
-  elif [[ "${BUILD}" == "scalasca" ]]; then
+  elif [[ "${BUILD}" == "scorep" ]]; then
     if [[ "${PRGENV}" == "cray" ]]; then
       sed -i "s:FFLAGS= -O2:FFLAGS= -G2 -O3 -h ipa0:g" ${MAKEFILE}
     elif [[ "${PRGENV}" == "gnu" ]]; then
@@ -50,14 +50,14 @@ function set_compile_options {
 PE_RELEASE=21.09
 PRGENV=$1
 BUILD=$2
-ERRMSG="Invalid syntax: build.sh cray|gnu|aocc release|debug|craypat|armmap|scalasca"
+ERRMSG="Invalid syntax: build.sh cray|gnu|aocc release|debug|craypat|armmap|scorep"
 
 if [[ "${PRGENV}" != "cray" && "${PRGENV}" != "gnu" && "${PRGENV}" != "aocc" ]]; then
   echo ${ERRMSG}
   exit
 fi
 
-if [[ "${BUILD}" != "release" && "${BUILD}" != "debug" && "${BUILD}" != "craypat" && "${BUILD}" != "armmap" && "${BUILD}" != "scalasca" ]]; then
+if [[ "${BUILD}" != "release" && "${BUILD}" != "debug" && "${BUILD}" != "craypat" && "${BUILD}" != "armmap" && "${BUILD}" != "scorep" ]]; then
   echo ${ERRMSG}
   exit
 fi
@@ -79,14 +79,14 @@ module -q load PrgEnv-${PRGENV}
 if [[ "${BUILD}" == "craypat" ]]; then
   module -q load perftools-base
   module -q load perftools
-elif [[ "${BUILD}" == "scalasca" ]]; then
+elif [[ "${BUILD}" == "scorep" ]]; then
   module -q use /work/y23/shared/scalasca/modulefiles
   if [[ "${PRGENV}" == "cray" ]]; then
     module -q load scalasca/2.6-cce
   elif [[ "${PRGENV}" == "gnu" ]]; then
     module -q load scalasca/2.6-gcc10
   else
-    echo "Error, ${PRGENV} not supported by scalasca, please try either cray or gnu."
+    echo "Error, ${PRGENV} not supported by scorep, please try either cray or gnu."
     exit
   fi
 fi
@@ -110,7 +110,7 @@ cp ./dynamic/makefile.sav ./dynamic/makefile
 set_compile_options ${SLATEC_BUILD_ROOT}/static/makefile
 set_compile_options ${SLATEC_BUILD_ROOT}/dynamic/makefile
 
-if [[ "${BUILD}" == "scalasca" ]]; then
+if [[ "${BUILD}" == "scorep" ]]; then
   sed -i "s:\${FC}:scorep --user \${FC}:g" ${SLATEC_BUILD_ROOT}/static/makefile
   sed -i "s:\${FC}:scorep --user \${FC}:g" ${SLATEC_BUILD_ROOT}/dynamic/makefile
 fi

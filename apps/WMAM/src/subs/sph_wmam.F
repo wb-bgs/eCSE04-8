@@ -599,7 +599,7 @@ c
      >                  d4a, d5a, d6a,
      >                  bp, dwx, dwy, dwz)
 
-        if (nub.eq.100) then
+        if (nub .eq. 100) then
 c
 c    sampling point
           dx = dot_product(dwx(1:nb), bc(1:nb))
@@ -718,7 +718,7 @@ c    calculate internal field component
         call PAT_region_end(1,cpstat)
 #endif
 
-        if (nub.eq.100) then
+        if (nub .eq. 100) then
 c    sampling point
           dx = dot_product(dwx(1:nb), bc(1:nb))
           dy = dot_product(dwy(1:nb), bc(1:nb))

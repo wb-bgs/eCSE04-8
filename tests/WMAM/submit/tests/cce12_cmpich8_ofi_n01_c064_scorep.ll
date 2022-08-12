@@ -63,16 +63,13 @@ export SCOREP_FILTERING_FILE=${APP_RUN_PATH}/2100419/scorep/initial_scorep.filte
 #export SCOREP_METRIC_PAPI=PAPI_TOT_CYC,PAPI_TOT_INS,PAPI_FP_INS,PAPI_FP_OPS
 #export SCOREP_TOTAL_MEMORY=
 
-#SCAN_ANALYZE_OPTS="--time-correct"
-
-# "skin" equivalent to "scalasca -instrument" or "scorep"
-# "scan" equivalent to "scalasca -analyze"
-# "square" equivalent to "scalasca -examine"
-# "square -s" equivalent to "scorep-score"
-
-# scan -s for summarise [default]
-# scan -t for trace
-# square /path/to/folder/containing/cubex/file
+#scorep-info
+#scorep-info config-vars
+#scorep-score -r /path/to/profile.cubex/file
+#scorep-score -r -g /path/to/profile.cubex/file
+#scorep-score -r -f /path/to/filtering/file /path/to/profile.cubex/file
+#scorep-score -r -c 4 -f /path/to/filtering/file /path/to/profile.cubex/file
+#cube /path/to/cubex/file
 
 # setup app run directory
 mkdir -p ${APP_RUN_PATH}/Data
@@ -84,7 +81,7 @@ mkdir ${APP_RUN_PATH}/Results
 RUN_START=$(date +%s.%N)
 echo -e "Launching ${APP_EXE_NAME} ${APP_VERSION} (${APP_MPI_LABEL}-${APP_COMPILER_LABEL}) with l=${DEGREE} over ${NCORES} core(s) across ${NNODES} node(s).\n" > ${APP_OUTPUT}
 
-scan srun ${SRUN_PARAMS} ${APP_EXE} ${APP_PARAMS} &>> ${APP_OUTPUT}
+srun ${SRUN_PARAMS} ${APP_EXE} ${APP_PARAMS} &>> ${APP_OUTPUT}
 
 RUN_STOP=$(date +%s.%N)
 RUN_TIME=$(echo "${RUN_STOP} - ${RUN_START}" | bc)
