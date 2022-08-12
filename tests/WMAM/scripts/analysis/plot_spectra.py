@@ -2,6 +2,9 @@
 """
 Functions (top) and script (bottom) to plot power spectral of model results,
 and differences to BGS "true" model.
+
+Credit to ChaosMagPy for basis of power spectrum and correlation functions,
+stripped down here to lighten environment dependencies.
 """
 
 import numpy as np
@@ -57,6 +60,53 @@ def coef2spec(coef, *, n_max=None):
     return P_n
 
 
+def degree_correlation(coef1, coef2):
+    """
+    Correlation per spherical harmonic degree between model coef1 and model
+    coef2.
+
+    Parameters
+    ----------
+    coef1, coef2 : ndarray, shape (N,)
+        Two sets of coefficients of equal length `N`.
+
+    Returns
+    -------
+    C_n : ndarray, shape (nmax,)
+        Degree correlation of the two models. There are `N = nmax(nmax+2)`
+        coefficients.
+    """
+
+    if coef1.ndim != 1:
+        raise ValueError(f'Only 1-D input allowed {coef1.ndim} != 1')
+
+    if coef2.ndim != 1:
+        raise ValueError(f'Only 1-D input allowed {coef2.ndim} != 1')
+
+    # Use shorter of two models to set degree limit
+    if coef1.size <= coef2.size:
+        ncoef = coef1.size
+    else:
+        ncoef = coef2.size
+
+    nmax = int(np.sqrt(ncoef + 1) - 1)
+
+    C_n = np.zeros((nmax,))
+    R_n = np.zeros((nmax,))  # elements are prop. to power spectrum of coef1
+    S_n = np.zeros((nmax,))  # elements are prop. to power spectrum of coef2
+
+    coef12 = coef1[:ncoef]*coef2[:ncoef]
+
+    for n in range(1, nmax+1):
+        m_min = n**2 - 1
+        m_max = m_min + (2*n + 1)
+        R_n[n-1] = np.sum(coef1[m_min:m_max]**2)
+        S_n[n-1] = np.sum(coef2[m_min:m_max]**2)
+        C_n[n-1] = (np.sum(coef12[m_min:m_max]) / np.sqrt(R_n[n-1]*S_n[n-1]))
+
+    return C_n
+
+
 def plot_power_spectrum(spectrum, labels, title):
     """
     Plot spherical harmonic spectrum.
@@ -82,6 +132,7 @@ def plot_power_spectrum(spectrum, labels, title):
     given array"""
     if type(spectrum) is not list:
         spectrum = [spectrum]
+        labels = [labels]
 
     # create axis handle
     fig, ax = plt.subplots(1, 1, sharex=True, sharey=True, figsize=(11,6))
@@ -105,6 +156,57 @@ def plot_power_spectrum(spectrum, labels, title):
     h, l = ax.get_legend_handles_labels()
     plt.legend(h, l, loc='center left', ncol=2,
                bbox_to_anchor=(1, 0.5))
+    plt.tight_layout()
+
+    return fig, ax
+
+
+def plot_degree_correlation(corr, labels, title):
+    """
+    Plot correlation per spherical harmonic degree between models.
+
+    Parameters
+    ----------
+    corr : ndarray, shape (N,)
+        Spherical harmonic correlation of degree `N`.
+    labels : str
+        Strings to label each series plotted.
+    title : str
+        String to title plot with.
+
+    Returns
+    -------
+    fig : :class:`matplotlib.figure.Figure`
+        Matplotlib figure.
+    ax : :class:`matplotlib.axes.Axes`
+        A single axes instance.
+    """
+
+    """Expecting list of different length arrays now, but keep compatibility if
+    given array"""
+    if type(corr) is not list:
+        corr = [corr]
+        labels = [labels]
+
+    # create axis handle
+    fig, ax = plt.subplots(1, 1, sharex=True, sharey=True, figsize=(11,6))
+
+    h = []
+    max_deg = 0
+    for i, c in enumerate(corr):
+        degrees = np.arange(1, c.shape[0] + 1, step=1.0)
+        max_deg = max([max_deg, max(degrees)])
+        h.append(ax.plot(degrees, c, label=labels[i]))
+
+    ax.set_title(title)
+    ax.grid(visible=True, which='minor', linestyle=':')
+    ax.grid(visible=True, which='major', linestyle='-', axis='both')
+    ax.set(ylabel="C_n", xlabel='degree')
+
+    ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+    plt.xlim((0, max_deg))
+    h, l = ax.get_legend_handles_labels()
+    plt.legend(h, l)
     plt.tight_layout()
 
     return fig, ax
@@ -163,10 +265,17 @@ def load_tabbed(fname):
 
     return coef
 
+
 ###############################################################################
+# v3.1 degree 2000 results analysis
 
 # Find all model output files below a given dir
-dir_results = '/users/globmod/eCSE_2021/outputs/3.0'  # don't use "~" for home!
+dir_results = '/users/globmod/eCSE_2021/outputs/3.1'  # don't use "~" for home!
+
+dir_figs = '/users/globmod/eCSE_2021/outputs/figures_3.1'
+if not os.path.exists(dir_figs):
+    os.makedirs(dir_figs)
+
 paths = glob.glob(os.path.join(dir_results ,"**", "model_No_P.out"),
                   recursive=True)
 
@@ -186,7 +295,8 @@ for path in paths:
     labels.append('_'.join([path.split('/')[i] for i in [5,6,9,10]]))
 
 fig, _ = plot_power_spectrum(P, labels, "Power spectra")
-fig.savefig("power_spectra.png", format="png", dpi=300)
+fig.savefig(os.path.join(dir_figs, "power_spectra.png"),
+            format="png", dpi=300)
 
 D = P[1:]
 for i, d in enumerate(D):
@@ -195,12 +305,67 @@ for i, d in enumerate(D):
     else:
         D[i] = d[:len(T)] - T
 fig, _ = plot_power_spectrum(D, labels[1:], "Power spectra relative to BGS1440")
-fig.savefig("power_spectra_diff.png", format="png", dpi=300)
+fig.savefig(os.path.join(dir_figs, "power_spectra_diff.png"),
+            format="png", dpi=300)
 
+C = degree_correlation(truth, load_starred_csv(paths[0]))
+labels = "BGS1440 : "+labels[1]
+fig, _ = plot_degree_correlation(C, labels, "Degree correlation")
+fig.savefig(os.path.join(dir_figs, "degree_correlation.png"),
+            format="png", dpi=300)
 
 sys.exit()
+
+###############################################################################
+# v3.0 results analysis
+
+# Find all model output files below a given dir
+dir_results = '/users/globmod/eCSE_2021/outputs/3.0'  # don't use "~" for home!
+
+dir_figs = '/users/globmod/eCSE_2021/outputs/figures_3.0'
+if not os.path.exists(dir_figs):
+    os.makedirs(dir_figs)
+
+paths = glob.glob(os.path.join(dir_results ,"**", "model_No_P.out"),
+                  recursive=True)
+
+# BGS degree 1440 model to use as benchmark
+truth = load_tabbed("/users/globmod/eCSE_2021/outputs/BGS1440/model_No_P.out")
+T = coef2spec(truth)
+
+P = []
+labels = []
+P.append(T)
+labels.append("BGS1440")
+for path in paths:
+    coef = load_starred_csv(path)
+    P.append(coef2spec(coef))
+    """Will only work for current path setup! Should use regex if this
+    directory naming convention is consistent."""
+    labels.append('_'.join([path.split('/')[i] for i in [5,6,9,10]]))
+
+fig, _ = plot_power_spectrum(P, labels, "Power spectra")
+fig.savefig(os.path.join(dir_figs, "power_spectra.png"),
+            format="png", dpi=300)
+
+D = P[1:]
+for i, d in enumerate(D):
+    if len(d) <= len(T):
+        D[i] = d - T[:len(d)]
+    else:
+        D[i] = d[:len(T)] - T
+fig, _ = plot_power_spectrum(D, labels[1:], "Power spectra relative to BGS1440")
+fig.savefig(os.path.join(dir_figs, "power_spectra_diff.png"),
+            format="png", dpi=300)
+
+sys.exit()
+
 ###############################################################################
 # Initial model files analysis plots:
+
+dir_figs = "/users/globmod/eCSE_2021/outputs/figures_initial_runs"
+if not os.path.exists(dir_figs):
+    os.makedirs(dir_figs)
 
 # Load files
 # BGS degree 1440 model to use as benchmark
@@ -235,7 +400,8 @@ fig, _ = plot_power_spectrum(np.column_stack((P1, P2, P3, P4, P5, P6, P7, P8, P9
                      "eCSE_large_problem",
                      "1024", "2048", "4096", "8192", "BGS1440"],
                     "Power spectra")
-fig.savefig("power_spectra.png", format="png", dpi=300)
+fig.savefig(os.path.join(dir_figs, "power_spectra.png"),
+            format="png", dpi=300)
 
 # Plot absolute spectra differences
 fig, _ = plot_power_spectrum(np.column_stack((P1-T, P2-T, P3-T, P4-T, P5-T, P6-T, P7-T, P8-T, P9-T)),
@@ -243,4 +409,7 @@ fig, _ = plot_power_spectrum(np.column_stack((P1-T, P2-T, P3-T, P4-T, P5-T, P6-T
                      "eCSE_large_problem",
                      "1024", "2048", "4096", "8192"],
                     "Power spectra realtive to BGS1440")
-fig.savefig("power_spectra_diff.png", format="png", dpi=300)
+fig.savefig(os.path.join(dir_figs, "power_spectra_diff.png"),
+            format="png", dpi=300)
+
+sys.exit()
