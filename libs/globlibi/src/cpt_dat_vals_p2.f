@@ -1,10 +1,10 @@
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c	subroutine cpt_dat_vals_p
+c	subroutine cpt_dat_vals_p2
 c		Vincent Lesur 09/02/2005
 c
 c       Parallel interface for cpt_dat_vals.f
 c
-c       Called: cpt_dat_vals
+c       Called: cpt_dat_vals_p2
 c
 c       input:
 c         nd            Space dimension
@@ -28,10 +28,26 @@ c
         integer :: nlocdatpts, nlocpts
         real*8  :: ppos(nd+1,*), bc(*), xyzf(*)
 c
+        integer :: i
+        real*8, allocatable :: dw(:)
+c
         external sub_base
 c
-        call cpt_dat_vals2(nd, nlocdatpts, nlocpts, ppos,
-     >                     nb, bc, sub_base, xyzf)
-c 
+        allocate(dw(1:nb))
+
+c  data points
+        do i=1,nlocdatpts
+          call sub_base('f',1,nb,bc,ppos(1,i),dw)
+          xyzf(i) = SUM(dw)
+        enddo
+
+c  sampling points
+        do i=nlocdatpts+1,nlocpts
+          call sub_base('f',100,nb,bc,ppos(1,i),dw)
+          xyzf(i) = SUM(dw)
+        enddo
+c
+        deallocate(dw)
+c
         return
         end

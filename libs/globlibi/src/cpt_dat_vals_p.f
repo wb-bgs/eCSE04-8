@@ -4,7 +4,7 @@ c		Vincent Lesur 09/02/2005
 c
 c       Parallel interface for cpt_dat_vals.f
 c
-c       Called: cpt_dat_vals
+c       Called: cpt_dat_vals_p
 c
 c       input:
 c         nd            Space dimension
@@ -27,10 +27,19 @@ c
         integer :: nd,np,nt,nb
         real*8  :: ppos(nd+1,*),bc(*),xyzf(*)
 c
+        integer :: i
+        real*8, allocatable :: dw(:)
+c
         external sub_base
 c
-        call cpt_dat_vals(nd, np, nt, ppos,
-     >                    nb, bc, sub_base, xyzf)
- 
+        allocate(dw(1:nb))
+c
+        do i=1,np
+          call sub_base('f',nt,nb,bc,ppos(1,i),dw)
+          xyzf(i) = SUM(dw)
+        enddo
+c
+        deallocate(dw)
+c
         return
         end
