@@ -1,6 +1,7 @@
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c     module sph_wmam
 c                       V. Lesur 16/09/2006
+c                       M. Bareford 18/08/2022
 c
 c     This module set the variable and define the model for the
 c     anaomaly field data
@@ -11,22 +12,41 @@ c  Number of parameters as organised on BE:
 c  ilg*(ilg+2)                        internal lithosphere models
 c
 c    Global data:
-c       ilg : integer : internal SH degree value (see below)
-c       ryg : real*8  : reference year for the model
-c       rag : real*8  : radius for lithosphere
-c       d2a,d3a,dalphaa,dbetaa : real*8(:)
-c       d4a,d5a,d6a : real*8(:) 
-c       allocatable arrays used to hold pre-computed values for
-c       the globlibi subroutines, mk_lf_dlf anf mklf_F2. 
+c       ilg : integer  : internal SH degree value (see below)
+c       ryg : real*8   : reference year for the model
+c       rag : real*8   : radius for lithosphere
+c
+c       dw_fname       : string  : name of burst buffer file holding
+c                                  dw values for all data points
+c       dw_fhandle     : integer : MPI file handle
+c       dw_rank        : integer : MPI rank
+c       dw_file_open   : logical : true if MPI dw data file is open
+c       dw_offset      : integer : rank offset for dw burst buffer file
+c       dw_nlocpts     : integer : number of points assigned to rank
+c       dw_nlocdatpts  : integer : number of observed points assigned to rank
+c       dw_nlocptsmax  : integer : maximum number of points assigned to rank
+c       dw_buf_type_committed : logical : flag indicating if dw_buf_type has been committed
+c       dw_buf_type    : integer : MPI dw_buf type
+c       dw_buf_size    : integer : number of elements (reals) in dw_buf
+c       dw_buf_nbytes  : integer : number of bytes in dw_buf
+c       dw_file_nbytes : integer : number of bytes in dw data file
+c       dw_buf         : real*8  : allocatable array holding dw values
+c                                  for one point
+c       dw_offset      : integer : rank offset in units of dw_buf_type
+c                                  for dw burst buffer file
 c
 c    Subroutines:
-c       init_sph_wmam()    initialise the global variables
-c       fini_sph_wmam()    deallocate global arrays
+c       init_sph_wmam()      initialise the global variables
+c       precalc_sph_wmam()   precalc dw values and store in burst buffer
+c       prepare_dw_read()    open dw data file for reading
+c       fini_sph_wmam()      deallocate dw array
 c       mpi_read_ref_model()
 c       mpi_read_model()
 c       mpi_read_data()
-c       sub_sph_wmam()     model subroutine
-c       sub_sph_wmam_l()   linearized model subroutine
+c       mpi_read_dw_data()
+c       mpi_write_dw_data()
+c       sub_sph_wmam()       model subroutine
+c       sub_sph_wmam_l()     linearized model subroutine
 c       wmam_norm()
 c       wmam_var
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -35,15 +55,27 @@ c
         implicit none
 c
         integer, parameter :: NUM_OF_PTCOMPS = 4
+        integer, parameter :: NUM_OF_DWCOMPS = 3
         integer, parameter :: SIZE_OF_REAL = 8
         integer, parameter :: SIZE_OF_PT = NUM_OF_PTCOMPS*SIZE_OF_REAL
 c        
+        character(len=100) :: dw_fname
+c
         integer ilg
+        integer dw_fhandle, dw_rank
+        integer dw_nlocdatpts, dw_nlocpts, dw_nlocptsmax
+        integer dw_offset
+        logical dw_file_open
+        logical dw_buf_type_committed
+        integer dw_buf_type, dw_buf_size, dw_buf_nbytes
+        integer(kind=8) :: dw_file_nbytes
+        integer dwx_imin, dwx_imax
+        integer dwy_imin, dwy_imax
+        integer dwz_imin, dwz_imax
+c
+        real*8, allocatable :: dw_buf(:) 
+c
         real*8 ryg, rag
-        real*8, allocatable :: d2a(:), d3a(:)
-        real*8, allocatable :: dalphaa(:), dbetaa(:)
-        real*8, allocatable :: d4a(:), d5a(:)
-        real*8, allocatable :: d6a(:)     
 c
         contains
 c
@@ -51,107 +83,271 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c    subroutine init_sph_wmam
 c
 c       V. Lesur 16/09/2006
+c       M. Bareford 18/08/2022
 c
-c  Set ilg, ryg (based on 1990) and rag
+c  Set ilg, ryg (based on 1990) and rag.
+c  Set the dw globals.
 c
 c  input:
-c       shdeg : integer  : spherical harmonic degree
+c       shdeg       : integer : spherical harmonic degree
+c       nparams     : integer : number of parameters
+c       nlocdatpts  : integer : number of observed points assigned to rank
+c       nlocpts     : integer : number of points assigned to rank
+c       nlocptsmax  : integer : maximum number of points assigned to rank
+c       npts        : integer : total number of points
+c       imin_locpts : integer : first index in to global point array for rank
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine init_sph_wmam(shdeg)
+        subroutine init_sph_wmam(shdeg, nparams, nlocdatpts,
+     >                           nlocpts, nlocptsmax,
+     >                           npts, imin_locpts)
 c
         implicit none
 c
-        integer shdeg
+        include 'mpif.h'
 c
-        integer ierr, klen
-        integer i, j, k
-        real*8 d1, d2, di
+        integer shdeg, nparams
+        integer nlocpts, nlocdatpts, nlocptsmax
+        integer npts, imin_locpts
 c
-        real*8 dgamln
-        external dgamln
+        character(len=32) :: username
+        integer ierr
+c
+        call MPI_Comm_rank(MPI_COMM_WORLD, dw_rank, ierr)
 c
         call dy2mjd(1990.d0,ryg)
         rag=6371.2d0
         ilg=shdeg
 c
-c       pre-calculate terms used in globlibi subroutine, mklf_F2
-        klen=((ilg-1)*ilg)/2
+        CALL GET_ENVIRONMENT_VARIABLE("USER", username)
+        dw_fname='/mnt/lustre/a2fs-nvme/'//TRIM(username)//'/dw.dat.bin'
+c       dw_fname='/dev/shm/dw.dat.bin' 
 c
-        allocate(d2a(0:ilg), d3a(0:ilg))
-        allocate(dalphaa(klen), dbetaa(klen))
+        dw_nlocdatpts=nlocdatpts
+        dw_nlocpts=nlocpts
+        dw_nlocptsmax=nlocptsmax
+        dw_offset=imin_locpts-1
+        dw_buf_size=NUM_OF_DWCOMPS*nparams
+        dw_buf_nbytes=dw_buf_size*SIZE_OF_REAL
+        dw_file_nbytes=npts
+        dw_file_nbytes=dw_file_nbytes*dw_buf_nbytes
 c
-        k=1
-        do i=0,ilg
-          di = dble(i)
-          d1 = dgamln(2*di+1.0d0,ierr)
-          d2 = dgamln(di+1.0d0,ierr)
-          if (ierr.ne.0) then
-            write(*,*)
-     >        'init_sph_wmam: Cannot compute normalisation cst!'
-            stop
-          endif
-        
-          d2 = 0.5d0*d1 - d2
-          d2 = d2 - i*dlog(2.0d0)
-          d2 = dexp(d2)
-          if (i .ne. 0) then
-            d2 = d2*dsqrt(2.0d0)
-          endif
-          d2a(i) = d2
+        dwx_imin = 1
+        dwx_imax = nparams 
+        dwy_imin = dwx_imax+1
+        dwy_imax = dwx_imax+nparams
+        dwz_imin = dwy_imax+1
+        dwz_imax = dwy_imax+nparams
 
-          d3a(i) = dsqrt(dble(2*i+1))
-
-          do j=2,ilg-i                      
-            d1 = dble((j-1) * (j+2*i-1))   
-            d2 = dble(j * (j+2*i))
-            dbetaa(k) = dsqrt(d1/d2)        
-            d1 = dble(2*(j+i)-1) 
-            dalphaa(k) = d1/dsqrt(d2)
-            k = k+1
-          enddo 
-        enddo
+        if (dw_rank .eq. 0) then
+          write(*,*) ''
+          write(*,*) ''
+          write(*,*) 'Initialising dw variables'
+          write(*,*) 'dw_fname: ', dw_fname
+          write(*,*) 'dw_nlocdatpts: ', dw_nlocdatpts
+          write(*,*) 'dw_nlocpts: ', dw_nlocpts
+          write(*,*) 'dw_nlocptsmax: ', dw_nlocptsmax
+          write(*,*) 'dw_offset: ', dw_offset
+          write(*,*) 'dw_buf_size: ', dw_buf_size
+          write(*,*) 'dw_buf_nbytes: ', dw_buf_nbytes
+          write(*,*) 'dw_file_nbytes: ', dw_file_nbytes
+          write(*,*) ''
+          write(*,*) 'dwx_imin: ', dwx_imin
+          write(*,*) 'dwx_imax: ', dwx_imax
+          write(*,*) 'dwy_imin: ', dwy_imin
+          write(*,*) 'dwy_imax: ', dwy_imax
+          write(*,*) 'dwz_imin: ', dwz_imin
+          write(*,*) 'dwz_imax: ', dwz_imax
+          write(*,*) ''
+          write(*,*) ''
+        endif
 c
-c       pre-calculate terms used in globlibi subroutine, mk_lf_dlf
-        klen=((ilg+1)*(2+ilg))/2
+        dw_buf_type_committed = .false.
+        dw_file_open = .false.
 c
-        allocate(d4a(1:ilg+1), d5a(3:ilg+1))
-        allocate(d6a(klen))
+        call MPI_Type_contiguous(dw_buf_size,
+     >                           MPI_DOUBLE_PRECISION,
+     >                           dw_buf_type, ierr)
+        if (ierr .ne. MPI_SUCCESS) then
+          write(*,*) dw_rank,
+     >               ': Error MPI_Type_contiguous() returned ',
+     >               ierr
+          stop
+        endif
 c
-        d4a(1) = -1.0d0
-        d4a(2) = -dsqrt(3.0d0) 
-        do i=3,ilg+1
-          d4a(i) = (2*i-1)/dsqrt(dble(i*i-1))
-          d5a(i) = dsqrt(dble((i-1)**2-1)/(i*i-1))
-        enddo
+        call MPI_Type_commit(dw_buf_type, ierr)
+        if (ierr .eq. MPI_SUCCESS) then
+          dw_buf_type_committed = .true.
+        else
+          write(*,*) dw_rank,
+     >               ': Error MPI_Type_commit() returned ',
+     >               ierr
+          stop
+        endif
+c        
+        if (dw_buf_type_committed) then
+          allocate(dw_buf(dw_buf_size))
+        endif
 c
-        k=1
-        do i=0,ilg
-          do j=ilg,i,-1
-            if (j-i .gt. 0) then
-              d6a(k) = dsqrt(dble((j-i)*(j+i)))
-            else
-              d6a(k) = 0.0d0
-            end if
-            k = k+1
-          enddo 
-        enddo
-
-        return
         end subroutine init_sph_wmam
+c
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c    subroutine precalc_sph_wmam
+c
+c  Calculate and write dw values to burst buffer.
+c
+c  input:
+c       nd        : integer : nd+1 is the lead dim of ppos
+c       nparams   : integer : number of parameters
+c       ppos(*,*) : real*8  : array of data values
+c
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+        subroutine precalc_sph_wmam(nd, nparams,  ppos)
+c
+        implicit none
+c
+        include 'mpif.h'
+c
+        integer nd, nparams
+        real*8 ppos(nd+1,*)
+c
+        logical fexists
+        integer ierr, i
+        integer(kind=8) :: fsize = 0
+        character(len=32) :: fsize_str
+        character(len=200) :: truncate_cmd  
+c
+        dw_file_open = .false.
+c
+        INQUIRE(FILE=dw_fname, EXIST=fexists)
+c
+        if (fexists) then
+          INQUIRE(FILE=dw_fname, SIZE=fsize)
+          if (fsize .eq. dw_file_nbytes) then
+c  correctly-sized dw data file already exists
+c  assume pre-calculations have already been written
+            if (dw_rank .eq. 0) then
+              write(*,*) 'Found existing dw data file at ',
+     >                   dw_fname
+              write(*,*) ''
+            endif
+            return
+          endif
+        endif
+c
+c  set the size of the dw data file
+        fsize = dw_file_nbytes
+        write(fsize_str,*) fsize
+        truncate_cmd='truncate -s '//TRIM(fsize_str)//' '//dw_fname
+        call EXECUTE_COMMAND_LINE(truncate_cmd)
+c
+c  open dw data file for writing
+        call MPI_File_open(MPI_COMM_WORLD, dw_fname,
+     >                     MPI_MODE_WRONLY, MPI_INFO_NULL,
+     >                     dw_fhandle, ierr)
+        if (ierr .eq. MPI_SUCCESS) then
+          dw_file_open = .true.
+        else
+          write(*,*) dw_rank,
+     >               ': Error MPI_File_open(WRONLY) returned ',
+     >               ierr
+          stop
+        endif
+c 
+c  data points
+        do i=1,dw_nlocpts
+          dw_buf(dwx_imin:dwz_imax)=0.0d0
+c  calculate internal field component
+          call XYZsph_bi0(ilg,rag,ppos(1,i),
+     >                    dw_buf(dwx_imin:dwx_imax),
+     >                    dw_buf(dwy_imin:dwy_imax),
+     >                    dw_buf(dwz_imin:dwz_imax))
+c
+c  write components to burst buffer 
+          call mpi_write_dw_data(i, .false.)
+        enddo
+c
+c  do dummy writes so that mpi collective write completes
+c       do i=dw_nlocpts+1,dw_nlocptsmax
+c         call mpi_write_dw_data(dw_nlocpts, .false.)
+c       enddo
+c
+c  close dw data file after writing
+        if (dw_file_open) then
+          call MPI_File_close(dw_fhandle, ierr)
+          dw_file_open = .false.
+        endif
+c
+        end subroutine precalc_sph_wmam
+c
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c    subroutine prepare_dw_read
+c
+c  Open dw data file for reading.
+c
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+        subroutine prepare_dw_read()
+c
+        implicit none
+c
+        include 'mpif.h'
+c
+        integer ierr
+c
+        dw_file_open = .false.
+c
+        call MPI_File_open(MPI_COMM_WORLD, dw_fname,
+     >                     MPI_MODE_RDONLY, MPI_INFO_NULL,
+     >                     dw_fhandle, ierr)
+        if (ierr .eq. MPI_SUCCESS) then
+          dw_file_open = .true.
+        else
+          write(*,*) dw_rank,
+     >               ': Error MPI_File_open(RDONLY) returned ',
+     >               ierr
+          stop
+        endif
+c
+        end subroutine prepare_dw_read
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c    subroutine fini_sph_wmam
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine fini_sph_wmam()
-        deallocate(d2a, d3a)
-        deallocate(dalphaa, dbetaa)
-        deallocate(d4a, d5a, d6a) 
+c
+        implicit none
+c
+        include 'mpif.h'
+c
+        integer ierr
+c
+c  close dw data file after reading
+        if (dw_file_open) then
+          call MPI_File_close(dw_fhandle, ierr)
+          dw_file_open = .false.
+        endif
+c
+        deallocate(dw_buf)
+c
+        if (dw_buf_type_committed) then
+          call MPI_Type_free(dw_buf_type, ierr)
+          dw_buf_type_committed = .false.
+        endif
+c
         end subroutine fini_sph_wmam
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c    subroutine mpi_read_ref_model
+c
+c  Read in reference model.
+c  All ranks read entire file.
+c
+c  input:
+c       fname   : character : name of reference model file
+c  output:
+c       ncoeffs : integer : number of coefficients/parameters
+c       bc(*)   : real*8  : coefficients/parameters
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine mpi_read_ref_model(fname, ncoeffs, bc)
@@ -306,6 +502,15 @@ c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c    subroutine mpi_read_model
 c
+c  Read in starting model.
+c  All ranks read entire file.
+c
+c  input:
+c       fname   : character : name of model file
+c  output:
+c       nparams : integer : number of parameters
+c       bc(*)   : real*8  : parameters
+c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine mpi_read_model(fname, nparams, bc)
 c
@@ -446,6 +651,19 @@ c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c    subroutine mpi_read_data
 c
+c  Read in data.
+c  Read just those points that have been assigned to the rank.
+c
+c  input:
+c       fname      : character : name of data file
+c       nd         : integer : nd+1 is the lead dim of ppos
+c       ndatpts    : integer : number of data points in file
+c       nlocdatpts : integer : number of data points assigned to rank
+c       imin_locdatpts : integer : one-based rank index for global
+c                                  array of data points
+c  output:
+c       ppos(*,*) : real*8 : array of data points assigned to rank
+c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine mpi_read_data(fname, nd, ndatpts, nlocdatpts,
      >                           imin_locdatpts, ppos)
@@ -564,6 +782,128 @@ c
         end
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c    subroutine mpi_read_dw_data
+c
+c  Read in dw values associated with a specific point.
+c
+c  input:
+c       ipt : integer : one-based index identifying a particular
+c                       point assigned to this rank
+c       debug : logical : if true check read count and if any point
+c                         read is nan
+c
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+        subroutine mpi_read_dw_data(ipt, debug)
+c
+        implicit none
+c
+        include 'mpif.h'
+c
+	integer ipt
+        logical debug
+c
+        integer ierr, i
+        integer :: nread = 0
+        integer (kind=MPI_OFFSET_KIND) :: disp = 0
+        integer fstat(MPI_STATUS_SIZE)
+c
+        disp = dw_offset + (ipt-1)
+        disp = disp*dw_buf_nbytes
+c
+        call MPI_File_read_at(dw_fhandle, disp,
+     >                        dw_buf, 1, dw_buf_type,
+     >                        fstat, ierr)
+        if (ierr .ne. MPI_SUCCESS) then
+          write(*,*) dw_rank,
+     >               ': Error, MPI_File_read_at() returned ',
+     >               ierr
+          stop
+        endif
+c
+        if (debug) then
+          call MPI_Get_count(fstat, dw_buf_type, nread, ierr)
+          if (ierr .eq. MPI_SUCCESS) then
+            if (nread .ne. 1) then
+              write(*,*) 'Error, unable to read ',
+     >                    dw_buf_size, ' reals from dw file'
+              stop
+            endif
+          else
+            write(*,*) dw_rank,
+     >                 ': Error, MPI_Get_count() returned ',
+     >                 ierr
+            stop
+          endif
+c
+          do i=1,dw_buf_size
+            if (ISNAN(dw_buf(i))) then
+              write(*,*) dw_rank,
+     >                   ': Read error, dw value ', i,
+     >                   ' for point ', ipt, ' is nan'
+              stop 
+            endif
+          enddo
+        endif
+c
+        end subroutine mpi_read_dw_data
+c
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c    subroutine mpi_write_dw_data
+c
+c  Write the dw values associated with a specific point.
+c
+c  input:
+c       ipt : integer : one-based index identifying a particular
+c                       point assigned to this rank
+c       debug : logical : if true check write count is correct
+c
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+        subroutine mpi_write_dw_data(ipt, debug)
+c
+        implicit none
+c
+        include 'mpif.h'
+c
+        integer ipt
+        logical debug
+c
+        integer ierr
+        integer :: nwritten = 0
+        integer (kind=MPI_OFFSET_KIND) :: disp = 0
+        integer fstat(MPI_STATUS_SIZE)
+c        
+        disp = dw_offset + (ipt-1)
+        disp = disp*dw_buf_nbytes
+c
+        call MPI_File_write_at(dw_fhandle, disp,
+     >                         dw_buf, 1, dw_buf_type,
+     >                         fstat, ierr)
+        if (ierr .ne. MPI_SUCCESS) then
+          write(*,*) dw_rank,
+     >               ': Error, MPI_File_write_at() returned ',
+     >               ierr
+          stop
+        endif
+c
+        if (debug) then
+          call MPI_Get_count(fstat, dw_buf_type, nwritten, ierr)
+          if (ierr .eq. MPI_SUCCESS) then
+            if (nwritten .ne. 1) then
+              write(*,*) dw_rank, ': Error, unable to write ',
+     >                   dw_buf_size, ' reals to dw file'
+              stop
+            endif
+          else
+            write(*,*) dw_rank,
+     >                 ': Error MPI_Get_count() returned ',
+     >                 ierr
+            stop
+          endif
+        endif
+c
+        end subroutine mpi_write_dw_data
+c
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c    subroutine sub_sph_wmam
 c
 c       V. Lesur  16/09/2006
@@ -579,34 +919,27 @@ c
         integer nub, nb
         real*8 bc(*), bp(*), be(*)
 c
-        real*8, allocatable :: dwx(:), dwy(:), dwz(:)
-c
+        integer i
         real*8 dx,dy,dz,dd
         real*8 xy_c, xz_c, yx_c, yz_c, zx_c, zy_c
         real*8 bex, bey, bez
         real*8 bex2, bey2, bez2
 c
 c
-        allocate(dwx(1:nb),dwy(1:nb),dwz(1:nb))
-
-        dwx(1:nb) = 0.0d0
-        dwy(1:nb) = 0.0d0
-        dwz(1:nb) = 0.0d0
         be(1:nb) = 0.0d0
-        
-        call XYZsph_bi0(ilg, rag, d2a, d3a,
-     >                  dalphaa, dbetaa,
-     >                  d4a, d5a, d6a,
-     >                  bp, dwx, dwy, dwz)
 
-        if (nub .eq. 100) then
+c  calculate internal field component
+c  read in dw for point nub from burst buffer
+        call mpi_read_dw_data(nub, .false.)
 c
-c    sampling point
-          dx = dot_product(dwx(1:nb), bc(1:nb))
-          dy = dot_product(dwy(1:nb), bc(1:nb))
-          dz = dot_product(dwz(1:nb), bc(1:nb))
+        if (nub .gt. dw_nlocdatpts) then
 c
-c    calculate field unit vector (lithos)
+c  sampling point
+          dx = dot_product(dw_buf(dwx_imin:dwx_imax), bc(1:nb))
+          dy = dot_product(dw_buf(dwy_imin:dwy_imax), bc(1:nb))
+          dz = dot_product(dw_buf(dwz_imin:dwz_imax), bc(1:nb))
+c
+c  calculate field unit vector (lithos)
           dd = dsqrt(bp(5)**2 + bp(6)**2 + bp(7)**2)
           bex = bp(5) / dd
           bey = bp(6) / dd
@@ -626,19 +959,22 @@ c
             bey2 = (yz_c*bez + yx_c*bex) / dd
             bez2 = (zy_c*bey + zx_c*bex) / dd
 c
-            be(1:nb) = dwx*bex2 + dwy*bey2 + dwz*bez2
+            be(1:nb) = dw_buf(dwx_imin:dwx_imax)*bex2
+     >               + dw_buf(dwy_imin:dwy_imax)*bey2
+     >               + dw_buf(dwz_imin:dwz_imax)*bez2
           else
-c    Full non-linear forward
+c  full non-linear forward
             be(1:1) = dd
           endif
         
         else
-c    regular data
+c  regular data
 c
-c    calulate full field (lithos + core)
-          dx = bp(5) + dot_product(dwx(1:nb), bc(1:nb))
-          dy = bp(6) + dot_product(dwy(1:nb), bc(1:nb))
-          dz = bp(7) + dot_product(dwz(1:nb), bc(1:nb))
+c  calculate full field (lithos + core)
+          dx = bp(5) + dot_product(dw_buf(dwx_imin:dwx_imax), bc(1:nb))
+          dy = bp(6) + dot_product(dw_buf(dwy_imin:dwy_imax), bc(1:nb))
+          dz = bp(7) + dot_product(dw_buf(dwz_imin:dwz_imax), bc(1:nb))
+
           dd = dsqrt(dx**2 + dy**2 + dz**2)
 c
           if (iof.ne.'f') then
@@ -646,18 +982,24 @@ c
             bey = dy / dd
             bez = dz / dd
 c
-            be(1:nb) = dwx*bex + dwy*bey + dwz*bez
+            be(1:nb) = dw_buf(dwx_imin:dwx_imax)*bex
+     >               + dw_buf(dwy_imin:dwy_imax)*bey
+     >               + dw_buf(dwz_imin:dwz_imax)*bez
           else
-c    Full non-linear forward
+c  full non-linear forward
             dx = dsqrt(bp(5)**2 + bp(6)**2 + bp(7)**2)
             be(1:1) = dd - dx
           endif
         
         endif
 c
-        deallocate(dwx,dwy,dwz)
-
-        return
+c  do dummy reads so that collective mpi reads complete
+c       if (nub .eq. dw_nlocpts) then
+c         do i=dw_nlocpts+1,dw_nlocptsmax
+c           call mpi_read_dw_data(dw_nlocpts, .false.)
+c         enddo
+c       endif
+c
         end subroutine  sub_sph_wmam
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -672,30 +1014,16 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
         implicit none
 c
-#ifdef CRAYPAT
-        include 'pat_apif.h'
-#endif
-c
         character iof
         integer nub, nb
         real*8 bp(*), be(*), bc(*)
 c
-        real*8, allocatable :: dwx(:), dwy(:), dwz(:)
-c
+        integer i
         real*8 dx, dy, dz, dd
         real*8 xy_c, xz_c, yx_c, yz_c, zx_c, zy_c
         real*8 bex, bey, bez
         real*8 bex2, bey2, bez2
-
-#ifdef CRAYPAT
-        integer cpstat
-#endif
-
-        allocate(dwx(1:nb),dwy(1:nb),dwz(1:nb))
-
-        dwx(1:nb) = 0.0d0
-        dwy(1:nb) = 0.0d0
-        dwz(1:nb) = 0.0d0
+c
         be(1:nb) = 0.0d0
 
 c    calculate full field (core)
@@ -704,25 +1032,15 @@ c    calculate full field (core)
         bey = bp(6) / dd
         bez = bp(7) / dd
 
-#ifdef CRAYPAT
-        call PAT_region_begin(1,"XYZsph_bi0",cpstat)
-#endif
-
 c    calculate internal field component
-        call XYZsph_bi0(ilg, rag, d2a, d3a,
-     >                  dalphaa, dbetaa,
-     >                  d4a, d5a, d6a,
-     >                  bp, dwx, dwy, dwz)
-
-#ifdef CRAYPAT
-        call PAT_region_end(1,cpstat)
-#endif
-
-        if (nub .eq. 100) then
+c    read in dw for point nub from burst buffer
+        call mpi_read_dw_data(nub, .false.)
+c
+        if (nub .gt. dw_nlocdatpts) then
 c    sampling point
-          dx = dot_product(dwx(1:nb), bc(1:nb))
-          dy = dot_product(dwy(1:nb), bc(1:nb))
-          dz = dot_product(dwz(1:nb), bc(1:nb))
+          dx = dot_product(dw_buf(dwx_imin:dwx_imax), bc(1:nb))
+          dy = dot_product(dw_buf(dwy_imin:dwy_imax), bc(1:nb))
+          dz = dot_product(dw_buf(dwz_imin:dwz_imax), bc(1:nb))
 c
           xy_c = dx*bey - bex*dy
           xz_c = dx*bez - bex*dz
@@ -742,19 +1060,25 @@ c
           bez = bez2
         endif
 
-        dwx = dwx * bex
-        dwy = dwy * bey
-        dwz = dwz * bez
+        dw_buf(dwx_imin:dwx_imax) = dw_buf(dwx_imin:dwx_imax) * bex
+        dw_buf(dwy_imin:dwy_imax) = dw_buf(dwy_imin:dwy_imax) * bey
+        dw_buf(dwz_imin:dwz_imax) = dw_buf(dwz_imin:dwz_imax) * bez
 
-        be(1:nb) = dwx + dwy + dwz
+        be(1:nb) = dw_buf(dwx_imin:dwx_imax)
+     >           + dw_buf(dwy_imin:dwy_imax)
+     >           + dw_buf(dwz_imin:dwz_imax)
 
         if (iof .eq. 'f') then
           be(1:nb) = be(1:nb) * bc(1:nb)
         endif
-
-        deallocate(dwx,dwy,dwz)
-
-        return
+c
+c  do dummy reads so that collective mpi reads complete
+c       if (nub .eq. dw_nlocpts) then
+c         do i=dw_nlocpts+1,dw_nlocptsmax
+c           call mpi_read_dw_data(dw_nlocpts, .false.)
+c         enddo
+c       endif
+c
         end subroutine  sub_sph_wmam_l
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc

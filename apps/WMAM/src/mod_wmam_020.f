@@ -34,6 +34,7 @@ c
         integer nlocdatpts, imin_locdatpts, imax_locdatpts
         integer nlocsampts, imin_locsampts
         integer nlocpts, imin_locpts
+        integer nlocptsmax
 c
         character(100) :: argstr
 c
@@ -42,7 +43,7 @@ c
         integer, allocatable :: proc_np(:), proc_ip(:)
 c
         integer, allocatable :: ijcov(:,:)
-        real*8, allocatable :: ppos(:,:), bc(:), cov(:), dw(:)
+        real*8, allocatable :: ppos(:,:), bc(:), cov(:), dw0(:)
         real*8, allocatable :: gg(:,:), bb(:)
         real*8, allocatable :: err(:)
         real*8 diff(4)
@@ -99,7 +100,6 @@ c  Read in command line arguments
 
 c
 c  Settings
-        call init_sph_wmam(shdeg)
         nparams=shdeg*(shdeg+2)
         nx=nint(1.0/resdeg)*180-1
         ny=nint(1.0/resdeg)*360
@@ -143,6 +143,7 @@ c  can be setup correctly
         enddo
         nlocpts = proc_np(rank+1)
         imin_locpts = proc_ip(rank+1)
+        nlocptsmax = MAXVAL(proc_np)
 
         deallocate(proc_ndp,proc_idp)
         deallocate(proc_nsp,proc_isp)
@@ -163,17 +164,20 @@ c  can be setup correctly
           write(*,*) 'Local Data+Sampling points: ', nlocpts
           write(*,*) 'Global Index for Data+Sampling points: ',
      >               imin_locpts
-          write(*,*) ''
-          write(*,*) ''
         endif
-
+c
+c
+        call init_sph_wmam(shdeg, nparams, nlocdatpts,
+     >                     nlocpts, nlocptsmax,
+     >                     npts, imin_locpts) 
+c
 c
 c  Array allocations
         allocate(bc(nparams))
         allocate(ppos(ND+1,nlocpts))
         allocate(cov(nlocpts))
         allocate(ijcov(nlocpts,2))
-        allocate(dw(nlocpts))
+        allocate(dw0(nlocpts))
         
 c
 c  Read in reference model
@@ -201,22 +205,22 @@ c
 c  Calculate CM4 components 
         if (rank.eq.0) write(*,*) 'Calculating CM4 components'
 
-        dw=0.0d0
+        dw0=0.0d0
         call cpt_dat_vals_p(ND, nlocdatpts, 1, ppos, ncoeffs,
-     >                      bc, sph_bi, dw)
-        ppos(5,1:nlocdatpts)=dw(1:nlocdatpts)
+     >                      bc, sph_bi, dw0)
+        ppos(5,1:nlocdatpts)=dw0(1:nlocdatpts)
         if (rank.eq.0) write(*,*) ' X CM4 component calculated'
         
-        dw=0.0d0
+        dw0=0.0d0
         call cpt_dat_vals_p(ND, nlocdatpts, 2, ppos, ncoeffs,
-     >                      bc, sph_bi, dw)
-        ppos(6,1:nlocdatpts)=dw(1:nlocdatpts)
+     >                      bc, sph_bi, dw0)
+        ppos(6,1:nlocdatpts)=dw0(1:nlocdatpts)
         if (rank.eq.0) write(*,*) ' Y CM4 component calculated'
 
-        dw=0.0d0
+        dw0=0.0d0
         call cpt_dat_vals_p(ND, nlocdatpts, 3, ppos, ncoeffs,
-     >                      bc, sph_bi, dw)
-        ppos(7,1:nlocdatpts)=dw(1:nlocdatpts)
+     >                      bc, sph_bi, dw0)
+        ppos(7,1:nlocdatpts)=dw0(1:nlocdatpts)
         if (rank.eq.0) then
           write(*,*) ' Z CM4 component calculated'
           write(*,*) ''
@@ -266,7 +270,7 @@ c  Invert data
         dl(2)=0.0d0
         dl(3)=1.d14
 c
-        dw=1.d0
+        dw0=1.d0
 c
         if (rank.eq.0) then
           write(*,*) 'Start Inversion'
@@ -278,21 +282,23 @@ c
         fname='./Results/'
         allocate(gg(1:1,1:1))
         allocate(bb(1:1))
-
+c
+        call precalc_sph_wmam(ND, nparams, ppos)
+        call prepare_dw_read()
 c
         if (scheme.eq.POLAK_RIBIERE) then
           call opt_pr_p3(fname, itmax, NPMAX, ND, nparams,
      >                   nlocdatpts, proc_np, ppos, bc, dl,
      >                   l2_norm, sub_sph_wmam_l, l2_std, damp_rien,
      >                   cov, ijcov(1,2),
-     >                   stdt, dw, bb, gg)
+     >                   stdt, dw0, bb, gg)
         else
 c         CONJUGATE_GRADIENT
           call opt_ghc_p2(fname, itmax, NPMAX, ND, nparams,
      >                    nlocdatpts, proc_np, ppos, bc, dl,
      >                    l2_norm, sub_sph_wmam_l, l2_std, damp_rien,
      >                    cov, ijcov(1,2),
-     >                    stdt, dw, bb, gg)
+     >                    stdt, dw0, bb, gg)
         endif
 
 c
@@ -310,10 +316,10 @@ c
           if (rank .eq. i) then
             call write_comp('./Results/fit_No_P.out',
      >                      ND, 1, nlocdatpts,
-     >                      ppos, dw, diff(1:2))
+     >                      ppos, dw0, diff(1:2))
             call write_comp('./Results/fit_damp.out',
      >                      ND, nlocdatpts+1, nlocpts,
-     >                      ppos, dw, diff(3:4))
+     >                      ppos, dw0, diff(3:4))
           endif
           if (i .lt. nranks-1) then
             call MPI_Barrier(MPI_COMM_WORLD, ierr)
@@ -377,7 +383,7 @@ c  Deallocate arrays
         deallocate(bc)
         deallocate(cov)
         deallocate(ijcov)
-        deallocate(dw)
+        deallocate(dw0)
         deallocate(proc_np,proc_ip)
 c
         call fini_sph_wmam()

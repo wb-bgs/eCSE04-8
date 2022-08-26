@@ -25,10 +25,10 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
         implicit none
 c
-        integer ,intent(in)    :: nranks,nelems
-        integer ,intent(out)   :: proc_np(*),proc_ip(*)
+        integer, intent(in)  :: nranks,nelems
+        integer, intent(out) :: proc_np(*),proc_ip(*)
 c
-        integer                :: i,k,n
+        integer              :: i,k,n
 c
         proc_np(1:nranks)=0 
         proc_ip(1:nranks)=0
@@ -49,5 +49,4 @@ c Set indexes
           proc_ip(i)=proc_ip(i-1)+proc_np(i-1) 
         enddo
 c
-        return
         end subroutine thread_segmenter

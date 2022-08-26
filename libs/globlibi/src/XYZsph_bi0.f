@@ -27,12 +27,8 @@ c
 c       colat,long,radius given in degree,degree,km
 c
 c       input:
-c         ilg  INTEGER   max SH degree 
-c         rag  REAL*8    reference radius
-c         d2a, d3a, dalphaa, dbetaa  REAL*8
-c           arrays holding pre-computed values for mklf_F2()
-c         d4a, d5a, d6a  REAL*8
-c           arrays holding pre-computed values for mk_lf_dlf()
+c         ra   REAL*8    reference radius
+c         nlie INTEGER   max SH degree
 c         pos  REAL*8    positions in space and time (colat,long,radius)
 c
 c       output:
@@ -41,78 +37,53 @@ c         by   REAL*8   Y Base funtion value
 c         bz   REAL*8   Z Base funtion value
 c       
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-	subroutine XYZsph_bi0(ilg, rag, d2a, d3a,
-     >                        dalphaa, dbetaa,
-     >                        d4a, d5a, d6a,
-     >                        pos, bx, by, bz)
+	subroutine XYZsph_bi0(nlie,ra,pos,bx,by,bz)
 c
         implicit none
 c
-        integer ilg
-        real*8 rag
-        real*8 d2a(0:ilg), d3a(0:ilg)
-        real*8 dalphaa(*), dbetaa(*)
-        real*8 d4a(1:ilg+1), d5a(3:ilg+1), d6a(*)
-        real*8 pos(*), bx(*), by(*), bz(*)
-c
-        integer il, im, nu
-        real*8 rc, rs, dw
-        real*8 ds, dc, dcosd, dsind, ra_div_pos3
-        real*8, allocatable :: dlf(:), ddlf(:), dr(:)
+        integer nu,il,im,nlie
+        real*8 pos(*),bx(*),by(*),bz(*),rc,rs,ra,dr,dw
+        real*8 ds,dc,dt,dcosd,dsind
+        real*8, allocatable :: dlf(:),ddlf(:)
 c
         external dcosd,dsind
+        allocate(dlf(1:nlie+1),ddlf(1:nlie+1))
 c
-        allocate(dlf(1:ilg+1), ddlf(1:ilg+1))
-        allocate(dr(1:ilg))
-c
-        rc = dcosd(pos(1))
-        rs = dsind(pos(1))
-
-        ra_div_pos3 = rag / pos(3)
+c       ra=6371.2d0
+        rc=dcosd(pos(1))
+        rs=dsind(pos(1))
 c
 c   im=0
         im=0
-        call mk_lf_dlf(im, ilg, d2a, d3a,
-     >                 dalphaa, dbetaa,
-     >                 d4a, d5a, d6a,
-     >                 rs, rc, dlf, ddlf)
-
-        do il=1,ilg
-          nu = il*il - 1
-          dr(il) = ra_div_pos3**(il+2)
-          bx(nu+1) = ddlf(il-im+1) * dr(il)
-          by(nu+1) = 0.0d0
-          bz(nu+1) = -dlf(il-im+1) * dble(il+1) * dr(il)
+        call mk_lf_dlf(im,nlie,rs,rc,dlf,ddlf)
+        do il=1,nlie
+          nu=(il*il-1)
+          dr=(ra/pos(3))**(il+2)
+          bx(nu+1)=ddlf(il-im+1)*dr
+          by(nu+1)=0.0d0
+          bz(nu+1)=-dlf(il-im+1)*dble(il+1)*dr
         enddo
-
 c   im.ne.0
-        do im=1,ilg
-          call mk_lf_dlf(im, ilg, d2a, d3a,
-     >                   dalphaa, dbetaa,
-     >                   d4a, d5a, d6a,
-     >                   rs, rc, dlf, ddlf)
-
-          dc = dcosd(im*pos(2))
-          ds = dsind(im*pos(2))
-          do il=im,ilg
-            nu = il*il + 2*(im-1)
-
-            dw = ddlf(il-im+1) * dr(il)
-            bx(nu+1) = dw*dc
-            bx(nu+2) = dw*ds
-            
-            dw = dlf(il-im+1)/rs
-            dw = dw * dble(im) * dr(il)
-            by(nu+1) = dw*ds
-            by(nu+2) = -dw*dc
-            
-            dw = dlf(il-im+1) * dble(il+1) * dr(il)
-            bz(nu+1) = -dw*dc
-            bz(nu+2) = -dw*ds
+        do im=1,nlie
+          call mk_lf_dlf(im,nlie,rs,rc,dlf,ddlf)
+          dc=dcosd(im*pos(2))
+          ds=dsind(im*pos(2))
+          do il=im,nlie
+            nu=il*il+2*(im-1)
+            dr=(ra/pos(3))**(il+2)
+            dw=ddlf(il-im+1)*dr
+            bx(nu+1)=dw*dc
+            bx(nu+2)=dw*ds
+            dw=dlf(il-im+1)/rs
+            dw=dw*dble(im)*dr
+            by(nu+1)=dw*ds
+            by(nu+2)=-dw*dc
+            dw=dlf(il-im+1)*dble(il+1)*dr
+            bz(nu+1)=-dw*dc
+            bz(nu+2)=-dw*ds
           enddo
         enddo
-
-        deallocate(dlf, ddlf, dr)
+        deallocate(dlf,ddlf)
 c
         return
         end

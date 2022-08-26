@@ -61,13 +61,7 @@ c
           np=min0(nlocpts-ip+1,npmax)
 
           do i=1,np
-            if (ip-1+i .le. nlocdatpts) then
-c  data points
-              ntval(i)=1
-            else
-c  sampling points
-              ntval(i)=100
-            endif
+            ntval(i)=ip-1+i
           enddo
 c
 c Calculate the equations of condition

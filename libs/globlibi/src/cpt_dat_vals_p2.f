@@ -35,15 +35,9 @@ c
 c
         allocate(dw(1:nb))
 
-c  data points
-        do i=1,nlocdatpts
-          call sub_base('f',1,nb,bc,ppos(1,i),dw)
-          xyzf(i) = SUM(dw)
-        enddo
-
-c  sampling points
-        do i=nlocdatpts+1,nlocpts
-          call sub_base('f',100,nb,bc,ppos(1,i),dw)
+c  data+sampling points
+        do i=1,nlocpts
+          call sub_base('f',i,nb,bc,ppos(1,i),dw)
           xyzf(i) = SUM(dw)
         enddo
 c

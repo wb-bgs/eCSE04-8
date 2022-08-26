@@ -39,8 +39,8 @@ c
 c
         real*8, allocatable :: vrt(:,:)
         real*8, allocatable :: glw(:)
-        real*8, allocatable :: dw(:)
-        real*8, allocatable :: dw2(:,:)
+        real*8, allocatable :: dw2(:)
+        real*8, allocatable :: dw3(:,:)
 c
         integer i,j,k
         real*8 r2,qpi
@@ -57,43 +57,43 @@ c
 c  Define sampling points
         allocate (glw(nlocsampts))
         allocate (vrt(nd+1,nlocsampts))
-        allocate (dw2(2,nlocsampts))
+        allocate (dw3(2,nlocsampts))
         call set_FG_sampling(llm, imin_locsampts, 
      >                       imin_locsampts+nlocsampts-1,
-     >                       dw2,glw)
+     >                       dw3,glw)
         do i=1,nlocsampts
-          vrt(1,i)=dw2(1,i)
-          vrt(2,i)=dw2(2,i)
+          vrt(1,i)=dw3(1,i)
+          vrt(2,i)=dw3(2,i)
           vrt(3,i)=rag
           vrt(4,i)=ryg
         enddo
-        deallocate (dw2)
+        deallocate (dw3)
 c
-        allocate(dw(1:nlocsampts))
+        allocate(dw2(1:nlocsampts))
 c
-        dw=0.0d0
+        dw2=0.0d0
         if (rank.eq.0) write(*,*) ' Calculating CM4 components'
         call cpt_dat_vals_p(nd, nlocsampts, 1, vrt, ncoeffs,
-     >                      bc, sph_bi, dw)
-        vrt(5,1:nlocsampts)=dw(1:nlocsampts)
+     >                      bc, sph_bi, dw2)
+        vrt(5,1:nlocsampts)=dw2(1:nlocsampts)
         if (rank.eq.0) write(*,*) '  X CM4 component calculated'
 c
-        dw=0.0d0
+        dw2=0.0d0
         call cpt_dat_vals_p(nd, nlocsampts, 2, vrt, ncoeffs,
-     >                      bc, sph_bi, dw)
-        vrt(6,1:nlocsampts)=dw(1:nlocsampts)
+     >                      bc, sph_bi, dw2)
+        vrt(6,1:nlocsampts)=dw2(1:nlocsampts)
         if (rank.eq.0) write(*,*) '  Y CM4 component calculated'
 c
-        dw=0.0d0
+        dw2=0.0d0
         call cpt_dat_vals_p(nd, nlocsampts, 3, vrt, ncoeffs,
-     >                      bc, sph_bi, dw)
-        vrt(7,1:nlocsampts)=dw(1:nlocsampts)
+     >                      bc, sph_bi, dw2)
+        vrt(7,1:nlocsampts)=dw2(1:nlocsampts)
         if (rank.eq.0) then
           write(*,*) '  Z CM4 component calculated'
           write(*,*) ''
         endif
 
-        deallocate(dw)
+        deallocate(dw2)
 c
 c for each data point define the covariance
         j=nlocdatpts+1
