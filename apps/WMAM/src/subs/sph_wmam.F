@@ -59,6 +59,7 @@ c
         integer, parameter :: SIZE_OF_REAL = 8
         integer, parameter :: SIZE_OF_PT = NUM_OF_PTCOMPS*SIZE_OF_REAL
 c        
+        character(len=100) :: dw_fpath
         character(len=100) :: dw_fname
 c
         integer ilg
@@ -111,6 +112,7 @@ c
         integer npts, imin_locpts
 c
         character(len=32) :: username
+        character(len=5) :: shdeg_str
         integer ierr
 c
         call MPI_Comm_rank(MPI_COMM_WORLD, dw_rank, ierr)
@@ -119,9 +121,12 @@ c
         rag=6371.2d0
         ilg=shdeg
 c
-        CALL GET_ENVIRONMENT_VARIABLE("USER", username)
-        dw_fname='/mnt/lustre/a2fs-nvme/'//TRIM(username)//'/dw.dat.bin'
-c       dw_fname='/dev/shm/dw.dat.bin' 
+        write (shdeg_str, '(I4.4)') shdeg
+c
+        call GET_ENVIRONMENT_VARIABLE("USER", username)
+        dw_fpath='/mnt/lustre/a2fs-nvme/'//TRIM(username)//
+     >           '/'//TRIM(shdeg_str)
+        dw_fname=TRIM(dw_fpath)//'/dw.dat.bin'
 c
         dw_nlocdatpts=nlocdatpts
         dw_nlocpts=nlocpts
@@ -206,6 +211,10 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
         implicit none
 c
+#ifdef CRAYPAT
+        include 'pat_apif.h'
+#endif
+c
         include 'mpif.h'
 c
         integer nd, nparams
@@ -215,14 +224,18 @@ c
         integer ierr, i
         integer(kind=8) :: fsize = 0
         character(len=32) :: fsize_str
-        character(len=200) :: truncate_cmd  
+        character(len=200) :: cmd  
+c
+#ifdef CRAYPAT
+        integer cpstat
+#endif
 c
         dw_file_open = .false.
 c
-        INQUIRE(FILE=dw_fname, EXIST=fexists)
+        inquire(FILE=dw_fname, EXIST=fexists)
 c
         if (fexists) then
-          INQUIRE(FILE=dw_fname, SIZE=fsize)
+          inquire(FILE=dw_fname, SIZE=fsize)
           if (fsize .eq. dw_file_nbytes) then
 c  correctly-sized dw data file already exists
 c  assume pre-calculations have already been written
@@ -232,14 +245,26 @@ c  assume pre-calculations have already been written
               write(*,*) ''
             endif
             return
+          else
+c  delete incorrectly sized dw data file
+            cmd='rm -rf '//dw_fpath
+            call EXECUTE_COMMAND_LINE(cmd)
           endif
         endif
+c
+c  create file path to dw data file
+        cmd='mkdir -p '//TRIM(dw_fpath)
+        call EXECUTE_COMMAND_LINE(cmd)
+c
+c  set the strip count to -1 (i.e., use all OSTs)
+        cmd='lfs setstripe -c -1 '//TRIM(dw_fpath)
+        call EXECUTE_COMMAND_LINE(cmd)
 c
 c  set the size of the dw data file
         fsize = dw_file_nbytes
         write(fsize_str,*) fsize
-        truncate_cmd='truncate -s '//TRIM(fsize_str)//' '//dw_fname
-        call EXECUTE_COMMAND_LINE(truncate_cmd)
+        cmd='truncate -s '//TRIM(fsize_str)//' '//TRIM(dw_fname)
+        call EXECUTE_COMMAND_LINE(cmd)
 c
 c  open dw data file for writing
         call MPI_File_open(MPI_COMM_WORLD, dw_fname,
@@ -257,20 +282,31 @@ c
 c  data points
         do i=1,dw_nlocpts
           dw_buf(dwx_imin:dwz_imax)=0.0d0
+c
+#ifdef CRAYPAT
+          call PAT_record(PAT_STATE_ON,cpstat)
+          call PAT_region_begin(1,"XYZsph_bi0",cpstat)
+#endif
+c
 c  calculate internal field component
           call XYZsph_bi0(ilg,rag,ppos(1,i),
      >                    dw_buf(dwx_imin:dwx_imax),
      >                    dw_buf(dwy_imin:dwy_imax),
      >                    dw_buf(dwz_imin:dwz_imax))
 c
+#ifdef CRAYPAT
+          call PAT_region_end(1,cpstat)
+          call PAT_record(PAT_STATE_OFF,cpstat)
+#endif
+c
 c  write components to burst buffer 
           call mpi_write_dw_data(i, .false.)
         enddo
 c
 c  do dummy writes so that mpi collective write completes
-c       do i=dw_nlocpts+1,dw_nlocptsmax
-c         call mpi_write_dw_data(dw_nlocpts, .false.)
-c       enddo
+        do i=dw_nlocpts+1,dw_nlocptsmax
+          call mpi_write_dw_data(dw_nlocpts, .false.)
+        enddo
 c
 c  close dw data file after writing
         if (dw_file_open) then
@@ -721,21 +757,31 @@ c
             nlocdatpts = 0
             exit
           endif
-
+c
           nlocreals = nlocdatpts*NUM_OF_PTCOMPS
           allocate(buf(nlocreals))
           buf_allocated = .true.
 
           disp = (imin_locdatpts-1)*SIZE_OF_PT
-          call MPI_File_read_at(fhandle, disp,
-     >                          buf, nlocreals,
-     >                          MPI_DOUBLE_PRECISION,
-     >                          fstat, ierr)
+c
+          call MPI_File_set_view(fhandle, disp,
+     >                           MPI_DOUBLE_PRECISION,
+     >                           MPI_DOUBLE_PRECISION,
+     >                           'native', 
+     >                           MPI_INFO_NULL, ierr)
           if (ierr .ne. MPI_SUCCESS) then
-            mpifunc = 'MPI_File_read_at'
+            mpifunc = 'MPI_File_set_view'
+            exit 
+          endif
+c
+          call MPI_File_read_all(fhandle, buf, nlocreals,
+     >                           MPI_DOUBLE_PRECISION,
+     >                           fstat, ierr)
+          if (ierr .ne. MPI_SUCCESS) then
+            mpifunc = 'MPI_File_read_all'
             exit
           endif
-
+c
           call MPI_Get_count(fstat, MPI_DOUBLE_PRECISION, 
      >                       nread, ierr)
           if (ierr .eq. MPI_SUCCESS) then
@@ -810,12 +856,22 @@ c
         disp = dw_offset + (ipt-1)
         disp = disp*dw_buf_nbytes
 c
-        call MPI_File_read_at(dw_fhandle, disp,
-     >                        dw_buf, 1, dw_buf_type,
-     >                        fstat, ierr)
+        call MPI_File_set_view(dw_fhandle, disp,
+     >                         MPI_DOUBLE_PRECISION,
+     >                         dw_buf_type, 'native', 
+     >                         MPI_INFO_NULL, ierr)
         if (ierr .ne. MPI_SUCCESS) then
           write(*,*) dw_rank,
-     >               ': Error, MPI_File_read_at() returned ',
+     >               ': Error, MPI_File_set_view() returned ',
+     >               ierr
+          stop 
+        endif
+c
+        call MPI_File_read_all(dw_fhandle, dw_buf, 1,
+     >                         dw_buf_type, fstat, ierr)
+        if (ierr .ne. MPI_SUCCESS) then
+          write(*,*) dw_rank,
+     >               ': Error, MPI_File_read_all() returned ',
      >               ierr
           stop
         endif
@@ -875,12 +931,22 @@ c
         disp = dw_offset + (ipt-1)
         disp = disp*dw_buf_nbytes
 c
-        call MPI_File_write_at(dw_fhandle, disp,
-     >                         dw_buf, 1, dw_buf_type,
-     >                         fstat, ierr)
+        call MPI_File_set_view(dw_fhandle, disp,
+     >                         MPI_DOUBLE_PRECISION,
+     >                         dw_buf_type, 'native', 
+     >                         MPI_INFO_NULL, ierr)
         if (ierr .ne. MPI_SUCCESS) then
           write(*,*) dw_rank,
-     >               ': Error, MPI_File_write_at() returned ',
+     >               ': Error, MPI_File_set_view() returned ',
+     >               ierr
+          stop 
+        endif
+c
+        call MPI_File_write_all(dw_fhandle, dw_buf, 1,
+     >                          dw_buf_type, fstat, ierr)
+        if (ierr .ne. MPI_SUCCESS) then
+          write(*,*) dw_rank,
+     >               ': Error, MPI_File_write_all() returned ',
      >               ierr
           stop
         endif
@@ -994,11 +1060,11 @@ c  full non-linear forward
         endif
 c
 c  do dummy reads so that collective mpi reads complete
-c       if (nub .eq. dw_nlocpts) then
-c         do i=dw_nlocpts+1,dw_nlocptsmax
-c           call mpi_read_dw_data(dw_nlocpts, .false.)
-c         enddo
-c       endif
+        if (nub .eq. dw_nlocpts) then
+          do i=dw_nlocpts+1,dw_nlocptsmax
+            call mpi_read_dw_data(dw_nlocpts, .false.)
+          enddo
+        endif
 c
         end subroutine  sub_sph_wmam
 c
@@ -1073,11 +1139,11 @@ c
         endif
 c
 c  do dummy reads so that collective mpi reads complete
-c       if (nub .eq. dw_nlocpts) then
-c         do i=dw_nlocpts+1,dw_nlocptsmax
-c           call mpi_read_dw_data(dw_nlocpts, .false.)
-c         enddo
-c       endif
+        if (nub .eq. dw_nlocpts) then
+          do i=dw_nlocpts+1,dw_nlocptsmax
+            call mpi_read_dw_data(dw_nlocpts, .false.)
+          enddo
+        endif
 c
         end subroutine  sub_sph_wmam_l
 c

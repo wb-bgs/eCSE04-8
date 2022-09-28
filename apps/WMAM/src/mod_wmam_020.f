@@ -13,7 +13,7 @@ c
 c
         include 'mpif.h'
 c
-        character(len=*), parameter :: VERSION="3.2.0"
+        character(len=*), parameter :: VERSION="3.2.0-gazelle"
 c
         integer, parameter :: POLAK_RIBIERE=1
         integer, parameter :: CONJUGATE_GRADIENT=2
@@ -279,12 +279,15 @@ c
           write(*,*) ''
         endif
 c
+c
+c  Pre-calculate for every data point 3*nparams dw values
+c  such that the dw values can be read in from a file when needed
+        call precalc_sph_wmam(ND, nparams, ppos)
+        call prepare_dw_read()
+c
         fname='./Results/'
         allocate(gg(1:1,1:1))
         allocate(bb(1:1))
-c
-        call precalc_sph_wmam(ND, nparams, ppos)
-        call prepare_dw_read()
 c
         if (scheme.eq.POLAK_RIBIERE) then
           call opt_pr_p3(fname, itmax, NPMAX, ND, nparams,
