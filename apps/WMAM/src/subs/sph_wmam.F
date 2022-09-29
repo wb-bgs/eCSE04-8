@@ -14,13 +14,14 @@ c    Global data:
 c       ilg : integer : internal SH degree value (see below)
 c       ryg : real*8  : reference year for the model
 c       rag : real*8  : radius for lithosphere
+c
+c       Allocatable arrays used to hold pre-computed values for
+c       the globlibi subroutines, mk_lf_dlf anf mklf_F2.
 c       d2a,d3a,dalphaa,dbetaa : real*8(:)
 c       d4a,d5a,d6a : real*8(:) 
-c       allocatable arrays used to hold pre-computed values for
-c       the globlibi subroutines, mk_lf_dlf anf mklf_F2. 
 c
 c    Subroutines:
-c       init_sph_wmam()    initialise the global variables
+c       init_sph_wmam()    initialise global variables
 c       fini_sph_wmam()    deallocate global arrays
 c       mpi_read_ref_model()
 c       mpi_read_model()
@@ -152,6 +153,15 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c    subroutine mpi_read_ref_model
+c
+c  Read in reference model.
+c  All ranks read entire file.
+c
+c  input:
+c       fname   : character : name of reference model file
+c  output:
+c       ncoeffs : integer : number of coefficients/parameters
+c       bc(*)   : real*8  : coefficients/parameters
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine mpi_read_ref_model(fname, ncoeffs, bc)
@@ -306,6 +316,15 @@ c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c    subroutine mpi_read_model
 c
+c  Read in starting model.
+c  All ranks read entire file.
+c
+c  input:
+c       fname   : character : name of model file
+c  output:
+c       nparams : integer : number of parameters
+c       bc(*)   : real*8  : parameters
+c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine mpi_read_model(fname, nparams, bc)
 c
@@ -446,6 +465,19 @@ c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c    subroutine mpi_read_data
 c
+c  Read in data.
+c  Read just those points that have been assigned to the rank.
+c
+c  input:
+c       fname      : character : name of data file
+c       nd         : integer : nd+1 is the lead dim of ppos
+c       ndatpts    : integer : number of data points in file
+c       nlocdatpts : integer : number of data points assigned to rank
+c       imin_locdatpts : integer : one-based rank index for global
+c                                  array of data points
+c  output:
+c       ppos(*,*) : real*8 : array of data points assigned to rank
+c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine mpi_read_data(fname, nd, ndatpts, nlocdatpts,
      >                           imin_locdatpts, ppos)
@@ -507,14 +539,24 @@ c
           nlocreals = nlocdatpts*NUM_OF_PTCOMPS
           allocate(buf(nlocreals))
           buf_allocated = .true.
-
+ 
           disp = (imin_locdatpts-1)*SIZE_OF_PT
-          call MPI_File_read_at(fhandle, disp,
-     >                          buf, nlocreals,
-     >                          MPI_DOUBLE_PRECISION,
-     >                          fstat, ierr)
+
+          call MPI_File_set_view(fhandle, disp,
+     >                           MPI_DOUBLE_PRECISION,
+     >                           MPI_DOUBLE_PRECISION,
+     >                           'native', 
+     >                           MPI_INFO_NULL, ierr)
           if (ierr .ne. MPI_SUCCESS) then
-            mpifunc = 'MPI_File_read_at'
+            mpifunc = 'MPI_File_set_view'
+            exit 
+          endif
+
+          call MPI_File_read_all(fhandle, buf, nlocreals,
+     >                           MPI_DOUBLE_PRECISION,
+     >                           fstat, ierr)
+          if (ierr .ne. MPI_SUCCESS) then
+            mpifunc = 'MPI_File_read_all'
             exit
           endif
 
@@ -705,6 +747,7 @@ c    calculate full field (core)
         bez = bp(7) / dd
 
 #ifdef CRAYPAT
+        call PAT_record(PAT_STATE_ON,cpstat)
         call PAT_region_begin(1,"XYZsph_bi0",cpstat)
 #endif
 
@@ -716,6 +759,7 @@ c    calculate internal field component
 
 #ifdef CRAYPAT
         call PAT_region_end(1,cpstat)
+        call PAT_record(PAT_STATE_OFF,cpstat)
 #endif
 
         if (nub .eq. 100) then
