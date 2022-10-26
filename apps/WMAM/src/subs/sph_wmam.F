@@ -15,11 +15,6 @@ c       ilg : integer : internal SH degree value (see below)
 c       ryg : real*8  : reference year for the model
 c       rag : real*8  : radius for lithosphere
 c
-c       Allocatable arrays used to hold pre-computed values for
-c       the globlibi subroutines, mk_lf_dlf anf mklf_F2.
-c       d2a,d3a,dalphaa,dbetaa : real*8(:)
-c       d4a,d5a,d6a : real*8(:) 
-c
 c    Subroutines:
 c       init_sph_wmam()    initialise global variables
 c       fini_sph_wmam()    deallocate global arrays
@@ -41,10 +36,6 @@ c
 c        
         integer ilg
         real*8 ryg, rag
-        real*8, allocatable :: d2a(:), d3a(:)
-        real*8, allocatable :: dalphaa(:), dbetaa(:)
-        real*8, allocatable :: d4a(:), d5a(:)
-        real*8, allocatable :: d6a(:)     
 c
         contains
 c
@@ -65,79 +56,10 @@ c
 c
         integer shdeg
 c
-        integer ierr, klen
-        integer i, j, k
-        real*8 d1, d2, di
-c
-        real*8 dgamln
-        external dgamln
-c
         call dy2mjd(1990.d0,ryg)
         rag=6371.2d0
         ilg=shdeg
 c
-c       pre-calculate terms used in globlibi subroutine, mklf_F2
-        klen=((ilg-1)*ilg)/2
-c
-        allocate(d2a(0:ilg), d3a(0:ilg))
-        allocate(dalphaa(klen), dbetaa(klen))
-c
-        k=1
-        do i=0,ilg
-          di = dble(i)
-          d1 = dgamln(2*di+1.0d0,ierr)
-          d2 = dgamln(di+1.0d0,ierr)
-          if (ierr.ne.0) then
-            write(*,*)
-     >        'init_sph_wmam: Cannot compute normalisation cst!'
-            stop
-          endif
-        
-          d2 = 0.5d0*d1 - d2
-          d2 = d2 - i*dlog(2.0d0)
-          d2 = dexp(d2)
-          if (i .ne. 0) then
-            d2 = d2*dsqrt(2.0d0)
-          endif
-          d2a(i) = d2
-
-          d3a(i) = dsqrt(dble(2*i+1))
-
-          do j=2,ilg-i                      
-            d1 = dble((j-1) * (j+2*i-1))   
-            d2 = dble(j * (j+2*i))
-            dbetaa(k) = dsqrt(d1/d2)        
-            d1 = dble(2*(j+i)-1) 
-            dalphaa(k) = d1/dsqrt(d2)
-            k = k+1
-          enddo 
-        enddo
-c
-c       pre-calculate terms used in globlibi subroutine, mk_lf_dlf
-        klen=((ilg+1)*(2+ilg))/2
-c
-        allocate(d4a(1:ilg+1), d5a(3:ilg+1))
-        allocate(d6a(klen))
-c
-        d4a(1) = -1.0d0
-        d4a(2) = -dsqrt(3.0d0) 
-        do i=3,ilg+1
-          d4a(i) = (2*i-1)/dsqrt(dble(i*i-1))
-          d5a(i) = dsqrt(dble((i-1)**2-1)/(i*i-1))
-        enddo
-c
-        k=1
-        do i=0,ilg
-          do j=ilg,i,-1
-            if (j-i .gt. 0) then
-              d6a(k) = dsqrt(dble((j-i)*(j+i)))
-            else
-              d6a(k) = 0.0d0
-            end if
-            k = k+1
-          enddo 
-        enddo
-
         return
         end subroutine init_sph_wmam
 c
@@ -146,9 +68,7 @@ c    subroutine fini_sph_wmam
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine fini_sph_wmam()
-        deallocate(d2a, d3a)
-        deallocate(dalphaa, dbetaa)
-        deallocate(d4a, d5a, d6a) 
+        return
         end subroutine fini_sph_wmam
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -170,7 +90,7 @@ c
 c
         include 'mpif.h'
 c
-	character fname*100
+	      character fname*100
         integer ncoeffs
         real*8 bc(*)
 c
@@ -332,7 +252,7 @@ c
 c
         include 'mpif.h'
 c
-	character fname*100
+	      character fname*100
         integer nparams
         real*8 bc(*)
 c
@@ -486,7 +406,7 @@ c
 c
         include 'mpif.h'
 c
-	character fname*100
+	      character fname*100
         integer nd, ndatpts, nlocdatpts, imin_locdatpts
         real*8 ppos(nd+1,*)
 c
@@ -636,10 +556,8 @@ c
         dwz(1:nb) = 0.0d0
         be(1:nb) = 0.0d0
         
-        call XYZsph_bi0(ilg, rag, d2a, d3a,
-     >                  dalphaa, dbetaa,
-     >                  d4a, d5a, d6a,
-     >                  bp, dwx, dwy, dwz)
+        call XYZsph_bi0(ilg, rag, bp,
+     >                  dwx, dwy, dwz)
 
         if (nub .eq. 100) then
 c
@@ -752,10 +670,8 @@ c    calculate full field (core)
 #endif
 
 c    calculate internal field component
-        call XYZsph_bi0(ilg, rag, d2a, d3a,
-     >                  dalphaa, dbetaa,
-     >                  d4a, d5a, d6a,
-     >                  bp, dwx, dwy, dwz)
+        call XYZsph_bi0(ilg, rag, bp,
+     >                  dwx, dwy, dwz)
 
 #ifdef CRAYPAT
         call PAT_region_end(1,cpstat)

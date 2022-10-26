@@ -13,7 +13,7 @@ c
 c
         include 'mpif.h'
 c
-        character(len=*), parameter :: VERSION="3.3.0"
+        character(len=*), parameter :: VERSION="3.4.0"
 c
         integer, parameter :: POLAK_RIBIERE=1
         integer, parameter :: CONJUGATE_GRADIENT=2
