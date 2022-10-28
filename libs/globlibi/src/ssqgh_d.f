@@ -55,7 +55,8 @@ c
         real*8 ddat(*),xyzf(*),cov(*),ppos(nd+1,*),bc(*)
         real*8 gj(*),hj(*)
 c       real*8, allocatable :: vmf(:)
-        real*8, allocatable :: dwgh(:),ddif(:),aa(:)
+        real*8, allocatable :: dwgh(:),ddif(:)
+        real*8, allocatable :: aa(:,:)
 c
         real*8 fun_mf
         external fun_mf,sub_base
@@ -63,9 +64,10 @@ c
 c  ipg : ip global
 c  ipl : ip local
 c
-c       allocate(vmf(1:npmax))
-        allocate(dwgh(1:npmax),ddif(1:npmax),aa(1:npmax*nb))
-        allocate(ntval(1:npmax))
+c       allocate(vmf(npmax))
+        allocate(dwgh(npmax),ddif(npmax))
+        allocate(aa(nb,npmax))
+        allocate(ntval(npmax))
 c
         gj(1:nb)=0.0d0
         hj(1:nb)=0.0d0
@@ -88,7 +90,7 @@ c  sampling points
           enddo
 c        
 c
-c Calculate the equations of condition
+c  calculate the equations of condition
           call mkArows(np,ntval,nd,nb,ppos(1,ipl),sub_base,bc,aa)
 c
 c  calculate the delta data
@@ -96,18 +98,18 @@ c  calculate the delta data
             ddif(i)=ddat(ipl+i-1)-xyzf(ipl+i-1)
           enddo
 c
-c  Calculate the inverse covariance matrix
+c  calculate the inverse covariance matrix
           do i=1,np
             dwgh(i)=1.d0/cov(jcov(ipl+i-1))
           enddo
 c
-c Calculate msft vector
+c  calculate msft vector
 c         do i=1,np
 c            vmf(i)=ddif(i)*dsqrt(dwgh(i))
 c         enddo
 
 c
-c Update the G matrix and B vector
+c  update the G matrix and B vector
           call concoct_GJ(fun_mf,nb,np,dwgh,aa,ddif,gj)
           call concoct_HJ(fun_mf,nb,np,dwgh,aa,hj)
 c

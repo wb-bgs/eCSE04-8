@@ -27,23 +27,18 @@ c
         implicit none
 c
 	integer np,ntv(*),nd,nb
-        real*8 ppos(nd+1,*),aa(np,*),bc(*)
-        real*8, allocatable :: row(:)
+        real*8 ppos(nd+1,*),bc(*)
+        real*8 aa(nb,*)
 c
-        integer ip,ib
+        integer ip
 c
         external sub_base
-
-        allocate(row(1:nb))
 c
         do ip=1,np
-          call sub_base('i',ntv(ip),nb,bc,ppos(1,ip),row)
-          do ib=1,nb
-            aa(ip,ib)=row(ib)
-          enddo
+          call sub_base(ntv(ip),nb,bc,
+     >                  ppos(1,ip),
+     >                  aa(1,ip))
         enddo
-
-        deallocate(row)
 c
         return
 	end

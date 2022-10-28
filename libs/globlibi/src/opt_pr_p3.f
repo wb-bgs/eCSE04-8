@@ -56,10 +56,11 @@ c         proc_np       number of data+sampling points for all ranks
 c         ppos          data point position in ndD + data value
 c         bc            Estimate of Base function coefficients
 c         dl(3)         control process + damping factor
-c         fun_mf        misfit function (like l2_norm.f)
-c         sub_base      Base subroutine to use
-c         fun_std       std Function
+c         sub_base_i    Base subroutine to use (see mkArows.f)
 c         sub_damp      damping -- not implemented
+c         fun_base_f    Base subroutine to use (see cpt_dat_vals_p[2].f)
+c         fun_mf        misfit function (like l2_norm.f)
+c         fun_std       std function
 c         cov(*)        covariance matrix in SLAP Column format
 c         jcov          Integer vector describing cov format
 c         stdt          target STD value
@@ -71,7 +72,8 @@ c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine opt_pr_p3(path, itmax, npmax, nd, nb,
      >                       nlocdatpts, proc_np, ppos, bc, dl,
-     >                       fun_mf, sub_base, fun_std, sub_damp,
+     >                       sub_base_i, sub_damp,
+     >                       fun_base_f, fun_mf, fun_std,
      >                       cov, jcov, stdt, xyzf, bb, gg)
 c
         implicit none
@@ -86,8 +88,9 @@ c
         real*8, optional :: bb(:),gg(:)
         character path*100
 c
-        real*8 fun_mf,fun_std
-        external fun_mf,sub_base,fun_std,sub_damp     
+        real*8 fun_base_f, fun_mf, fun_std
+        external sub_base_i, sub_damp
+        external fun_base_f, fun_mf, fun_std     
 c
         integer i,ip,it,itm,iunit,ipth,itm_l,itm_r
         integer ierr,rank,nlocpts
@@ -176,7 +179,7 @@ c               if(rank.eq.0)write(*,*)'opt_pr_p3: 1'
                 
                 call cpt_dat_vals_p2(nd, nlocdatpts, nlocpts,
      >                               ppos, nb, inv_stat%bc,
-     >                               sub_base, xyzf)
+     >                               fun_base_f, xyzf)
 c
                 call cptstd_dp(npmax, proc_np,
      >                         jcov, cov, ddat, xyzf,
@@ -194,7 +197,7 @@ c
                 if (itmax(1).ge.0.or.it.ne.1) then
 c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 2'
                     call ssqgh_dp(npmax, nd, nlocdatpts, nlocpts,
-     >                            ppos, nb, fun_mf, sub_base,
+     >                            ppos, nb, fun_mf, sub_base_i,
      >                            inv_stat%bc,
      >                            jcov, cov, ddat,
      >                            xyzf, gj, dh)
@@ -289,7 +292,7 @@ c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 4'
      >                                 nlocdatpts, proc_np,
      >                                 ppos, ddat,
      >                                 nb, inv_stat%bc,
-     >                                 fun_std, sub_base,
+     >                                 fun_std, fun_base_f,
      >                                 cov, jcov, std,
      >                                 gj, ghj, ds, stp, xyzf)
                     else
@@ -298,7 +301,7 @@ c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 5'
      >                                 nlocdatpts, proc_np, ppos, ddat,
      >                                 nb, inv_stat%bc,
      >                                 src_stat, MPI_SEARCH_STATUS,
-     >                                 dl, sub_base, fun_std,
+     >                                 dl, fun_base_f, fun_std,
      >                                 cov, jcov,
      >                                 std, ds, stp, xyzf)
                     endif
@@ -308,7 +311,7 @@ c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 6'
      >                             nlocdatpts, proc_np, ppos, ddat,
      >                             nb, inv_stat%bc,
      >                             src_stat, MPI_SEARCH_STATUS,
-     >                             dl, sub_base, fun_std,
+     >                             dl, fun_base_f, fun_std,
      >                             cov, jcov,
      >                             std, ds, stp, xyzf)
                 endif

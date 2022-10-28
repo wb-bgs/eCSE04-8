@@ -25,6 +25,7 @@ c     bc(*)   base coefficients
 c
 c   output:
 c     be(*)   nb base elements dim min nb
+c             be(1) = be.bc
 c      
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         recursive subroutine sph_bi(iof,nub,nb,bc,bp,be)
@@ -80,10 +81,8 @@ c
           stop
         endif
 c
-        if(iof.eq.'f') then
-          do i=1,nb
-            be(i)=be(i)*bc(i)
-          enddo
+        if (iof.eq.'f') then
+          be(1) = dot_product(be(1:nb), bc(1:nb))
         endif
 c
         return

@@ -40,7 +40,7 @@ c
         real*8 ddat(*),xyzf(*),cov(*),ppos(nd+1,*),bc(*),ds(*)
         real*8 zz(*)
 c       real*8, allocatable :: vmf(:)
-        real*8, allocatable :: dwgh(:),ddif(:),aa(:)
+        real*8, allocatable :: dwgh(:),ddif(:),aa(:,:)
 c
         real*8 fun_mf
         external fun_mf,sub_base
@@ -49,7 +49,8 @@ c  ipg : ip global
 c  ipl : ip local
 c
 c       allocate(vmf(1:npmax))
-        allocate(dwgh(1:npmax),ddif(1:npmax),aa(1:npmax*nb))
+        allocate(dwgh(1:npmax),ddif(1:npmax))
+        allocate(aa(nb,npmax))
         allocate(ntval(1:npmax))
 c
         zz(1:nb)=0.0d0
@@ -70,7 +71,7 @@ c  sampling points
             endif
           enddo
 c
-c Calculate the equations of condition
+c  calculate the equations of condition
           call mkArows(np,ntval,nd,nb,ppos(1,ipl),sub_base,bc,aa)
 c
 c  calculate the delta data
@@ -78,17 +79,17 @@ c  calculate the delta data
             ddif(i)=ddat(ipl+i-1)-xyzf(ipl+i-1)
           enddo
 c
-c  Calculate the inverse covariance matrix
+c  calculate the inverse covariance matrix
           do i=1,np
             dwgh(i)=1.d0/cov(jcov(ipl+i-1))
           enddo
 c
-c Calculate msft vector
+c  calculate msft vector
 c         do i=1,np
 c           vmf(i)=ddif(i)*dsqrt(dwgh(i))
 c         enddo
 c
-c Update the G matrix and B vector
+c  update the G matrix and B vector
           call concoct_ZZ(fun_mf,nb,np,dwgh,aa,ds,zz)
 c
           ip=ip+np

@@ -14,15 +14,20 @@ c    Global data:
 c       ilg : integer : internal SH degree value (see below)
 c       ryg : real*8  : reference year for the model
 c       rag : real*8  : radius for lithosphere
-c
+c       dwx, dwy, dwz : real*8 : allocatable arrays of size nb
+c       d2a : real*8  : allocatable array of size 0:ilg;
+c                       holds pre-computed values for mklf_F2()
 c    Subroutines:
 c       init_sph_wmam()    initialise global variables
 c       fini_sph_wmam()    deallocate global arrays
 c       mpi_read_ref_model()
 c       mpi_read_model()
 c       mpi_read_data()
-c       sub_sph_wmam()     model subroutine
+c       prepare_cm4_components()
 c       sub_sph_wmam_l()   linearized model subroutine
+c       sub_base_i()
+c    Functions
+c       fun_base_f()
 c       wmam_norm()
 c       wmam_var
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -37,6 +42,9 @@ c
         integer ilg
         real*8 ryg, rag
 c
+        real*8, allocatable :: dwx(:), dwy(:), dwz(:)
+        real*8, allocatable :: d2a(:)
+c
         contains
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -47,19 +55,46 @@ c
 c  Set ilg, ryg (based on 1990) and rag
 c
 c  input:
-c       shdeg : integer  : spherical harmonic degree
+c       shdeg : integer : spherical harmonic degree
+c          nb : integer : number of parameters
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine init_sph_wmam(shdeg)
+        subroutine init_sph_wmam(shdeg, nb)
 c
         implicit none
 c
-        integer shdeg
+        integer shdeg, nb
+        integer nm, ierr
+        real*8  dnm, d1, d2
+        real*8 dgamln
+c
+        external dgamln 
 c
         call dy2mjd(1990.d0,ryg)
         rag=6371.2d0
         ilg=shdeg
 c
+        allocate(dwx(nb),dwy(nb),dwz(nb))
+c
+        allocate(d2a(0:ilg))
+c
+        do nm=0,ilg
+          dnm = dble(nm)                    ! dble real for nm
+          d1 = dgamln(2*dnm+1.0d0,ierr)     ! d1=log(fact(2dnm))
+          d2 = dgamln(dnm+1.0d0,ierr)       ! d2=log(fact(dnm))
+          if (ierr.ne.0) then
+            write(*,*) 'mklf_F: Cannot computes normalisation cst !'
+            stop
+          endif
+c
+          d2 = 0.5d0*d1 - d2                ! d2=sqrt(fact(2dnm))/fact(dnm)
+          d2 = d2 - nm*dlog(2.0d0)          !
+          d2 = dexp(d2)                     ! normalisation cst.
+          if (nm.ne.0) d2 = d2*dsqrt(2.0d0) ! special case  m=0
+c
+          d2a(nm) = d2
+        enddo
+
         return
         end subroutine init_sph_wmam
 c
@@ -68,6 +103,8 @@ c    subroutine fini_sph_wmam
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine fini_sph_wmam()
+        deallocate(dwx,dwy,dwz)
+        deallocate(d2a)
         return
         end subroutine fini_sph_wmam
 c
@@ -231,7 +268,7 @@ c
           call MPI_File_close(fhandle, ierr)
         endif
 
-        end
+        end subroutine mpi_read_ref_model
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c    subroutine mpi_read_model
@@ -380,7 +417,7 @@ c
           call MPI_File_close(fhandle, ierr)
         endif
 
-        end
+        end subroutine mpi_read_model
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c    subroutine mpi_read_data
@@ -523,270 +560,221 @@ c
           call MPI_File_close(fhandle, ierr)
         endif
 
-        end
+        end subroutine mpi_read_data
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c    subroutine sub_sph_wmam
-c
-c       V. Lesur  16/09/2006
-c
-c   That is for a full non-linear inversion of the lithosphere field
+c    subroutine prepare_cm4_components
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine sub_sph_wmam(iof, nub, nb, bc, bp, be)
-c
-        implicit none
-c
-        character iof
-        integer nub, nb
-        real*8 bc(*), bp(*), be(*)
-c
-        real*8, allocatable :: dwx(:), dwy(:), dwz(:)
-c
-        real*8 dx,dy,dz,dd
-        real*8 xy_c, xz_c, yx_c, yz_c, zx_c, zy_c
-        real*8 bex, bey, bez
-        real*8 bex2, bey2, bez2
-c
-c
-        allocate(dwx(1:nb),dwy(1:nb),dwz(1:nb))
+       subroutine prepare_cm4_components(bp)
 
-        dwx(1:nb) = 0.0d0
-        dwy(1:nb) = 0.0d0
-        dwz(1:nb) = 0.0d0
-        be(1:nb) = 0.0d0
-        
-        call XYZsph_bi0(ilg, rag, bp,
-     >                  dwx, dwy, dwz)
+       implicit none
 
-        if (nub .eq. 100) then
-c
-c    sampling point
-          dx = dot_product(dwx(1:nb), bc(1:nb))
-          dy = dot_product(dwy(1:nb), bc(1:nb))
-          dz = dot_product(dwz(1:nb), bc(1:nb))
-c
-c    calculate field unit vector (lithos)
-          dd = dsqrt(bp(5)**2 + bp(6)**2 + bp(7)**2)
-          bex = bp(5) / dd
-          bey = bp(6) / dd
-          bez = bp(7) / dd
-c
-          xy_c = dx*bey - bex*dy
-          xz_c = dx*bez - bex*dz
-          yx_c = dy*bex - bey*dx
-          yz_c = dy*bez - bey*dz
-          zx_c = dz*bex - bez*dx
-          zy_c = dz*bey - bez*dy
-c
-          dd = dsqrt(yz_c**2 + xz_c**2 +xy_c**2)
-c
-          if (iof.ne.'f') then
-            bex2 = (xz_c*bez + xy_c*bey) / dd
-            bey2 = (yz_c*bez + yx_c*bex) / dd
-            bez2 = (zy_c*bey + zx_c*bex) / dd
-c
-            be(1:nb) = dwx*bex2 + dwy*bey2 + dwz*bez2
-          else
-c    Full non-linear forward
-            be(1:1) = dd
-          endif
-        
-        else
-c    regular data
-c
-c    calulate full field (lithos + core)
-          dx = bp(5) + dot_product(dwx(1:nb), bc(1:nb))
-          dy = bp(6) + dot_product(dwy(1:nb), bc(1:nb))
-          dz = bp(7) + dot_product(dwz(1:nb), bc(1:nb))
-          dd = dsqrt(dx**2 + dy**2 + dz**2)
-c
-          if (iof.ne.'f') then
-            bex = dx / dd
-            bey = dy / dd
-            bez = dz / dd
-c
-            be(1:nb) = dwx*bex + dwy*bey + dwz*bez
-          else
-c    Full non-linear forward
-            dx = dsqrt(bp(5)**2 + bp(6)**2 + bp(7)**2)
-            be(1:1) = dd - dx
-          endif
-        
-        endif
-c
-        deallocate(dwx,dwy,dwz)
+       real*8 bp(*)
+       real*8 dd
 
-        return
-        end subroutine  sub_sph_wmam
+       dd = dsqrt(bp(5)**2 + bp(6)**2 + bp(7)**2)
+       bp(5) = bp(5) / dd
+       bp(6) = bp(6) / dd
+       bp(7) = bp(7) / dd
+
+       end subroutine prepare_cm4_components
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c    subroutine sub_sph_wmam_l
 c
 c       V. Lesur  16/09/2006
 c
-c   That is for a linearized inversion of the lithosphere field
+c   That is for a linearized inversion of the lithosphere field.
+c   This subroutine is called from either sub_base_i() or fun_base_f().
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine sub_sph_wmam_l(iof, nub, nb, bc, bp, be)
+       subroutine sub_sph_wmam_l(nub, nb, bc, bp, be)
 c
-        implicit none
+       implicit none
 c
 #ifdef CRAYPAT
-        include 'pat_apif.h'
+       include 'pat_apif.h'
 #endif
 c
-        character iof
-        integer nub, nb
-        real*8 bp(*), be(*), bc(*)
+       integer nub, nb
+       real*8 bc(*), bp(*), be(*)
 c
-        real*8, allocatable :: dwx(:), dwy(:), dwz(:)
+       real*8 dx, dy, dz, dd
 c
-        real*8 dx, dy, dz, dd
-        real*8 xy_c, xz_c, yx_c, yz_c, zx_c, zy_c
-        real*8 bex, bey, bez
-        real*8 bex2, bey2, bez2
+       real*8 dxbey, dxbez
+       real*8 dybex, dybez
+       real*8 dzbex, dzbey
+c
+       real*8 xy_c, xz_c
+       real*8 yx_c, yz_c
+       real*8 zx_c, zy_c
+c
+       real*8 bex, bey, bez
+       real*8 bex2, bey2, bez2
 
 #ifdef CRAYPAT
-        integer cpstat
-#endif
+       integer cpstat
 
-        allocate(dwx(1:nb),dwy(1:nb),dwz(1:nb))
-
-        dwx(1:nb) = 0.0d0
-        dwy(1:nb) = 0.0d0
-        dwz(1:nb) = 0.0d0
-        be(1:nb) = 0.0d0
-
-c    calculate full field (core)
-        dd = dsqrt(bp(5)**2 + bp(6)**2 + bp(7)**2)
-        bex = bp(5) / dd
-        bey = bp(6) / dd
-        bez = bp(7) / dd
-
-#ifdef CRAYPAT
-        call PAT_record(PAT_STATE_ON,cpstat)
-        call PAT_region_begin(1,"XYZsph_bi0",cpstat)
+       call PAT_record(PAT_STATE_ON,cpstat)
+       call PAT_region_begin(1,"XYZsph_bi0",cpstat)
 #endif
 
 c    calculate internal field component
-        call XYZsph_bi0(ilg, rag, bp,
-     >                  dwx, dwy, dwz)
+       call XYZsph_bi0(ilg, rag, bp, d2a,
+     >                 dwx, dwy, dwz)
 
 #ifdef CRAYPAT
-        call PAT_region_end(1,cpstat)
-        call PAT_record(PAT_STATE_OFF,cpstat)
+       call PAT_region_end(1,cpstat)
+       call PAT_record(PAT_STATE_OFF,cpstat)
 #endif
 
-        if (nub .eq. 100) then
+       bex = bp(5)
+       bey = bp(6)
+       bez = bp(7)
+
+       if (nub .eq. 100) then
 c    sampling point
-          dx = dot_product(dwx(1:nb), bc(1:nb))
-          dy = dot_product(dwy(1:nb), bc(1:nb))
-          dz = dot_product(dwz(1:nb), bc(1:nb))
+         dx = dot_product(dwx(1:nb), bc(1:nb))
+         dy = dot_product(dwy(1:nb), bc(1:nb))
+         dz = dot_product(dwz(1:nb), bc(1:nb))
 c
-          xy_c = dx*bey - bex*dy
-          xz_c = dx*bez - bex*dz
-          yx_c = dy*bex - bey*dx
-          yz_c = dy*bez - bey*dz
-          zx_c = dz*bex - bez*dx
-          zy_c = dz*bey - bez*dy
+         dxbey = dx*bey
+         dxbez = dx*bez
+         dybex = dy*bex
+         dybez = dy*bez
+         dzbex = dz*bex
+         dzbey = dz*bey
 c
-          dd = dsqrt(yz_c**2 + xz_c**2 + xy_c**2)
+         xy_c = dxbey - dybex
+         xz_c = dxbez - dzbex
+         yx_c = -xy_c
+         yz_c = dybez - dzbey
+         zx_c = -xz_c
+         zy_c = -yz_c
 c
-          bex2 = (xz_c*bez + xy_c*bey) / dd
-          bey2 = (yz_c*bez + yx_c*bex) / dd
-          bez2 = (zy_c*bey + zx_c*bex) / dd
+         dd = dsqrt(yz_c**2 + xz_c**2 + xy_c**2)
+c
+         bex2 = (xz_c*bez + xy_c*bey) / dd
+         bey2 = (yz_c*bez + yx_c*bex) / dd
+         bez2 = (zy_c*bey + zx_c*bex) / dd
 
-          bex = bex2
-          bey = bey2
-          bez = bez2
-        endif
-
-        dwx = dwx * bex
-        dwy = dwy * bey
-        dwz = dwz * bez
-
-        be(1:nb) = dwx + dwy + dwz
-
-        if (iof .eq. 'f') then
-          be(1:nb) = be(1:nb) * bc(1:nb)
-        endif
-
-        deallocate(dwx,dwy,dwz)
-
-        return
-        end subroutine  sub_sph_wmam_l
+         bex = bex2
+         bey = bey2
+         bez = bez2
+       endif
+c
+       be(1:nb) = dwx(1:nb)*bex
+     >          + dwy(1:nb)*bey
+     >          + dwz(1:nb)*bez
+c
+       return
+       end subroutine sub_sph_wmam_l
+c
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c    subroutine sub_base_i
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-         real*8 function wmam_norm(i,nub,mv)
+       subroutine sub_base_i(nub, nb, bc, bp, be)
 c
-         implicit none
+       implicit none
 c
-         integer i,nub(*)
-         real*8 mv(*)
+       integer nub, nb
+       real*8 bc(*), bp(*), be(*)
 c
-         real*8 dc,ae
+       call sub_sph_wmam_l(nub, nb, bc, bp, be)
+c 
+       return
+       end subroutine sub_base_i
 c
-         real*8 lesur_norm,l2_norm,l1_norm
-         external lesur_norm,l2_norm,l1_norm
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c    function fun_base_f
 c
-         select case (nub(i))
-         case (1)
-           dc=0.6d0
-           ae=0.5d0
-           wmam_norm=l2_norm(i,nub,mv)
-c          wmam_norm=lesur_norm(dc,ae,i,mv)
-         case default
-           wmam_norm=l2_norm(i,nub,mv)
-c          wmam_norm=l1_norm(i,nub,mv)
-         end select
-c
-         return
-         end function wmam_norm
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-         real*8 function wmam_var(nub,npt,np,var,mv,wgh)
+       real*8 function fun_base_f(nub, nb, bc, bp, be)
 c
-         implicit none
+       implicit none
 c
-         integer npt,np,nub(*)
-         real*8 mv(*),var,wgh(*)
+       integer nub, nb
+       real*8 bc(*), bp(*), be(*)
 c
-         integer i,j,k
-         real*8 vv,dv
-         real*8 dc,ae
+       call sub_sph_wmam_l(nub, nb, bc, bp, be)
 c
-         real*8 lesur_var2,l2_var,l1_var
-         external lesur_var2,l2_var,l1_var
+       fun_base_f = dot_product(be(1:nb), bc(1:nb))
 c
-         if(np.ge.0)then
-           vv=var
-           do i=1,np
-             dv=vv
-             j=0
-             k=1
+       return
+       end function fun_base_f
+c 
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+       real*8 function wmam_norm(i,nub,mv)
 c
-             select case (nub(i))
-             case (1)
-               dc=0.6d0
-               ae=0.5d0
-               vv=l2_var(nub(i),j,k,dv,mv(i),wgh(i))
-c              vv=lesur_var2(dc,ae,j,k,dv,mv(i),wgh(i))
-             case default
-               vv=l2_var(nub(i),j,k,dv,mv(i),wgh(i))
-c              vv=l1_var(nub(i),j,k,dv,mv(i),wgh(i))
-             end select
+       implicit none
 c
-           enddo
-         else
-          vv=0.0d0
-          do i=1,-np
-            vv=vv+mv(i)
-          enddo
-         endif
+       integer i,nub(*)
+       real*8 mv(*)
 c
-         wmam_var=vv
+       real*8 dc,ae
 c
-         return
-         end function wmam_var
+       real*8 lesur_norm,l2_norm,l1_norm
+       external lesur_norm,l2_norm,l1_norm
+c
+       select case (nub(i))
+       case (1)
+         dc=0.6d0
+         ae=0.5d0
+         wmam_norm=l2_norm(i,nub,mv)
+c        wmam_norm=lesur_norm(dc,ae,i,mv)
+       case default
+         wmam_norm=l2_norm(i,nub,mv)
+c        wmam_norm=l1_norm(i,nub,mv)
+       end select
+c
+       return
+       end function wmam_norm
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c
+       real*8 function wmam_var(nub,npt,np,var,mv,wgh)
+c
+       implicit none
+c
+       integer npt,np,nub(*)
+       real*8 mv(*),var,wgh(*)
+c
+       integer i,j,k
+       real*8 vv,dv
+       real*8 dc,ae
+c
+       real*8 lesur_var2,l2_var,l1_var
+       external lesur_var2,l2_var,l1_var
+c
+       if(np.ge.0)then
+         vv=var
+         do i=1,np
+           dv=vv
+           j=0
+           k=1
+c
+           select case (nub(i))
+           case (1)
+             dc=0.6d0
+             ae=0.5d0
+             vv=l2_var(nub(i),j,k,dv,mv(i),wgh(i))
+c            vv=lesur_var2(dc,ae,j,k,dv,mv(i),wgh(i))
+           case default
+             vv=l2_var(nub(i),j,k,dv,mv(i),wgh(i))
+c            vv=l1_var(nub(i),j,k,dv,mv(i),wgh(i))
+           end select
+         enddo
+       else
+         vv=0.0d0
+         do i=1,-np
+           vv=vv+mv(i)
+         enddo
+       endif
+c
+       wmam_var=vv
+c
+       return
+       end function wmam_var
 ccccccccccccccccccccccccccccccccccc
-        end module sph_wmam
+       end module sph_wmam

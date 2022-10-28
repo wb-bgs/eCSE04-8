@@ -25,16 +25,16 @@ c
         implicit none
 c
         integer nl1,nl2,il,j
-        real*8 ds(*),w2s(*),a2(nl2,*),zz(*),dw1
+        real*8 ds(*),w2s(*),a2(nl1,*),zz(*),dw1
 c
         real*8 fun_mf
         external fun_mf
 c
         do j=1,nl2
-          dw1=dot_product(a2(j,1:nl1),ds(1:nl1))
+          dw1=dot_product(a2(1:nl1,j),ds(1:nl1))
           dw1=2.d0*fun_mf()*w2s(j)*dw1
           do il=1,nl1
-            zz(il)=zz(il)+dw1*a2(j,il)
+            zz(il)=zz(il)+dw1*a2(il,j)
           enddo
         enddo
 c

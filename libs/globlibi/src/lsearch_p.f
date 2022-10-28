@@ -31,8 +31,8 @@ c         nb            Number or base function to use
 c         bc            Estimate of Base function coefficients
 c         src_stat      MPI gradient search status
 c         dl(3)         control lsearch process & damping
-c         sub_base      Base subroutine to use
-c         fun_std       std Function
+c         fun_base      base function to use
+c         fun_std       std function
 c         cov(*)        covariance matrix in SLAP Column format
 c         jcov          Integer vector describing cov format
 c         std           STD value for given BC
@@ -46,7 +46,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine lsearch_p(iunit, itm, npmax, nd, 
      >                       nlocdatpts, proc_np, ppos, ddat,
      >                       nb, bc, src_stat, MPI_SEARCH_STATUS,
-     >                       dl, sub_base, fun_std, cov, jcov,
+     >                       dl, fun_base, fun_std, cov, jcov,
      >                       std, ds, stp, xyzf)
 c
         implicit none
@@ -64,8 +64,8 @@ c
         integer jcov(*)
         real*8 std,ds(*),stp,xyzf(*)
 c
-        real*8 fun_std
-        external sub_base,fun_std
+        real*8 fun_base, fun_std
+        external fun_base, fun_std
 c
         integer i,im1,im2,it
         integer ierr,rank,nlocpts
@@ -115,7 +115,7 @@ c               write(*,*)'lsearch_p: 1'
                 bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
                 call cpt_dat_vals_p2(nd, nlocdatpts, nlocpts,
      >                               ppos, nb, bcn,
-     >                               sub_base, xyzf)
+     >                               fun_base, xyzf)
                 call cptstd_dp(npmax, proc_np,
      >                         jcov, cov, ddat,
      >                         xyzf, fun_std, std)
@@ -149,7 +149,7 @@ c                       write(*,*)'lsearch_p: 2'
                         bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
                         call cpt_dat_vals_p2(nd, nlocdatpts, nlocpts,
      >                                       ppos, nb, bcn,
-     >                                       sub_base, xyzf)
+     >                                       fun_base, xyzf)
                         call cptstd_dp(npmax, proc_np,
      >                                 jcov, cov, ddat,
      >                                 xyzf, fun_std, std)
@@ -181,7 +181,7 @@ c                       write(*,*)'lsearch_p: 3'
                         bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
                         call cpt_dat_vals_p2(nd, nlocdatpts, nlocpts,
      >                                       ppos, nb, bcn,
-     >                                       sub_base, xyzf)
+     >                                       fun_base, xyzf)
                         call cptstd_dp(npmax, proc_np,
      >                                 jcov, cov, ddat,
      >                                 xyzf, fun_std, std)
@@ -263,7 +263,7 @@ c                   write(*,*)'lsearch_p: 4'
                     bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
                     call cpt_dat_vals_p2(nd, nlocdatpts, nlocpts,
      >                                   ppos, nb, bcn,
-     >                                   sub_base, xyzf)
+     >                                   fun_base, xyzf)
                     call cptstd_dp(npmax, proc_np,
      >                             jcov, cov, ddat,
      >                             xyzf, fun_std, std)
@@ -326,7 +326,7 @@ c           write(*,*)'lsearch_p: 5'
             bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
             call cpt_dat_vals_p2(nd, nlocdatpts, nlocpts,
      >                           ppos, nb, bcn,
-     >                           sub_base, xyzf)
+     >                           fun_base, xyzf)
             call cptstd_dp(npmax, proc_np,
      >                     jcov, cov, ddat,
      >                     xyzf, fun_std, std)
@@ -346,7 +346,7 @@ c  SP do the work
                 bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
                 call cpt_dat_vals_p2(nd, nlocdatpts, nlocpts,
      >                               ppos, nb, bcn,
-     >                               sub_base, xyzf)
+     >                               fun_base, xyzf)
 
                 call cptstd_dp(npmax, proc_np,
      >                         jcov, cov, ddat,
@@ -362,7 +362,7 @@ c  SP receive final stp from master & does the final piece of work
 
             call cpt_dat_vals_p2(nd, nlocdatpts, nlocpts,
      >                           ppos, nb, bcn,
-     >                           sub_base, xyzf)
+     >                           fun_base, xyzf)
 
             call cptstd_dp(npmax, proc_np,
      >                     jcov, cov, ddat,

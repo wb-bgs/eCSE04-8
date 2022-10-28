@@ -13,38 +13,37 @@ c         nlocpts       number of data+sampling points local to rank
 c         ppos(nd+1,*)  point position in ndD
 c         nb            Number of base functions
 c         bc            base coefficients
-c         sub_base      Base Subroutine to use
+c         fun_base      Base function to use
 c
 c       output:
 c         XYZF(*)       X,Y,Z or F value at point position
 c        
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine cpt_dat_vals_p2(nd, nlocdatpts, nlocpts, ppos,
-     >                             nb, bc, sub_base, xyzf)
+     >                             nb, bc, fun_base, xyzf)
 c
         implicit none
 c
         integer :: nd, nb
         integer :: nlocdatpts, nlocpts
-        real*8  :: ppos(nd+1,*), bc(*), xyzf(*)
+        real*8  :: ppos(nd+1,*), bc(*)
+        real*8  :: fun_base, xyzf(*)
 c
         integer :: i
         real*8, allocatable :: dw(:)
 c
-        external sub_base
+        external fun_base
 c
-        allocate(dw(1:nb))
+        allocate(dw(nb))
 
 c  data points
         do i=1,nlocdatpts
-          call sub_base('f',1,nb,bc,ppos(1,i),dw)
-          xyzf(i) = SUM(dw)
+          xyzf(i) = fun_base(1,nb,bc,ppos(1,i),dw)
         enddo
 
 c  sampling points
         do i=nlocdatpts+1,nlocpts
-          call sub_base('f',100,nb,bc,ppos(1,i),dw)
-          xyzf(i) = SUM(dw)
+          xyzf(i) = fun_base(100,nb,bc,ppos(1,i),dw)
         enddo
 c
         deallocate(dw)

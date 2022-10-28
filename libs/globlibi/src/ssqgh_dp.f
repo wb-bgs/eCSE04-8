@@ -56,7 +56,7 @@ c  All defining parallel enviroment
 c
 c  All: Now does the work
         nb2=nb*2
-        allocate(gj_hj(1:nb2))
+        allocate(gj_hj(nb2))
 c
         call ssqgh_d(npmax, nlocdatpts, nlocpts, 1,
      >               nd, ppos, nb,

@@ -17,12 +17,15 @@ c    outputs:
 c       dlf             Legendre functions [dim min: max (2,lm-nm+1)]
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine  mklf_F(nm,ilg,ds,dc,dlf)
+        subroutine  mklf_F(nm, ilg, ds, dc, dlf)
 c
         implicit none
 c
-        integer nm,ilg,ierr,il
-        real*8 dlf(*),ds,dc,dnm,d1,d2,dbeta,dalpha
+        integer nm, ilg
+        real*8 ds, dc, dlf(*)
+c
+        integer ierr, il, d0
+        real*8 dnm, d1, d2, dbeta, dalpha
 c
         real*8 dgamln
         external dgamln
@@ -58,8 +61,9 @@ c     l=nm+2....lm
 c
         do il=2,ilg-nm                        ! l=nm+il-1
 c
-          d1 = dble((il-1) * (il+2*nm-1))    ! (l-m)*(l+m)
-          d2 = dble(il * (il+2*nm))          ! (l-m+1)*(l+m+1)	
+          d0 = il+2*nm
+          d1 = dble((il-1) * (d0-1))         ! (l-m)*(l+m)
+          d2 = dble(il * d0)                 ! (l-m+1)*(l+m+1)	
           dbeta = dsqrt(d1/d2)               ! recurrence coeff.
           d1 = dble(2*(il+nm)-1)             ! 2l+1
           dalpha = d1/dsqrt(d2)              !

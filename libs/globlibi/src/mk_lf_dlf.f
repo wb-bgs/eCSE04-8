@@ -11,21 +11,27 @@ c
 c       Fast version: tests reduced to minimum
 c
 c       input:
-c         nm/ilg         order and degree max
+c         nm/ilg        order and degree max
 c         dc/ds         cos(colatitude)/sin(colatitude)
+c         d2a           pre-computed array for mklf_F2()
 c       output:
 c         dlf           legendre function from nm to nl
 c         ddlf          derivative of legendre function from nm to nl
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine mk_lf_dlf(nm,ilg,ds,dc,dlf,ddlf)
+        subroutine mk_lf_dlf(nm, ilg, ds, dc, d2a, dlf, ddlf)
 c
         implicit none
 c
-        integer nm,ilg,il,jl
-        real*8 ds,dc,dlf(*),ddlf(*),d1,d2
+        integer nm, ilg
+        real*8 ds, dc, d2a(0:ilg)
+        real*8 dlf(*), ddlf(*)
 c
-        call mklf_F(nm,ilg,ds,dc,dlf)
+        integer il, jl
+        real*8 d1, d2
+c
+c       call mklf_F(nm, ilg, ds, dc, dlf)
+        call mklf_F2(nm, ilg, ds, dc, d2a, dlf)
 c
         if (ds.eq.0.0d0) then
 
@@ -35,8 +41,9 @@ c
                 ddlf(1) = -1.0d0
                 ddlf(2) = -dsqrt(3.0d0) 
                 do il=3,ilg+1
-                    d1 = (2*il-1)/dsqrt(dble(il*il-1))
-                    d2 = dsqrt(dble((il-1)**2-1)/(il*il-1))
+                    jl = il*il-1
+                    d1 = (2*il-1)/dsqrt(dble(jl))
+                    d2 = dsqrt(dble((il-1)**2-1)/jl)
                     ddlf(il) = d1*ddlf(il-1) - d2*ddlf(il-2)
                 enddo
             endif

@@ -13,7 +13,7 @@ c
 c
         include 'mpif.h'
 c
-        character(len=*), parameter :: VERSION="3.4.0"
+        character(len=*), parameter :: VERSION="3.5.0"
 c
         integer, parameter :: POLAK_RIBIERE=1
         integer, parameter :: CONJUGATE_GRADIENT=2
@@ -99,7 +99,6 @@ c  Read in command line arguments
 
 c
 c  Settings
-        call init_sph_wmam(shdeg)
         nparams=shdeg*(shdeg+2)
         nx=nint(1.0/resdeg)*180-1
         ny=nint(1.0/resdeg)*360
@@ -118,6 +117,8 @@ c  Settings
           write(*,*) 'Data+Sampling points: ', npts
           write(*,*) ''
         endif
+
+        call init_sph_wmam(shdeg, nparams)
 
 c
 c  Partition workload
@@ -221,6 +222,7 @@ c  Calculate CM4 components
           write(*,*) ' Z CM4 component calculated'
           write(*,*) ''
         endif
+
 c
 c  Define covariance matrix: sin(colat) weight
         if (rank.eq.0) then
@@ -243,6 +245,12 @@ c  Add smoothing equations
      >                        imin_locpts, imin_locsampts,
      >                        ND, ncoeffs, shdeg, dampfac,
      >                        bc, ijcov, cov, ppos)
+
+c
+c  Prepare the CM4 components for use within sub_sph_wmam_l()
+        do i=1,nlocpts
+          call prepare_cm4_components(ppos(1,i))
+        enddo
 
 c
 c  Finalise covariance matrix
@@ -283,14 +291,16 @@ c
         if (scheme.eq.POLAK_RIBIERE) then
           call opt_pr_p3(fname, itmax, NPMAX, ND, nparams,
      >                   nlocdatpts, proc_np, ppos, bc, dl,
-     >                   l2_norm, sub_sph_wmam_l, l2_std, damp_rien,
+     >                   sub_base_i, damp_rien,
+     >                   fun_base_f, l2_norm, l2_std,
      >                   cov, ijcov(1,2),
      >                   stdt, dw, bb, gg)
         else
 c         CONJUGATE_GRADIENT
           call opt_ghc_p2(fname, itmax, NPMAX, ND, nparams,
      >                    nlocdatpts, proc_np, ppos, bc, dl,
-     >                    l2_norm, sub_sph_wmam_l, l2_std, damp_rien,
+     >                    sub_base_i, damp_rien,
+     >                    fun_base_f, l2_norm, l2_std,
      >                    cov, ijcov(1,2),
      >                    stdt, dw, bb, gg)
         endif

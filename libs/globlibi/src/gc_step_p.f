@@ -30,8 +30,8 @@ c         ppos          data point position in ndD
 c         ddat          data values
 c         nb            Number or base function to use
 c         bc            Estimate of Base function coefficients
-c         fun_std       std Function
-c         sub_base      Base subroutine to use
+c         fun_std       std function
+c         fun_base      Base function to use
 c         cov(*)        covariance matrix in SLAP Column format
 c         jcov          Integer vector describing cov format
 c         std           STD value for given BC
@@ -46,7 +46,7 @@ c         xyzf(*)       Forward modelling for given BC+stp*DS
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine gc_step_p(iunit, npmax, nd, nlocdatpts,
      >                       proc_np, ppos, ddat, nb, bc,
-     >                       fun_std, sub_base, cov, jcov,
+     >                       fun_std, fun_base, cov, jcov,
      >                       std, gj, ghj, ds, stp, xyzf)
 c
         implicit none
@@ -61,8 +61,8 @@ c
         real*8 std,gj(*),ghj(*)
         real*8 ds(*),stp,xyzf(*)
 c
-        real*8 fun_std
-        external sub_base,fun_std
+        real*8 fun_base,fun_std
+        external fun_base,fun_std
 c
         integer i,nlocpts
         integer ierr,rank 
@@ -78,7 +78,7 @@ c All: Calculate  sqrt(w).A.DS
         zz(1:nlocpts)=0.0d0
         call cpt_dat_vals_p2(nd, nlocdatpts, nlocpts,
      >                       ppos, nb, ds,
-     >                       sub_base, zz)
+     >                       fun_base, zz)
 c
         do i=1,nlocpts
           zz(i)=zz(i)/dsqrt(cov(jcov(i)))
@@ -107,7 +107,7 @@ c ALL: Do the forward modelling
         xyzf(1:nlocpts)=0.0d0
         call cpt_dat_vals_p2(nd, nlocdatpts, nlocpts,
      >                       ppos, nb, bcn,
-     >                       sub_base, xyzf)
+     >                       fun_base, xyzf)
         call cptstd_dp(npmax, proc_np,
      >                 jcov, cov, ddat,
      >                 xyzf, fun_std, std)

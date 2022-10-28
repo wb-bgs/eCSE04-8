@@ -94,6 +94,7 @@ c
         endif
 
         deallocate(dw)
+
 c
 c for each data point define the covariance
         j=nlocdatpts+1
