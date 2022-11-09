@@ -1,15 +1,15 @@
 #!/usr/bin/env python 
 
-# python memory_requirement-1.9.py 1 256 128 200  1.00
-# 0.239%
-# python memory_requirement-1.9.py 1 256 128 300  0.50
-# 0.539%
-# python memory_requirement-1.9.py 1 256 128 720  0.25
-# 3.075%
-# python memory_requirement-1.9.py 1 256 128 1440 0.10
-# 12.363%
-# python memory_requirement-1.9.py 1 256 128 2000 0.05
-# 24.307%
+# python memory_requirement.py 1 256 128 200  1.00
+# 0.231%
+# python memory_requirement.py 1 256 128 300  0.50
+# 0.522%
+# python memory_requirement.py 1 256 128 720  0.25
+# 2.978%
+# python memory_requirement.py 1 256 128 1440 0.10
+# 11.975%
+# python memory_requirement.py 1 256 128 2000 0.05
+# 23.559%
 
 
 import sys
@@ -68,47 +68,51 @@ lab = []
 mem = []
 
 
-precalc1 = 2*(shdeg+1) + 2*(((shdeg-1)*shdeg)/2)
-precalc2 = 2*shdeg + ((shdeg+1)*(2+shdeg))/2
+precalc = nparams*3 + (shdeg+1)
 
 lab.append("mod_wmam_020") # mem[0]
-mem.append(SIZEOF_DOUBLE*(1*nparams + 10*nlocpts + precalc1+precalc2) + SIZEOF_INT*(2*nlocpts + 2*nranks))
+mem.append(SIZEOF_DOUBLE*(1*nparams + 10*nlocpts + precalc) + SIZEOF_INT*(2*nlocpts + 2*nranks))
 
 
 lab.append("cpt_dat_vals_p")
-mem.append(mem[0] + SIZEOF_DOUBLE*(1*ncoeffs + 3*ncoeffs + 2*(shdeg+1)))
+mem.append(mem[0] + SIZEOF_DOUBLE*(1*ncoeffs + 1*(shdeg+1)))
 
 lab.append("build_damp_space")
-mem.append(mem[0] + SIZEOF_DOUBLE*(11*nlocsampts) + SIZEOF_DOUBLE*(1*ncoeffs + 3*ncoeffs + 2*(shdeg+1)))
+mem.append(mem[0] + SIZEOF_DOUBLE*(10*nlocsampts) + SIZEOF_DOUBLE*(1*ncoeffs + 1*(shdeg+1)))
+
 
 lab.append("opt_pr_p3") # mem[3]
-mem.append(mem[0] + SIZEOF_DOUBLE*(2*nparams + 3*nparams + 1*nlocpts))
+mem.append(mem[0] + SIZEOF_DOUBLE*(3 + 2*nparams + 3*nparams + 1*nlocpts))
 
-lab.append("cpt_dat_vals_p")
-mem.append(mem[3] + SIZEOF_DOUBLE*(1*nparams + 3*nparams + 2*(shdeg+1)))
+
+lab.append("cpt_dat_vals_p2")
+mem.append(mem[3] + SIZEOF_DOUBLE*(1*nparams + 2*(shdeg+1) + 1*(shdeg)))
 
 lab.append("cptstd_dp")
 mem.append(mem[3] + SIZEOF_DOUBLE*(2*nranks + 6))
 
+
 lab.append("ssqgh_dp")
-mem.append(mem[3] + SIZEOF_DOUBLE*(2*nparams) + SIZEOF_DOUBLE*(9 + 3*nparams) + SIZEOF_DOUBLE*(3*nparams + 2*(shdeg+1)))
+mem.append(mem[3] + SIZEOF_DOUBLE*(1*nparams) + SIZEOF_DOUBLE*(2*nparams) + SIZEOF_DOUBLE*(9 + 3*nparams))
+
 
 lab.append("gc_step_p") # mem[7]
 mem.append(mem[3] + SIZEOF_DOUBLE*(1*nlocpts))
-lab.append("cpt_dat_vals_p")
-mem.append(mem[7] + SIZEOF_DOUBLE*(1*nparams + 3*nparams + 2*(shdeg+1)))
+lab.append("cpt_dat_vals_p2")
+mem.append(mem[7] + SIZEOF_DOUBLE*(1*nparams + 2*(shdeg+1) + 1*(shdeg)))
 
 lab.append("gc_step_p") # mem[9]
 mem.append(mem[3] + SIZEOF_DOUBLE*(1*nparams))
-lab.append("cpt_dat_vals_p")
-mem.append(mem[9] + SIZEOF_DOUBLE*(1*nparams + 3*nparams + 2*(shdeg+1)))
+lab.append("cpt_dat_vals_p2")
+mem.append(mem[9] + SIZEOF_DOUBLE*(1*nparams + 2*(shdeg+1) + 1*(shdeg)))
 lab.append("cptstd_dp")
 mem.append(mem[9] + SIZEOF_DOUBLE*(2*nranks + 6))
 
+
 lab.append("lsearch_p") # mem[12]
 mem.append(mem[3] + SIZEOF_DOUBLE*(1*nparams))
-lab.append("cpt_dat_vals_p")
-mem.append(mem[12] + SIZEOF_DOUBLE*(1*nparams + 3*nparams + 2*(shdeg+1)))
+lab.append("cpt_dat_vals_p2")
+mem.append(mem[12] + SIZEOF_DOUBLE*(1*nparams + 2*(shdeg+1) + 1*(shdeg)))
 lab.append("cptstd_dp")
 mem.append(mem[12] + SIZEOF_DOUBLE*(2*nranks + 6))
 
