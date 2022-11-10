@@ -13,7 +13,7 @@ c
 c
         include 'mpif.h'
 c
-        character(len=*), parameter :: VERSION="3.5.0"
+        character(len=*), parameter :: VERSION="3.5.0-cache"
 c
         integer, parameter :: POLAK_RIBIERE=1
         integer, parameter :: CONJUGATE_GRADIENT=2
@@ -27,10 +27,10 @@ c
         integer nx, ny
         integer itmax(3), nub
         real*8  std, stdt, dd, dl(3), dampfac
-        real*8  resdeg
+        real*8  resdeg, cache_size
         integer cmdcnt, shdeg, scheme
         integer ncoeffs, nparams
-        integer ndatpts, nsampts, npts
+        integer ndatpts, nsampts, npts, ncache
         integer nlocdatpts, imin_locdatpts, imax_locdatpts
         integer nlocsampts, imin_locsampts
         integer nlocpts, imin_locpts
@@ -87,13 +87,22 @@ c  Read in command line arguments
         else
           dampfac=5.0d0
         endif
+        if (cmdcnt.ge.5) then
+          call GET_COMMAND_ARGUMENT(5,argstr)
+          read(argstr,*) cache_size
+          if (cache_size.lt.0.0) cache_size = 0.0d0
+          if (cache_size.gt.1.0) cache_size = 1.0d0
+        else
+          cache_size=0.0d0
+        endif
         if (rank.eq.0) then
           write(*,*) 'WMAM v', VERSION
           write(*,*) ''
           write(*,*) 'shdeg: ', shdeg
           write(*,*) 'resdeg: ', resdeg
           write(*,*) 'scheme: ', scheme
-          write(*,*) 'dampfac: ', dampfac 
+          write(*,*) 'dampfac: ', dampfac
+          write(*,*) 'cache_size: ', cache_size 
           write(*,*) ''
         endif
 
@@ -117,8 +126,6 @@ c  Settings
           write(*,*) 'Data+Sampling points: ', npts
           write(*,*) ''
         endif
-
-        call init_sph_wmam(shdeg, nparams)
 
 c
 c  Partition workload
@@ -148,7 +155,13 @@ c  can be setup correctly
         deallocate(proc_ndp,proc_idp)
         deallocate(proc_nsp,proc_isp)
 
+c
+c  Do more initialisations (and allocate point cache)
+        ncache = nint(cache_size*dble(nlocpts))
+        call init_sph_wmam(shdeg, nparams, nlocdatpts, ncache)
 
+c
+c  Output array sizes
         if (rank.eq.0) then
           write(*,*) ''
           write(*,*) 'MPI Rank:', rank
@@ -164,6 +177,8 @@ c  can be setup correctly
           write(*,*) 'Local Data+Sampling points: ', nlocpts
           write(*,*) 'Global Index for Data+Sampling points: ',
      >               imin_locpts
+          write(*,*) ''
+          write(*,*) 'Cache size: ', ncache, ' points'
           write(*,*) ''
           write(*,*) ''
         endif
@@ -251,6 +266,9 @@ c  Prepare the CM4 components for use within sub_sph_wmam_l()
         do i=1,nlocpts
           call prepare_cm4_components(ppos(1,i))
         enddo
+
+c  Populate the dw point cache
+        call populate_dw_cache(ND, ppos)
 
 c
 c  Finalise covariance matrix

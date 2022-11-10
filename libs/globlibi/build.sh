@@ -50,7 +50,7 @@ function set_compile_options {
 PE_RELEASE=21.09
 PRGENV=$1
 BUILD=$2
-VERSION=3.5
+VERSION=3.5-cache
 ERRMSG="Invalid syntax: build.sh cray|gnu|aocc release|debug|craypat|armmap|scorep"
 
 if [[ "${PRGENV}" != "cray" && "${PRGENV}" != "gnu" && "${PRGENV}" != "aocc" ]]; then
@@ -72,7 +72,7 @@ PRFX=${HOME/home/work}
 GLOBLIB_LABEL=globlibi
 GLOBLIB_VERSION=${VERSION}
 GLOBLIB_NAME=${GLOBLIB_LABEL}-${GLOBLIB_VERSION}
-GLOBLIB_BUILD_ROOT=${PRFX}/eCSE04-8/libs/${GLOBLIB_LABEL}/src
+GLOBLIB_BUILD_ROOT=${PRFX}/eCSE04-8-cache/libs/${GLOBLIB_LABEL}/src
 GLOBLIB_INSTALL_ROOT=${PRFX}/libs/${GLOBLIB_LABEL}/${GLOBLIB_VERSION}
 
 

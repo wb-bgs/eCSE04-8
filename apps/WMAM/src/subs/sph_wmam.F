@@ -11,12 +11,14 @@ c  Number of parameters as organised on BE:
 c  ilg*(ilg+2)                        internal lithosphere models
 c
 c    Global data:
-c       ilg : integer : internal SH degree value (see below)
-c       ryg : real*8  : reference year for the model
-c       rag : real*8  : radius for lithosphere
-c       dwx, dwy, dwz : real*8 : allocatable arrays of size nb
-c       d2a : real*8  : allocatable array of size 0:ilg;
-c                       holds pre-computed values for mklf_F2()
+c         ilg : integer : internal SH degree value (see below)
+c  imax_datpt : integer : number of local data points
+c          nc : integer : number of points in cache
+c         ryg : real*8  : reference year for the model
+c         rag : real*8  : radius for lithosphere
+c         dwx, dwy, dwz : real*8 : allocatable arrays of size nb,0:ncache
+c         d2a : real*8  : allocatable array of size 0:ilg;
+c                         holds pre-computed values for mklf_F2()
 c    Subroutines:
 c       init_sph_wmam()    initialise global variables
 c       fini_sph_wmam()    deallocate global arrays
@@ -24,6 +26,7 @@ c       mpi_read_ref_model()
 c       mpi_read_model()
 c       mpi_read_data()
 c       prepare_cm4_components()
+c       populate_dw_cache()
 c       sub_sph_wmam_l()   linearized model subroutine
 c       sub_base_i()
 c    Functions
@@ -39,10 +42,10 @@ c
         integer, parameter :: SIZE_OF_REAL = 8
         integer, parameter :: SIZE_OF_PT = NUM_OF_PTCOMPS*SIZE_OF_REAL
 c        
-        integer ilg
+        integer ilg, imax_datpt, nc
         real*8 ryg, rag
 c
-        real*8, allocatable :: dwx(:), dwy(:), dwz(:)
+        real*8, allocatable :: dwx(:,:), dwy(:,:), dwz(:,:)
         real*8, allocatable :: d2a(:)
 c
         contains
@@ -57,13 +60,15 @@ c
 c  input:
 c       shdeg : integer : spherical harmonic degree
 c          nb : integer : number of parameters
+c         nlp : integer : number of local data points
+c      ncache : integer : number of points in cache
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine init_sph_wmam(shdeg, nb)
+        subroutine init_sph_wmam(shdeg, nb, nlp, ncache)
 c
         implicit none
 c
-        integer shdeg, nb
+        integer shdeg, nb, nlp, ncache
         integer nm, ierr
         real*8  dnm, d1, d2
         real*8 dgamln
@@ -73,8 +78,6 @@ c
         call dy2mjd(1990.d0,ryg)
         rag=6371.2d0
         ilg=shdeg
-c
-        allocate(dwx(nb),dwy(nb),dwz(nb))
 c
         allocate(d2a(0:ilg))
 c
@@ -94,7 +97,14 @@ c
 c
           d2a(nm) = d2
         enddo
-
+c
+        imax_datpt = nlp
+        nc = ncache
+c  allocate cache 
+        allocate(dwx(nb, 0:nc))
+        allocate(dwy(nb, 0:nc))
+        allocate(dwz(nb, 0:nc))
+c
         return
         end subroutine init_sph_wmam
 c
@@ -105,6 +115,9 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine fini_sph_wmam()
         deallocate(dwx,dwy,dwz)
         deallocate(d2a)
+c
+        nc = 0
+c
         return
         end subroutine fini_sph_wmam
 c
@@ -580,6 +593,27 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
        end subroutine prepare_cm4_components
 c
+
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c    subroutine populate_dw_cache
+c
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+       subroutine populate_dw_cache(nd, ppos)
+
+       implicit none
+
+       integer nd
+       real*8  ppos(nd+1,*)
+
+       integer i
+
+       do i=1,nc
+         call XYZsph_bi0(ilg, rag, ppos(1,i), d2a,
+     >                   dwx(1,i), dwy(1,i), dwz(1,i))
+       enddo
+
+       end subroutine populate_dw_cache
+c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c    subroutine sub_sph_wmam_l
 c
@@ -589,7 +623,7 @@ c   That is for a linearized inversion of the lithosphere field.
 c   This subroutine is called from either sub_base_i() or fun_base_f().
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-       subroutine sub_sph_wmam_l(nub, nb, bc, bp, be)
+       subroutine sub_sph_wmam_l(ipt, nb, bc, bp, be)
 c
        implicit none
 c
@@ -597,8 +631,10 @@ c
        include 'pat_apif.h'
 #endif
 c
-       integer nub, nb
+       integer ipt, nb
        real*8 bc(*), bp(*), be(*)
+c
+       integer i
 c
        real*8 dx, dy, dz, dd
 c
@@ -621,8 +657,14 @@ c
 #endif
 
 c    calculate internal field component
-       call XYZsph_bi0(ilg, rag, bp, d2a,
-     >                 dwx, dwy, dwz)
+       if (ipt .gt. nc) then
+         call XYZsph_bi0(ilg, rag, bp, d2a,
+     >                   dwx(1,0), dwy(1,0), dwz(1,0))
+         i = 0
+       else
+c    dw arrays have been pre-calculated for this point
+         i = ipt
+       endif
 
 #ifdef CRAYPAT
        call PAT_region_end(1,cpstat)
@@ -633,11 +675,11 @@ c    calculate internal field component
        bey = bp(6)
        bez = bp(7)
 
-       if (nub .eq. 100) then
+       if (ipt .gt. imax_datpt) then
 c    sampling point
-         dx = dot_product(dwx(1:nb), bc(1:nb))
-         dy = dot_product(dwy(1:nb), bc(1:nb))
-         dz = dot_product(dwz(1:nb), bc(1:nb))
+         dx = dot_product(dwx(1:nb,i), bc(1:nb))
+         dy = dot_product(dwy(1:nb,i), bc(1:nb))
+         dz = dot_product(dwz(1:nb,i), bc(1:nb))
 c
          dxbey = dx*bey
          dxbez = dx*bez
@@ -664,9 +706,9 @@ c
          bez = bez2
        endif
 c
-       be(1:nb) = dwx(1:nb)*bex
-     >          + dwy(1:nb)*bey
-     >          + dwz(1:nb)*bez
+       be(1:nb) = dwx(1:nb,i)*bex
+     >          + dwy(1:nb,i)*bey
+     >          + dwz(1:nb,i)*bez
 c
        return
        end subroutine sub_sph_wmam_l
@@ -675,14 +717,14 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c    subroutine sub_base_i
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-       subroutine sub_base_i(nub, nb, bc, bp, be)
+       subroutine sub_base_i(ipt, nb, bc, bp, be)
 c
        implicit none
 c
-       integer nub, nb
+       integer ipt, nb
        real*8 bc(*), bp(*), be(*)
 c
-       call sub_sph_wmam_l(nub, nb, bc, bp, be)
+       call sub_sph_wmam_l(ipt, nb, bc, bp, be)
 c 
        return
        end subroutine sub_base_i
@@ -691,14 +733,14 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c    function fun_base_f
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-       real*8 function fun_base_f(nub, nb, bc, bp, be)
+       real*8 function fun_base_f(ipt, nb, bc, bp, be)
 c
        implicit none
 c
-       integer nub, nb
+       integer ipt, nb
        real*8 bc(*), bp(*), be(*)
 c
-       call sub_sph_wmam_l(nub, nb, bc, bp, be)
+       call sub_sph_wmam_l(ipt, nb, bc, bp, be)
 c
        fun_base_f = dot_product(be(1:nb), bc(1:nb))
 c

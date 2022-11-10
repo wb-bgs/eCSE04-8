@@ -38,12 +38,12 @@ c
 
 c  data points
         do i=1,nlocdatpts
-          xyzf(i) = fun_base(1,nb,bc,ppos(1,i),dw)
+          xyzf(i) = fun_base(i,nb,bc,ppos(1,i),dw)
         enddo
 
 c  sampling points
         do i=nlocdatpts+1,nlocpts
-          xyzf(i) = fun_base(100,nb,bc,ppos(1,i),dw)
+          xyzf(i) = fun_base(i,nb,bc,ppos(1,i),dw)
         enddo
 c
         deallocate(dw)
