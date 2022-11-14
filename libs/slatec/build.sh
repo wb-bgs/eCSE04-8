@@ -44,10 +44,16 @@ function set_compile_options {
       sed -i "s:FFLAGS= -O2:FFLAGS= -g1 -O1:g" ${MAKEFILE}
     fi
   fi
+
+  if [[ "${PRGENV}" == "gnu" ]]; then
+    if [[ "${PE_RELEASE}" == "21.04" ]]; then
+      sed -i "s:-fallow-argument-mismatch::g" ${MAKEFILE}
+    fi
+  fi
 }
 
 
-PE_RELEASE=21.09
+PE_RELEASE=21.04
 PRGENV=$1
 BUILD=$2
 ERRMSG="Invalid syntax: build.sh cray|gnu|aocc release|debug|craypat|armmap|scorep"
@@ -70,7 +76,7 @@ SLATEC_BUILD_ROOT=${PRFX}/eCSE04-8/libs/${SLATEC_LABEL}/src
 SLATEC_INSTALL_ROOT=${PRFX}/libs/${SLATEC_LABEL}/${SLATEC_VERSION}
 
 
-echo -e "\n\nBuilding ${SLATEC_LABEL} ${SLATEC_VERSION} (${BUILD}) using ${PRGENV} programming environment...\n\n"
+echo -e "\n\nBuilding ${SLATEC_LABEL} ${SLATEC_VERSION} (${BUILD}) using ${PRGENV} (CPE ${PE_RELEASE}) programming environment...\n\n"
   
 module -q restore
 module -q load cpe/${PE_RELEASE}
@@ -95,8 +101,7 @@ export LD_LIBRARY_PATH=${CRAY_LD_LIBRARY_PATH}:${LD_LIBRARY_PATH}
 
 
 PE_NAME=${PE_MPICH_FIXED_PRGENV}
-PE_VERSION=$(eval echo "\${PE_MPICH_GENCOMPILERS_${PE_NAME}}")
-SLATEC_INSTALL_PATH=${SLATEC_INSTALL_ROOT}/${PE_NAME}/${PE_VERSION}/${BUILD}
+SLATEC_INSTALL_PATH=${SLATEC_INSTALL_ROOT}/${PE_NAME}/${PE_RELEASE}/${BUILD}
 
 cd ${SLATEC_BUILD_ROOT}
 

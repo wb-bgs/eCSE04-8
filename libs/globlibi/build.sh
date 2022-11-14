@@ -44,10 +44,16 @@ function set_compile_options {
       sed -i "s:FFLAGS =:FFLAGS= -g1 -O3:g" ${MAKEFILE}
     fi
   fi
+
+  if [[ "${PRGENV}" == "gnu" ]]; then
+    if [[ "${PE_RELEASE}" == "21.04" ]]; then
+      sed -i "s:-fallow-argument-mismatch::g" ${MAKEFILE}
+    fi
+  fi
 }
 
 
-PE_RELEASE=21.09
+PE_RELEASE=22.04
 PRGENV=$1
 BUILD=$2
 VERSION=3.5
@@ -76,7 +82,7 @@ GLOBLIB_BUILD_ROOT=${PRFX}/eCSE04-8/libs/${GLOBLIB_LABEL}/src
 GLOBLIB_INSTALL_ROOT=${PRFX}/libs/${GLOBLIB_LABEL}/${GLOBLIB_VERSION}
 
 
-echo -e "\n\nBuilding ${GLOBLIB_LABEL} ${GLOBLIB_VERSION} (${BUILD}) using ${PRGENV} programming environment...\n\n"
+echo -e "\n\nBuilding ${GLOBLIB_LABEL} ${GLOBLIB_VERSION} (${BUILD}) using ${PRGENV} (CPE ${PE_RELEASE}) programming environment...\n\n"
   
 module -q restore
 module -q load cpe/${PE_RELEASE}
@@ -101,8 +107,7 @@ export LD_LIBRARY_PATH=${CRAY_LD_LIBRARY_PATH}:${LD_LIBRARY_PATH}
 
 
 PE_NAME=${PE_MPICH_FIXED_PRGENV}
-PE_VERSION=$(eval echo "\${PE_MPICH_GENCOMPILERS_${PE_NAME}}")
-GLOBLIB_INSTALL_PATH=${GLOBLIB_INSTALL_ROOT}/${PE_NAME}/${PE_VERSION}/${BUILD}/lib
+GLOBLIB_INSTALL_PATH=${GLOBLIB_INSTALL_ROOT}/${PE_NAME}/${PE_RELEASE}/${BUILD}/lib
 
 
 cd ${GLOBLIB_BUILD_ROOT}

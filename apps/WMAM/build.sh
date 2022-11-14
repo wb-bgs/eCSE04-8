@@ -44,10 +44,16 @@ function set_compile_options {
       sed -i "s:FFLAGS =:FFLAGS= -g1 -O3:g" ${MAKEFILE}
     fi
   fi
+
+  if [[ "${PRGENV}" == "gnu" ]]; then
+    if [[ "${PE_RELEASE}" == "21.04" ]]; then
+      sed -i "s:-fallow-argument-mismatch::g" ${MAKEFILE}
+    fi
+  fi
 }
 
 
-PE_RELEASE=21.09
+PE_RELEASE=22.04
 PRGENV=$1
 BUILD=$2
 VERSION=3.5
@@ -78,7 +84,7 @@ WMAM_BUILD_ROOT=${PRFX}/eCSE04-8/apps/${WMAM_LABEL}/src
 WMAM_INSTALL_ROOT=${PRFX}/apps/${WMAM_LABEL}/${WMAM_VERSION}
 
 
-echo -e "\n\nBuilding ${WMAM_LABEL} ${WMAM_VERSION} with globlibi ${GLOBLIBI_VERSION} (${BUILD}) using ${PRGENV} programming environment...\n\n"
+echo -e "\n\nBuilding ${WMAM_LABEL} ${WMAM_VERSION} with globlibi ${GLOBLIBI_VERSION} (${BUILD}) using ${PRGENV} (CPE ${PE_RELEASE}) programming environment...\n\n"
   
 module -q restore
 module -q load cpe/${PE_RELEASE}
@@ -104,11 +110,10 @@ fi
 export LD_LIBRARY_PATH=${CRAY_LD_LIBRARY_PATH}:${LD_LIBRARY_PATH}
 
 PE_NAME=${PE_MPICH_FIXED_PRGENV}
-PE_VERSION=$(eval echo "\${PE_MPICH_GENCOMPILERS_${PE_NAME}}")
-WMAM_INSTALL_PATH=${WMAM_INSTALL_ROOT}/${PE_NAME}/${PE_VERSION}/${BUILD}
+WMAM_INSTALL_PATH=${WMAM_INSTALL_ROOT}/${PE_NAME}/${PE_RELEASE}/${BUILD}
 
-SLATEC_ROOT=${PRFX}/libs/slatec/${SLATEC_VERSION}/${PE_NAME}/${PE_VERSION}/${BUILD}
-GLOBLIBI_ROOT=${PRFX}/libs/globlibi/${GLOBLIBI_VERSION}/${PE_NAME}/${PE_VERSION}/${BUILD}
+SLATEC_ROOT=${PRFX}/libs/slatec/${SLATEC_VERSION}/${PE_NAME}/${PE_RELEASE}/${BUILD}
+GLOBLIBI_ROOT=${PRFX}/libs/globlibi/${GLOBLIBI_VERSION}/${PE_NAME}/${PE_RELEASE}/${BUILD}
 
 cd ${WMAM_BUILD_ROOT}
 
@@ -117,7 +122,7 @@ set_compile_options ./makefile
 
 LIBS_MAKEFILE_LINE="${GLOBLIBI_ROOT}/lib/libgloblibi.a ${SLATEC_ROOT}/lib/libslatec.a"
 if [[ "${BUILD}" == "armmap" ]]; then
-  ARM_MAPLIB_PATH=${FORGE_ROOT}/map/lib/${PE_NAME,,}/${PE_VERSION}
+  ARM_MAPLIB_PATH=${FORGE_ROOT}/map/lib/${PE_NAME}/${PE_RELEASE}
   LIBS_MAKEFILE_LINE="${LIBS_MAKEFILE_LINE} -L${ARM_MAPLIB_PATH} -lmap-sampler-pmpi -lmap-sampler -Wl,--eh-frame-hdr -Wl,-rpath=${ARM_MAPLIB_PATH}"
 fi
 sed -i "s:LIBS =:LIBS = ${LIBS_MAKEFILE_LINE}:g" ./makefile
