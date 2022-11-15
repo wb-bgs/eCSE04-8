@@ -9,7 +9,7 @@ DEGREE=$1
 
 APP_LABEL=WMAM
 APP_VERSION=$2
-TARGET_PATH=cce12/cmpich8-ofi
+TARGET_PATH=21.09/cce12/cmpich8-ofi
 RESULTS_TYPE=$3
 RESULTS_HOME=${ROOT}/tests/${APP_LABEL}/results/${RESULTS_TYPE}/${APP_VERSION}/${DEGREE}
 VERIFY_SCRIPT=${SCRIPTS_HOME}/verification/verify_output.py
@@ -26,8 +26,7 @@ elif [ ${DEGREE} -eq 720 ]; then
 elif [ ${DEGREE} -eq 1440 ]; then
   REFERENCE_HOME="~/../shared/arc/mod_wdmam_4Nick_1024/Results"
 elif [ ${DEGREE} -eq 2000 ]; then
-#  REFERENCE_HOME="~/../shared/arc/eCSE_large_problem/eCSE2021-v1.3/Results"
-  REFERENCE_HOME="/work/ecsead08/ecsead08/mrbad08/tests/WMAM/results.test/2000/cce12/cmpich8-ucx/n1024/c32768/1438712/Results"
+  REFERENCE_HOME="~/../shared/arc/eCSE_large_problem/eCSE2021-v1.3/Results"
 else
   echo "Error, unrecognised degree value."
   exit 0

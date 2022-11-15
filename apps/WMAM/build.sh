@@ -21,7 +21,8 @@ function set_compile_options {
     fi
   elif [[ "${BUILD}" == "craypat" ]]; then
     if [[ "${PRGENV}" == "cray" ]]; then
-      sed -i "s:FFLAGS =:FFLAGS = -g -O3 -DCRAYPAT -h profile_generate:g" ${MAKEFILE}
+      #sed -i "s:FFLAGS =:FFLAGS = -g -O3 -DCRAYPAT -h profile_generate:g" ${MAKEFILE}
+      sed -i "s:FFLAGS =:FFLAGS = -g -O3 -h profile_generate:g" ${MAKEFILE}
     elif [[ "${PRGENV}" == "gnu" ]]; then
       sed -i "s:FFLAGS =:FFLAGS = -g -O3 -DCRAYPAT -fallow-argument-mismatch:g" ${MAKEFILE}
     elif [[ "${PRGENV}" == "aocc" ]]; then
@@ -53,7 +54,7 @@ function set_compile_options {
 }
 
 
-PE_RELEASE=22.04
+PE_RELEASE=21.09
 PRGENV=$1
 BUILD=$2
 VERSION=3.5
@@ -139,7 +140,7 @@ mkdir -p ${WMAM_INSTALL_PATH}/bin
 
 if [[ "${BUILD}" == "craypat" ]]; then
   rm -f ${WMAM_INSTALL_PATH}/bin/mod_wmam_020+pat
-  pat_build -o ${WMAM_INSTALL_PATH}/bin/mod_wmam_020+pat ${WMAM_BUILD_ROOT}/mod_wmam_020
+  pat_build -g mpi -o ${WMAM_INSTALL_PATH}/bin/mod_wmam_020+pat ${WMAM_BUILD_ROOT}/mod_wmam_020
 else
   mv ${WMAM_BUILD_ROOT}/mod_wmam_020 ${WMAM_INSTALL_PATH}/bin/
 fi

@@ -53,7 +53,7 @@ function set_compile_options {
 }
 
 
-PE_RELEASE=22.04
+PE_RELEASE=21.09
 PRGENV=$1
 BUILD=$2
 VERSION=3.5
