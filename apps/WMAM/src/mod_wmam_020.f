@@ -13,14 +13,14 @@ c
 c
         include 'mpif.h'
 c
-        character(len=*), parameter :: VERSION="3.5.0"
+        character(len=*), parameter :: VERSION="3.6.0"
 c
         integer, parameter :: POLAK_RIBIERE=1
         integer, parameter :: CONJUGATE_GRADIENT=2
         integer, parameter :: ND=7
         integer, parameter :: NPMAX=3
 c
-        character fname*100
+        character fname*100, fname2*100
         character buf*100
         integer fhandle
         integer i, j, ix, iy, il, im
@@ -173,7 +173,7 @@ c  Array allocations
         allocate(bc(nparams))
         allocate(ppos(ND+1,nlocpts))
         allocate(cov(nlocpts))
-        allocate(ijcov(nlocpts,2))
+        allocate(ijcov(nlocpts+2,2))
         allocate(dw(nlocpts))
         
 c
@@ -275,13 +275,13 @@ c  Invert data
         dl(3)=1.d14
 c
         dw=1.d0
-c
+c 
         if (rank.eq.0) then
           write(*,*) 'Start Inversion'
           write(*,*) ' itmax: ', itmax(1:3)
           write(*,*) ' dl: ', dl(1:3)
           write(*,*) ''
-        endif
+         endif
 c
         fname='./Results/'
         allocate(gg(1:1,1:1))
@@ -316,13 +316,13 @@ c
           write(*,'(A)')' '
         endif
 
+        fname='./Results/fit_No_P.out'
+        fname2='./Results/fit_damp.out'
         do i=0,nranks-1
           if (rank .eq. i) then
-            call write_comp('./Results/fit_No_P.out',
-     >                      ND, 1, nlocdatpts,
+            call write_comp(fname, ND, 1, nlocdatpts,
      >                      ppos, dw, diff(1:2))
-            call write_comp('./Results/fit_damp.out',
-     >                      ND, nlocdatpts+1, nlocpts,
+            call write_comp(fname, ND, nlocdatpts+1, nlocpts,
      >                      ppos, dw, diff(3:4))
           endif
           if (i .lt. nranks-1) then
@@ -383,16 +383,15 @@ c  Saving update base coefficients
         endif
 c
 c  Deallocate arrays
+        deallocate(dw)
+        deallocate(ijcov)
+        deallocate(cov)
         deallocate(ppos)
         deallocate(bc)
-        deallocate(cov)
-        deallocate(ijcov)
-        deallocate(dw)
         deallocate(proc_np,proc_ip)
 c
         call fini_sph_wmam()
 c
         call MPI_Finalize(ierr)
 c
-        stop
         end
