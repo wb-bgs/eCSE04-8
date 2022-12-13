@@ -39,7 +39,7 @@ c
 c
         real*8, allocatable :: vrt(:,:)
         real*8, allocatable :: glw(:)
-        real*8, allocatable :: dw(:)
+        real*8, allocatable :: dw1(:)
         real*8, allocatable :: dw2(:,:)
 c
         integer i,j,k
@@ -69,31 +69,31 @@ c  Define sampling points
         enddo
         deallocate (dw2)
 c
-        allocate(dw(1:nlocsampts))
+        allocate(dw1(1:nlocsampts))
 c
-        dw=0.0d0
+        dw1=0.0d0
         if (rank.eq.0) write(*,*) ' Calculating CM4 components'
         call cpt_dat_vals_p(nd, nlocsampts, 1, vrt, ncoeffs,
-     >                      bc, sph_bi, dw)
-        vrt(5,1:nlocsampts)=dw(1:nlocsampts)
+     >                      bc, sph_bi, dw1)
+        vrt(5,1:nlocsampts)=dw1(1:nlocsampts)
         if (rank.eq.0) write(*,*) '  X CM4 component calculated'
 c
-        dw=0.0d0
+        dw1=0.0d0
         call cpt_dat_vals_p(nd, nlocsampts, 2, vrt, ncoeffs,
-     >                      bc, sph_bi, dw)
-        vrt(6,1:nlocsampts)=dw(1:nlocsampts)
+     >                      bc, sph_bi, dw1)
+        vrt(6,1:nlocsampts)=dw1(1:nlocsampts)
         if (rank.eq.0) write(*,*) '  Y CM4 component calculated'
 c
-        dw=0.0d0
+        dw1=0.0d0
         call cpt_dat_vals_p(nd, nlocsampts, 3, vrt, ncoeffs,
-     >                      bc, sph_bi, dw)
-        vrt(7,1:nlocsampts)=dw(1:nlocsampts)
+     >                      bc, sph_bi, dw1)
+        vrt(7,1:nlocsampts)=dw1(1:nlocsampts)
         if (rank.eq.0) then
           write(*,*) '  Z CM4 component calculated'
           write(*,*) ''
         endif
 
-        deallocate(dw)
+        deallocate(dw1)
 
 c
 c for each data point define the covariance

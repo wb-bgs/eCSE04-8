@@ -29,18 +29,18 @@ c
         real*8  :: xyzf(*)
 c
         integer :: i
-        real*8, allocatable :: dw(:)
+        real*8, allocatable :: dw1(:)
 c
         external sub_base
 c
-        allocate(dw(nb))
+        allocate(dw1(nb))
 c
         do i=1,np
-          call sub_base('f',nt,nb,bc,ppos(1,i),dw)
-          xyzf(i) = dw(1)
+          call sub_base('f',nt,nb,bc,ppos(1,i),dw1)
+          xyzf(i) = dw1(1)
         enddo
 c
-        deallocate(dw)
+        deallocate(dw1)
 c
         return
         end

@@ -35,7 +35,7 @@ c
         character iof
         integer nub,nb,nli,nti,i
         real*8 bp(*),be(*),bc(*),ry,df(3),dnm
-        real*8, allocatable :: dw(:)
+        real*8, allocatable :: dw1(:)
 c
         real*8 dcosd,dsind
 c
@@ -53,26 +53,26 @@ c
         elseif(nub.eq.3)then
           call Zsph_bi(ry,1,nli,nti,bp,be)
         elseif(nub.eq.4)then
-          allocate(dw(1:nb))
+          allocate(dw1(1:nb))
           df(1:3)=0.0d0
           do i=1,3
-            call sph_bi('i',i,nb,bc,bp,dw)
-            df(i)=dot_product(dw,bc(1:nb))
-            be(1:nb)=be(1:nb)+dw*df(i)
+            call sph_bi('i',i,nb,bc,bp,dw1)
+            df(i)=dot_product(dw1,bc(1:nb))
+            be(1:nb)=be(1:nb)+dw1*df(i)
           enddo
-          deallocate(dw)
+          deallocate(dw1)
           dnm=dot_product(df,df)
           dnm=dsqrt(dnm)
           be(1:nb)=be(1:nb)/dnm
         elseif(nub.eq.53)then
-          allocate(dw(1:nb))
-            call Xsph_bi(ry,1,nli,nti,bp,dw)
+          allocate(dw1(1:nb))
+            call Xsph_bi(ry,1,nli,nti,bp,dw1)
             call Zsph_bi(ry,1,nli,nti,bp,be)
             do i=1,nb
               be(i)=be(i)*dcosd(bp(1))
-              be(i)=dw(i)*dsind(bp(1))-be(i)
+              be(i)=dw1(i)*dsind(bp(1))-be(i)
             enddo
-          deallocate(dw)
+          deallocate(dw1)
         elseif(nub.eq.100)then
           call Psph_bi(ry,1,nli,nti,bp,be)
         else

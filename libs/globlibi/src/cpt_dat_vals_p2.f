@@ -30,23 +30,23 @@ c
         real*8  :: fun_base, xyzf(*)
 c
         integer :: i
-        real*8, allocatable :: dw(:)
+        real*8, allocatable :: dw1(:)
 c
         external fun_base
 c
-        allocate(dw(nb))
+        allocate(dw1(nb))
 
 c  data points
         do i=1,nlocdatpts
-          xyzf(i) = fun_base(1,nb,bc,ppos(1,i),dw)
+          xyzf(i) = fun_base(1,nb,bc,ppos(1,i),dw1)
         enddo
 
 c  sampling points
         do i=nlocdatpts+1,nlocpts
-          xyzf(i) = fun_base(100,nb,bc,ppos(1,i),dw)
+          xyzf(i) = fun_base(100,nb,bc,ppos(1,i),dw1)
         enddo
 c
-        deallocate(dw)
+        deallocate(dw1)
 c
         return
         end
