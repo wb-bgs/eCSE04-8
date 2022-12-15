@@ -1,4 +1,4 @@
-# ./verify_output.sh 21.09 cce12 3.6 200 2784014
+# ./verify_output.sh 21.09 cce12 3.6 200
 
 ROOT=${HOME/home/work}
 PYPP_HOME=${ROOT}/utils/pypp/3.9.4.1
@@ -8,11 +8,10 @@ CPE_RELEASE=$1
 COMPILER_LABEL=$2
 APP_VERSION=$3
 DEGREE=$4
-JOBID=$5
 
 APP_LABEL=WMAM
 TARGET_PATH=${CPE_RELEASE}/${COMPILER_LABEL}/cmpich8-ofi
-RESULTS_HOME=${ROOT}/tests/${APP_LABEL}/results/${DEGREE}
+RESULTS_HOME=${ROOT}/tests/${APP_LABEL}/results/scaling/${APP_VERSION}/${DEGREE}
 VERIFY_SCRIPT=${SCRIPTS_HOME}/verification/verify_output.py
 
 REFERENCE_DEGREE=""
@@ -36,6 +35,9 @@ fi
 
 . ${PYPP_HOME}/bin/activate
 
-python ${VERIFY_SCRIPT} "${RESULTS_HOME}/${TARGET_PATH}/n*/c*/${JOBID}/Results/model_No_P.out" "${REFERENCE_HOME}/model_No_P.out"
+declare -a node_count=( "1" "2" "4" "8" "16" "32" "64" "128" )
+for nc in "${node_count[@]}"; do
+  python ${VERIFY_SCRIPT} "${RESULTS_HOME}/${TARGET_PATH}/n${nc}/c*/*/Results/model_No_P.out" "${REFERENCE_HOME}/model_No_P.out" &> comp_${DEGREE}_n${nc}.out
+done
 
 . ${PYPP_HOME}/bin/deactivate

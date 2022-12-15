@@ -55,8 +55,19 @@ def verify_output(refFilename,outFilenames):
     if days != days_ref:
       print("Error, days="+str(days)+" is not equal to expected days value, "+str(days_ref)+".")
 
-    if len(outLines) != len(refLines):
-      print("Error, length of output file does not match reference file ("+str(len(outLines))+"!="+str(len(refLines))+").")
+    outLnCnt = len(outLines)
+    refLnCnt = len(refLines)
+    if outLnCnt != refLnCnt:
+      if outLnCnt-5 == 2*(refLnCnt-5):
+        print("Each coefficient result is split over two lines - this can happen if running an aocc-built code.")
+        outLines2 = []
+        for ln in outLines[4::2]:
+          outLines2.append(ln)
+        for i,ln in enumerate(outLines[5::2]):
+          outLines2[i] = outLines2[i] + " " + ln
+        outLines = outLines[:4] + outLines2
+      else:
+        print("Error, length of output file does not match reference file ("+str(len(outLines))+"!="+str(len(refLines))+").")
 
 
     for i,ln in enumerate(outLines[4:]):
@@ -64,22 +75,44 @@ def verify_output(refFilename,outFilenames):
       if 0 == len(lnParts):
         continue
 
+      # strip commas
+      for j, lp in enumerate(lnParts):
+        if lp[-1] == ',':
+          lnParts[j] = lp[:-1]
+
       model_type = lnParts[0]
-      sh_degree_order = lnParts[1]
-      if len(lnParts) == 5:
-        sh_degree_order += " " + lnParts[2]
-      sh_coeff_value = float(lnParts[-2][:-1])
+
+      if len(lnParts) == 4:
+        # order is one field
+        orderParts = lnParts[1].split('*')
+        sh_degree_order = orderParts[-1] + " " + orderParts[-1]
+      else:
+        sh_degree_order = lnParts[1] + " " + lnParts[2]
+
+      sh_coeff_value = float(lnParts[-2])
       sh_coeff_error = float(lnParts[-1])
+
 
       lnRef = refLines[i+4]
       lnRefParts = lnRef.split()
 
+      # strip commas
+      for j, lp in enumerate(lnRefParts):
+        if lp[-1] == ',':
+          lnRefParts[j] = lp[:-1]
+
       model_type_ref = lnRefParts[0]
-      sh_degree_order_ref = lnRefParts[1]
-      if len(lnRefParts) == 5:
-        sh_degree_order_ref += " " + lnRefParts[2]
-      sh_coeff_value_ref = float(lnRefParts[-2][:-1])
+
+      if len(lnRefParts) == 4:
+        # order is one field
+        orderRefParts = lnRefParts[1].split('*')
+        sh_degree_order_ref = orderRefParts[-1] + " " + orderRefParts[-1]
+      else:
+        sh_degree_order_ref = lnRefParts[1] + " " + lnRefParts[2]
+
+      sh_coeff_value_ref = float(lnRefParts[-2])
       sh_coeff_error_ref = float(lnRefParts[-1])
+
 
       if model_type != model_type_ref:
         print("Error, model type mismatch at line "+str(i+5)+".")
@@ -91,7 +124,6 @@ def verify_output(refFilename,outFilenames):
         output_lines(refLines[i+4],outLines[i+4])
         continue
 
-      #print("line number="+str(i+5))
  
       if sh_coeff_value_ref == 0.0:
         if sh_coeff_value != 0.0:

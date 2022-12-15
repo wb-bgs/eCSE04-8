@@ -71,7 +71,7 @@ mem = []
 precalc = nparams*3 + (shdeg+1)
 
 lab.append("mod_wmam_020") # mem[0]
-mem.append(SIZEOF_DOUBLE*(1*nparams + 10*nlocpts + precalc) + SIZEOF_INT*(2*nlocpts + 2*nranks))
+mem.append(SIZEOF_DOUBLE*(1*nparams + 10*nlocpts + precalc) + SIZEOF_INT*(2*(nlocpts+2) + 2*nranks))
 
 
 lab.append("cpt_dat_vals_p")
