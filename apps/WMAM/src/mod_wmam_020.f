@@ -176,7 +176,7 @@ c  Array allocations
         allocate(bc(nparams))
         allocate(ppos(ND+1,nlocpts))
         allocate(cov(nlocpts))
-        allocate(ijcov(nlocpts,2))
+        allocate(ijcov(nlocpts+2,2))
         allocate(dw0(nlocpts))
         
 c
@@ -283,6 +283,10 @@ c
 c  Pre-calculate for every data point 3*nparams dw values
 c  such that the dw values can be read in from a file when needed
         call precalc_sph_wmam(ND, nparams, ppos)
+c       call MPI_Barrier(MPI_COMM_WORLD, ierr)
+c       call fini_sph_wmam()
+c       call MPI_Finalize(ierr)
+c       stop
         call prepare_dw_read()
 c
         fname='./Results/'

@@ -34,7 +34,7 @@ c
 c
         integer nlocdatpts, nlocsampts
         integer imin_locpts, imin_locsampts
-        integer nd, ncoeffs, llm, ijcov(nlocdatpts+nlocsampts,*)
+        integer nd, ncoeffs, llm, ijcov(nlocdatpts+nlocsampts+2,*)
         real*8 bc(*), ppos(nd+1,*), cov(*), wgh
 c
         real*8, allocatable :: vrt(:,:)
