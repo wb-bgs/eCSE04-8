@@ -188,7 +188,7 @@ c  Array allocations
         allocate(bc(nparams))
         allocate(ppos(ND+1,nlocpts))
         allocate(cov(nlocpts))
-        allocate(ijcov(nlocpts,2))
+        allocate(ijcov(nlocpts+2,2))
         allocate(dw(nlocpts))
         
 c
