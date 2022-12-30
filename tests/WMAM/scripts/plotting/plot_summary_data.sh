@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # ./plot_summary_data.sh 200 1.0 3.0 scaling
 # ./plot_summary_data.sh 300 0.5 3.0 scaling
 # ./plot_summary_data.sh 720 0.25 3.0 scaling
@@ -14,7 +16,7 @@ RESOLUTION=$2
 APP_LABEL=WMAM
 APP_VERSION=$3
 APP_NAME="${APP_LABEL} ${APP_VERSION}"
-TARGET_PATH=21.09/cce12/cmpich8-ofi
+TARGET_PATH=cce12/cmpich8-ofi
 RESULTS_TYPE=$4
 RESULTS_HOME=${ROOT}/tests/${APP_LABEL}/results/${RESULTS_TYPE}/${APP_VERSION}/${DEGREE}
 PLOTS_HOME=${ROOT}/tests/${APP_LABEL}/plots/${RESULTS_TYPE}/${APP_VERSION}

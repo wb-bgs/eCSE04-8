@@ -1,4 +1,6 @@
-# ./verify_output.sh 21.09 cce12 3.6 200
+#!/bin/bash
+
+# ./verify_scaling_output.sh 21.09 cce12 3.6 200
 
 ROOT=${HOME/home/work}
 PYPP_HOME=${ROOT}/utils/pypp/3.9.4.1

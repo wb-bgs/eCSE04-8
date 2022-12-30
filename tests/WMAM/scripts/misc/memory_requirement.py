@@ -1,16 +1,18 @@
 #!/usr/bin/env python 
 
 # python memory_requirement.py 1 256 128 200  1.00
-# 0.231%
+# 0.248%
 # python memory_requirement.py 1 256 128 300  0.50
-# 0.522%
+# 0.56%
 # python memory_requirement.py 1 256 128 720  0.25
-# 2.978%
+# 3.197%
 # python memory_requirement.py 1 256 128 1440 0.10
-# 11.975%
+# 12.858%
 # python memory_requirement.py 1 256 128 2000 0.05
-# 23.559%
+# 25.297%
 
+# On ARCHER2, around 88% of 256 GB is made available by Slurm
+# for jobs running on standard memory nodes.
 
 import sys
 import os
@@ -19,18 +21,21 @@ import numpy
 from datetime import datetime
 from decimal import Decimal
 
+KB = 1000
+MB = KB*KB
+GB = KB*MB
 
 KiB = 1024
-MiB = 1024*KiB
-GiB = 1024*MiB
+MiB = KiB*KiB
+GiB = KiB*MiB
 
 SIZEOF_DOUBLE=8
 SIZEOF_INT=4
 
 nnodes = int(sys.argv[1])
 
-mempn_gib = int(sys.argv[2])
-mempn = mempn_gib*GiB
+mempn_gb = int(sys.argv[2])
+mempn = mempn_gb*GB
 
 nrankspn = int(sys.argv[3])
 nranks = nnodes*nrankspn
@@ -117,7 +122,7 @@ lab.append("cptstd_dp")
 mem.append(mem[12] + SIZEOF_DOUBLE*(2*nranks + 6))
 
 
-print("\nEstimated percentage of node memory ("+str(mempn_gib)+" GiB) use for "+str(nrankspn)+" ranks per node.")
+print("\nEstimated percentage of node memory ("+str(mempn_gb)+" GB) use for "+str(nrankspn)+" ranks per node.")
 for i, l in enumerate(lab):
   mem[i] = mem[i]*nrankspn
   print(l+": "+str(round(100.0*float(mem[i])/float(mempn),3))+"%")
