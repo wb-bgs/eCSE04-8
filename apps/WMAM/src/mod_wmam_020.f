@@ -13,7 +13,7 @@ c
 c
         include 'mpif.h'
 c
-        character(len=*), parameter :: VERSION="3.6.0"
+        character(len=*), parameter :: VERSION="3.7.0"
 c
         integer, parameter :: POLAK_RIBIERE=1
         integer, parameter :: CONJUGATE_GRADIENT=2
@@ -322,7 +322,7 @@ c
           if (rank .eq. i) then
             call write_comp(fname, ND, 1, nlocdatpts,
      >                      ppos, dw, diff(1:2))
-            call write_comp(fname, ND, nlocdatpts+1, nlocpts,
+            call write_comp(fname2, ND, nlocdatpts+1, nlocpts,
      >                      ppos, dw, diff(3:4))
           endif
           if (i .lt. nranks-1) then
