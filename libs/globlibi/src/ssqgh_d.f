@@ -20,7 +20,6 @@ c       subroutines
 c
 c       input:
 c          npmax          number max of data points handled together
-c          nlocdatpts     number of data points local to rank
 c          nlocpts        number of data+sampling points local to rank
 c          ipg            where to start in data file!
 c          nd             space dimension
@@ -41,14 +40,14 @@ c          gj             gradient of the weighted sum of squares (nb)
 c          hj             diagonal of the Hessian (nb)
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine ssqgh_d(npmax, nlocdatpts, nlocpts, ipg,
+        subroutine ssqgh_d(npmax, nlocpts, ipg,
      >                     nd, ppos, nb,
      >                     fun_mf, sub_base, bc, jcov, cov,
      >                     ddat, xyzf, gj, hj)
 c
         implicit none
 c
-        integer ip,nlocdatpts,nlocpts
+        integer ip,nlocpts
         integer np,npmax,nd,nb,jcov(*)
         integer i,ipg,ipl
         integer, allocatable :: ntval(:)
@@ -80,13 +79,7 @@ c
           np=min0(nlocpts-ip+1,npmax)
 
           do i=1,np
-            if (ip-1+i .le. nlocdatpts) then
-c  data points
-              ntval(i)=1
-            else
-c  sampling points
-              ntval(i)=100
-            endif
+            ntval(i)=ip-1+i
           enddo
 c        
 c

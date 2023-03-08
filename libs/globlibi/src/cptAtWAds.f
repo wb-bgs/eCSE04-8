@@ -7,7 +7,6 @@ c       Should be used with F90 ot later versions
 c
 c       input:
 c          npmax          number max of data points handled together
-c          nlocdatpts     number of data points local to rank
 c          nlocpts        number of data+sampling points local to rank
 c          ipg            where to start in data file!
 c          nd             space dimension
@@ -26,7 +25,7 @@ c       output:
 c          zz             Vector A^t.W.A.ds (nb)
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine cptAtWAds(npmax, nlocdatpts, nlocpts, ipg, nd,
+        subroutine cptAtWAds(npmax, nlocpts, ipg, nd,
      >                       ppos, nb,
      >                       fun_mf, sub_base, bc, ds,
      >                       jcov, cov, ddat,
@@ -34,7 +33,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
         implicit none
 c
-        integer ip,nlocdatpts,nlocpts,np,npmax,nd,nb,jcov(*)
+        integer ip,nlocpts,np,npmax,nd,nb,jcov(*)
         integer i,ipg,ipl
         integer, allocatable :: ntval(:)
         real*8 ddat(*),xyzf(*),cov(*),ppos(nd+1,*),bc(*),ds(*)
@@ -62,13 +61,7 @@ c
           np=min0(nlocpts-ip+1,npmax)
 
           do i=1,np
-            if (ip-1+i .le. nlocdatpts) then
-c  data points
-              ntval(i)=1
-            else
-c  sampling points
-              ntval(i)=100
-            endif
+            ntval(i)=ip-1+i
           enddo
 c
 c  calculate the equations of condition

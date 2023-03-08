@@ -51,7 +51,6 @@ c         itmax(3)      array for Maximum number of iterations
 c         npmax         number max of data point with correlated errors
 c         nd            space dimension
 c         nb            Number of parameters
-c         nlocdatpts    number of data points local to rank
 c         proc_np       number of data+sampling points for all ranks
 c         ppos          data point position in ndD + data value
 c         bc            Estimate of Base function coefficients
@@ -71,7 +70,7 @@ c         xyzf(*)       Forward modelling for given BC
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine opt_pr_p3(path, itmax, npmax, nd, nb,
-     >                       nlocdatpts, proc_np, ppos, bc, dl,
+     >                       proc_np, ppos, bc, dl,
      >                       sub_base_i, sub_damp,
      >                       fun_base_f, fun_mf, fun_std,
      >                       cov, jcov, stdt, xyzf, bb, gg)
@@ -81,7 +80,7 @@ c
         include 'mpif.h'
         include 'mpi_status_types.h'
 c
-        integer itmax(*),npmax,nd,nb,nlocdatpts,proc_np(*)
+        integer itmax(*),npmax,nd,nb,proc_np(*)
         real*8 ppos(*),bc(*),dl(*),cov(*)
         integer jcov(*)
         real*8 stdt,xyzf(*)
@@ -177,7 +176,7 @@ c All: do their part in forward modelling
             if (inv_stat%yon(2:2).eq.'y') then
 c               if(rank.eq.0)write(*,*)'opt_pr_p3: 1'
                 
-                call cpt_dat_vals_p2(nd, nlocdatpts, nlocpts,
+                call cpt_dat_vals_p2(nd, nlocpts,
      >                               ppos, nb, inv_stat%bc,
      >                               fun_base_f, xyzf)
 c
@@ -196,7 +195,7 @@ c All: do their part in finding GJ, DH
 c
                 if (itmax(1).ge.0.or.it.ne.1) then
 c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 2'
-                    call ssqgh_dp(npmax, nd, nlocdatpts, nlocpts,
+                    call ssqgh_dp(npmax, nd, nlocpts,
      >                            ppos, nb, fun_mf, sub_base_i,
      >                            inv_stat%bc,
      >                            jcov, cov, ddat,
@@ -289,7 +288,7 @@ c ALL: search minimum in descent direction
                     if (itmax(3).ge.0) then
 c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 4'
                         call gc_step_p(iunit, npmax, nd,
-     >                                 nlocdatpts, proc_np,
+     >                                 proc_np,
      >                                 ppos, ddat,
      >                                 nb, inv_stat%bc,
      >                                 fun_std, fun_base_f,
@@ -298,7 +297,7 @@ c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 4'
                     else
 c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 5'
                         call lsearch_p(iunit, itm_l, npmax, nd, 
-     >                                 nlocdatpts, proc_np, ppos, ddat,
+     >                                 proc_np, ppos, ddat,
      >                                 nb, inv_stat%bc,
      >                                 src_stat, MPI_SEARCH_STATUS,
      >                                 dl, fun_base_f, fun_std,
@@ -308,7 +307,7 @@ c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 5'
                 else
 c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 6'
                     call lsearch_p(iunit, itm_l, npmax, nd, 
-     >                             nlocdatpts, proc_np, ppos, ddat,
+     >                             proc_np, ppos, ddat,
      >                             nb, inv_stat%bc,
      >                             src_stat, MPI_SEARCH_STATUS,
      >                             dl, fun_base_f, fun_std,

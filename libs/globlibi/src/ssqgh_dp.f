@@ -13,7 +13,6 @@ c
 c       input:
 c          npmax          number max of data point with correlated errors
 c          nd             space dimension
-c          nlocdatpts     number of data points local to rank
 c          nlocpts        number of data+sampling points local to rank
 c          ppos           data point position in ndD
 c          nb             Number or base function to use
@@ -30,7 +29,7 @@ c          gj             gradient of the weighted sum of squares (nb)
 c          hj             diagonal of the Hessian (nb)
 c        
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine ssqgh_dp(npmax, nd, nlocdatpts, nlocpts,
+        subroutine ssqgh_dp(npmax, nd, nlocpts,
      >                      ppos, nb, fun_mf, sub_base, bc,
      >                      jcov, cov, ddat,
      >                      xyzf, gj, hj)
@@ -40,7 +39,7 @@ c
         include 'mpif.h'
 c
         integer npmax,nd,nb,jcov(*)
-        integer nlocdatpts,nlocpts
+        integer nlocpts
         real*8 ddat(*),xyzf(*),cov(*),ppos(*),bc(*)
         real*8 gj(*),hj(*)
 c
@@ -58,7 +57,7 @@ c  All: Now does the work
         nb2=nb*2
         allocate(gj_hj(nb2))
 c
-        call ssqgh_d(npmax, nlocdatpts, nlocpts, 1,
+        call ssqgh_d(npmax, nlocpts, 1,
      >               nd, ppos, nb,
      >               fun_mf, sub_base, bc,
      >               jcov, cov,

@@ -24,7 +24,6 @@ c     input:
 c         iunit         integer unit number for I/O
 c         npmax         number max of data point with correlated errors
 c         nd            space dimension
-c         nlocdatpts    number of data points local to rank
 c         proc_np       number of data+sampling points for all ranks
 c         ppos          data point position in ndD
 c         ddat          data values
@@ -44,7 +43,7 @@ c         stp           recommended step in direction ds(*)
 c         std           STD value for given BC+stp*DS
 c         xyzf(*)       Forward modelling for given BC+stp*DS
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine gc_step_p(iunit, npmax, nd, nlocdatpts,
+        subroutine gc_step_p(iunit, npmax, nd, 
      >                       proc_np, ppos, ddat, nb, bc,
      >                       fun_std, fun_base, cov, jcov,
      >                       std, gj, ghj, ds, stp, xyzf)
@@ -53,7 +52,7 @@ c
 c
         include 'mpif.h'
 c
-        integer iunit,npmax,nd,nlocdatpts,proc_np(*)
+        integer iunit,npmax,nd,proc_np(*)
         real*8 ppos(*),ddat(*)
         integer nb
         real*8 bc(*),cov(*)
@@ -76,7 +75,7 @@ c
 c All: Calculate  sqrt(w).A.DS 
         allocate(zz(1:nlocpts))
         zz(1:nlocpts)=0.0d0
-        call cpt_dat_vals_p2(nd, nlocdatpts, nlocpts,
+        call cpt_dat_vals_p2(nd, nlocpts,
      >                       ppos, nb, ds,
      >                       fun_base, zz)
 c
@@ -105,7 +104,7 @@ c ALL: Estimate the new set of parameter for a step stp in direction ds
 c
 c ALL: Do the forward modelling
         xyzf(1:nlocpts)=0.0d0
-        call cpt_dat_vals_p2(nd, nlocdatpts, nlocpts,
+        call cpt_dat_vals_p2(nd, nlocpts,
      >                       ppos, nb, bcn,
      >                       fun_base, xyzf)
         call cptstd_dp(npmax, proc_np,

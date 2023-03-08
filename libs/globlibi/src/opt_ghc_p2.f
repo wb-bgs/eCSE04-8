@@ -16,7 +16,6 @@ c         itmax(3)      array for Maximum number of iterations
 c         npmax         number max of data point with correlated errors
 c         nd            space dimension
 c         nb            Number of parameters
-c         nlocdatpts    number of data points local to rank
 c         proc_np       number of data+sampling points for all ranks
 c         ppos          data point position in ndD + data value
 c         BC            Estimate of Base function coefficients
@@ -36,7 +35,7 @@ c         xyzf(*)       Forward modelling for given BC
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine opt_ghc_p2(path, itmax, npmax, nd, nb,
-     >                        nlocdatpts, proc_np, ppos, bc, dl,
+     >                        proc_np, ppos, bc, dl,
      >                        sub_base_i, sub_damp,
      >                        fun_base_f, fun_mf, fun_std,
      >                        cov, jcov, stdt,
@@ -46,7 +45,7 @@ c
 c
         include 'mpif.h'
 c
-        integer itmax(*),npmax,nd,nb,nlocdatpts
+        integer itmax(*),npmax,nd,nb
         integer proc_np(*)
         real*8 ppos(*),bc(*),dl(*),cov
         integer jcov(*)
@@ -131,7 +130,7 @@ c
 c All: do their part in forward modelling
             if (yon(2:2).eq.'y') then
                 stdo=std
-                call cpt_dat_vals_p2(nd, nlocdatpts, nlocpts,
+                call cpt_dat_vals_p2(nd, nlocpts,
      >                               ppos, nb, bc,
      >                               fun_base_f, xyzf)
                 call cptstd_dp(npmax, proc_np,
@@ -142,7 +141,7 @@ c
 c All: do their part in finding GJ, DH
             if (yon(3:3).eq.'y') then
                 ip=1
-                call ssqgh_dp(npmax, nd, nlocdatpts, nlocpts,
+                call ssqgh_dp(npmax, nd, nlocpts,
      >                        ppos, nb, fun_mf, sub_base_i, bc,
      >                        jcov, cov, ddat, xyzf,
      >                        gj, dh)
@@ -201,7 +200,7 @@ c ALL: Find GC step
                 stp=0.d0
 c ALL: compute zz=2.A^t.W.A.ds
                 ip=1
-                call cptAtWAds_p(npmax, nd, nlocdatpts, nlocpts,
+                call cptAtWAds_p(npmax, nd, nlocpts,
      >                           ppos, nb, fun_mf, sub_base_i, bc, ds,
      >                           jcov, cov, ddat,
      >                           xyzf, zz)
