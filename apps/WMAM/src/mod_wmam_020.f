@@ -31,7 +31,7 @@ c
         integer cmdcnt, shdeg, scheme
         integer ncoeffs, nparams
         integer ndatpts, nsampts, npts
-        integer nlocdatpts, imin_locdatpts, imax_locdatpts
+        integer nlocdatpts, imin_locdatpts
         integer nlocsampts, imin_locsampts
         integer nlocpts, imin_locpts
 c
@@ -118,16 +118,13 @@ c  Settings
           write(*,*) ''
         endif
 
-        call init_sph_wmam(shdeg, nparams)
-
 c
 c  Partition workload
         allocate(proc_ndp(nranks),proc_idp(nranks))
         call thread_segmenter(nranks,ndatpts,proc_ndp,proc_idp)
         nlocdatpts = proc_ndp(rank+1)
         imin_locdatpts = proc_idp(rank+1)
-        imax_locdatpts = imin_locdatpts + nlocdatpts - 1
-
+        
         allocate(proc_nsp(nranks),proc_isp(nranks))        
         call thread_segmenter(nranks,nsampts,proc_nsp,proc_isp)
         nlocsampts = proc_nsp(rank+1)
@@ -175,7 +172,11 @@ c  Array allocations
         allocate(cov(nlocpts))
         allocate(ijcov(nlocpts+2,2))
         allocate(dw(nlocpts))
-        
+
+c
+c  Initialize sph_wmam module
+        call init_sph_wmam(shdeg, nparams, nlocdatpts)
+
 c
 c  Read in reference model
         bc(1:nparams)=1.0d0
@@ -290,7 +291,7 @@ c
 c
         if (scheme.eq.POLAK_RIBIERE) then
           call opt_pr_p3(fname, itmax, NPMAX, ND, nparams,
-     >                   nlocdatpts, proc_np, ppos, bc, dl,
+     >                   proc_np, ppos, bc, dl,
      >                   sub_base_i, damp_rien,
      >                   fun_base_f, l2_norm, l2_std,
      >                   cov, ijcov(1,2),
@@ -298,7 +299,7 @@ c
         else
 c         CONJUGATE_GRADIENT
           call opt_ghc_p2(fname, itmax, NPMAX, ND, nparams,
-     >                    nlocdatpts, proc_np, ppos, bc, dl,
+     >                    proc_np, ppos, bc, dl,
      >                    sub_base_i, damp_rien,
      >                    fun_base_f, l2_norm, l2_std,
      >                    cov, ijcov(1,2),
@@ -309,37 +310,36 @@ c
         deallocate(bb)
         deallocate(gg)
 c
-
         if (rank.eq.0) then
           write(*,'(A)')' '
           write(*,'(A,e15.7)') 'The L2 STD is: ',stdt
           write(*,'(A)')' '
         endif
+c
+c
+        fname='./Results/fit_No_P.out.bin'
+        call mpi_write_fit_data(fname, ND,
+     >                          ndatpts, imin_locdatpts,
+     >                          1, nlocdatpts,
+     >                          ppos, dw, diff(1:2))
 
-        fname='./Results/fit_No_P.out'
-        fname2='./Results/fit_damp.out'
-        do i=0,nranks-1
-          if (rank .eq. i) then
-            call write_comp(fname, ND, 1, nlocdatpts,
-     >                      ppos, dw, diff(1:2))
-            call write_comp(fname2, ND, nlocdatpts+1, nlocpts,
-     >                      ppos, dw, diff(3:4))
-          endif
-          if (i .lt. nranks-1) then
-            call MPI_Barrier(MPI_COMM_WORLD, ierr)
-          else     
-            if (rank .eq. 0) then
-              call MPI_Reduce(MPI_IN_PLACE, diff, 4,
-     >                        MPI_DOUBLE_PRECISION,
-     >                        MPI_SUM, 0, MPI_COMM_WORLD, ierr)
-            else
-              call MPI_Reduce(diff, diff, 4,
-     >                        MPI_DOUBLE_PRECISION,
-     >                        MPI_SUM, 0, MPI_COMM_WORLD, ierr)
-            endif
-          endif
-        enddo
-        
+        fname='./Results/fit_damp.out.bin'
+        call mpi_write_fit_data(fname, ND,
+     >                          nsampts, imin_locsampts,
+     >                          nlocdatpts+1, nlocpts,
+     >                          ppos, dw, diff(3:4))
+c
+        if (rank .eq. 0) then
+          call MPI_Reduce(MPI_IN_PLACE, diff, 4,
+     >                    MPI_DOUBLE_PRECISION,
+     >                    MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+        else
+          call MPI_Reduce(diff, diff, 4,
+     >                    MPI_DOUBLE_PRECISION,
+     >                    MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+        endif
+c
+c       
         if (rank .eq. 0) then
           diff(1)=diff(1)/ndatpts
           diff(2)=dsqrt((diff(2)-ndatpts*diff(1)**2)/ndatpts)
