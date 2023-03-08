@@ -136,7 +136,7 @@ c
 c
         include 'mpif.h'
 c
-	      character fname*100
+        character fname*100
         integer ncoeffs
         real*8 bc(*)
 c
@@ -298,7 +298,7 @@ c
 c
         include 'mpif.h'
 c
-	      character fname*100
+        character fname*100
         integer nparams
         real*8 bc(*)
 c
@@ -452,7 +452,7 @@ c
 c
         include 'mpif.h'
 c
-	      character fname*100
+        character fname*100
         integer nd, ndatpts, nlocdatpts, imin_locdatpts
         real*8 ppos(nd+1,*)
 c
@@ -597,7 +597,7 @@ c
 c
         include 'mpif.h'
 c
-	      character fname*100
+        character fname*100
         integer nd, np, imin, nmin, nmax
         real*8 ppos(nd+1, *), xyzf(*), diff(*)        
 c
