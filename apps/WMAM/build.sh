@@ -5,7 +5,7 @@ function set_compile_options {
   MAKEFILE=$1
   if [[ "${BUILD}" == "release" ]]; then
     if [[ "${PRGENV}" == "cray" ]]; then
-      sed -i "s:FFLAGS =:FFLAGS = -O3:g" ${MAKEFILE}
+      sed -i "s:FFLAGS =:FFLAGS = -O3 -h omp:g" ${MAKEFILE}
     elif [[ "${PRGENV}" == "gnu" ]]; then
       sed -i "s:FFLAGS =:FFLAGS = -O3 -fallow-argument-mismatch -std=legacy -fdefault-real-8 -fdefault-double-8:g" ${MAKEFILE}
     elif [[ "${PRGENV}" == "aocc" ]]; then
@@ -56,8 +56,8 @@ function set_compile_options {
 PE_RELEASE=$1
 PRGENV=$2
 BUILD=$3
-VERSION=3.6
-GLOBLIBI_VERSION=3.6
+VERSION=3.7
+GLOBLIBI_VERSION=3.7
 SLATEC_VERSION=4.1
 ERRMSG="Invalid syntax: build.sh <CPE release> cray|gnu|aocc release|debug|craypat|armmap|scorep"
 
