@@ -278,7 +278,7 @@ c end of <if (rank.eq.0)> clause
 c
 c ALL: Master broadcast ds
 c               if(rank.eq.0)write(*,*)'opt_pr_p3: 3'
-                call MPI_BCAST(ds(1:nb), nb, MPI_DOUBLE_PRECISION,
+                call MPI_BCAST(ds, nb, MPI_DOUBLE_PRECISION,
      >                         0, MPI_COMM_WORLD, ierr)
 c
 c ALL: search minimum in descent direction

@@ -11,10 +11,10 @@ c  Number of parameters as organised on BE:
 c  ilg*(ilg+2)                        internal lithosphere models
 c
 c    Global data:
-c       ilg : integer : internal SH degree value (see below)
+c        ilg : integer : internal SH degree value (see below)
 c       nldp : integer : number of data points assigned to rank
-c       ryg : real*8  : reference year for the model
-c       rag : real*8  : radius for lithosphere
+c        ryg : real*8  : reference year for the model
+c        rag : real*8  : radius for lithosphere
 c       dwx, dwy, dwz : real*8 : allocatable arrays of size nb
 c       fbf_be : real*8 : allocatable array of size nb used in
 c                         fun_base_f()
@@ -102,7 +102,7 @@ c
 c
           d2a(nm) = d2
         enddo
-
+c
         return
         end subroutine init_sph_wmam
 c

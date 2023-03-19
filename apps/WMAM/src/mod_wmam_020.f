@@ -20,7 +20,7 @@ c
         integer, parameter :: ND=7
         integer, parameter :: NPMAX=3
 c
-        character fname*100, fname2*100
+        character fname*100
         character buf*100
         integer fhandle
         integer i, j, ix, iy, il, im
@@ -93,7 +93,7 @@ c  Read in command line arguments
           write(*,*) 'shdeg: ', shdeg
           write(*,*) 'resdeg: ', resdeg
           write(*,*) 'scheme: ', scheme
-          write(*,*) 'dampfac: ', dampfac 
+          write(*,*) 'dampfac: ', dampfac
           write(*,*) ''
         endif
 
@@ -145,7 +145,20 @@ c  can be setup correctly
         deallocate(proc_ndp,proc_idp)
         deallocate(proc_nsp,proc_isp)
 
+c
+c  Array allocations
+        allocate(bc(nparams))
+        allocate(ppos(ND+1,nlocpts))
+        allocate(cov(nlocpts))
+        allocate(ijcov(nlocpts+2,2))
+        allocate(dw(nlocpts))
 
+c
+c  Initialize sph_wmam module
+        call init_sph_wmam(shdeg, nparams, nlocdatpts)
+
+c
+c  Output array sizes
         if (rank.eq.0) then
           write(*,*) ''
           write(*,*) 'MPI Rank:', rank
@@ -164,18 +177,6 @@ c  can be setup correctly
           write(*,*) ''
           write(*,*) ''
         endif
-
-c
-c  Array allocations
-        allocate(bc(nparams))
-        allocate(ppos(ND+1,nlocpts))
-        allocate(cov(nlocpts))
-        allocate(ijcov(nlocpts+2,2))
-        allocate(dw(nlocpts))
-
-c
-c  Initialize sph_wmam module
-        call init_sph_wmam(shdeg, nparams, nlocdatpts)
 
 c
 c  Read in reference model
