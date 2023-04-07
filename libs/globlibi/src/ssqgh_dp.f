@@ -43,9 +43,6 @@ c
         real*8 ddat(*),xyzf(*),cov(*),ppos(*),bc(*)
         real*8 gj(*),hj(*)
 c
-        integer :: nb2
-        real*8, allocatable :: gj_hj(:)
-c
         real*8 fun_mf
         external fun_mf,sub_base
 c
@@ -54,25 +51,21 @@ c  All defining parallel enviroment
         call MPI_Comm_rank(MPI_COMM_WORLD,rank,ierr)
 c
 c  All: Now does the work
-        nb2=nb*2
-        allocate(gj_hj(nb2))
-c
         call ssqgh_d(npmax, nlocpts, 1,
      >               nd, ppos, nb,
      >               fun_mf, sub_base, bc,
      >               jcov, cov,
      >               ddat, xyzf,
-     >               gj_hj(1), gj_hj(nb+1))
+     >               gj, hj)
 c
 c  All: Gather & SUM the GJ and HJ results from ALL the other Processes
-        call MPI_ALLREDUCE(MPI_IN_PLACE, gj_hj, nb2,
+        call MPI_ALLREDUCE(MPI_IN_PLACE, gj, nb,
      >                     MPI_DOUBLE_PRECISION,
      >                     MPI_SUM, MPI_COMM_WORLD, ierr)
 c
-        gj(1:nb)=gj_hj(1:nb)
-        hj(1:nb)=gj_hj(nb+1:nb2)
-c
-        deallocate(gj_hj)
+        call MPI_ALLREDUCE(MPI_IN_PLACE, hj, nb,
+     >                     MPI_DOUBLE_PRECISION,
+     >                     MPI_SUM, MPI_COMM_WORLD, ierr)
 c
         return
         end
