@@ -24,9 +24,11 @@ c    Subroutines:
 c       init_sph_wmam()    initialise global variables
 c       fini_sph_wmam()    deallocate global arrays
 c       mpi_read_ref_model()
-c       mpi_read_model()
-c       mpi_read_data()
-c       mpi_write_fit_data()
+c       mpi_read_ini_model()
+c       mpi_read_all_ref_model()
+c       mpi_read_all_ini_model()
+c       mpi_read_all_data()
+c       mpi_write_all_fit_data()
 c       prepare_cm4_components()
 c       sub_sph_wmam_l()   linearized model subroutine
 c       sub_base_i()
@@ -121,7 +123,264 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c    subroutine mpi_read_ref_model
 c
 c  Read in reference model.
-c  All ranks read entire file.
+c  Rank 0 does the read and then broadcasts to all other ranks.
+c
+c  input:
+c       fname   : character : name of reference model file
+c       ncoeffs : integer : number of coefficients/parameters
+c  output:
+c       bc(*)   : real*8  : coefficients/parameters
+c
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+        subroutine mpi_read_ref_model(fname, ncoeffs, bc)
+c
+        implicit none
+c
+        include 'mpif.h'
+c
+        character fname*100
+        integer ncoeffs
+        real*8 bc(*)
+c
+        integer rank, ierr
+        integer fhandle, fsize, nreals, nread
+        integer (kind=MPI_OFFSET_KIND) :: disp = 0
+        integer fstat(MPI_STATUS_SIZE)
+c
+        logical file_open
+c       
+        character mpifunc*40 
+        real*8, allocatable :: buf(:)
+c
+c
+        nreals = 1 + ncoeffs
+        allocate(buf(nreals))
+c
+        call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
+c
+        if (rank .eq. 0) then
+c
+          file_open = .false.
+c
+          do while (.true.)
+c
+            call MPI_File_open(MPI_COMM_SELF, fname,
+     >                         MPI_MODE_RDONLY, MPI_INFO_NULL,
+     >                         fhandle, ierr)
+            if (ierr .eq. MPI_SUCCESS) then
+              file_open = .true.
+            else
+              mpifunc = 'MPI_File_open'
+              exit
+            endif 
+c        
+            call MPI_File_get_size(fhandle, fsize, ierr)
+            if (ierr .eq. MPI_SUCCESS) then
+              nread = fsize / SIZE_OF_REAL
+            else
+              mpifunc = 'MPI_File_get_size'
+              exit
+            endif
+c
+            if (nread .ne. nreals) then
+              write(*,*) 'Error, ref model file should contain ',
+     >                   '1 +', ncoeffs, ' reals.'
+              nread = 0
+              exit
+            endif
+c
+            call MPI_File_set_view(fhandle, disp,
+     >                             MPI_DOUBLE_PRECISION,
+     >                             MPI_DOUBLE_PRECISION,
+     >                             'native', 
+     >                             MPI_INFO_NULL, ierr)
+            if (ierr .ne. MPI_SUCCESS) then
+              mpifunc = 'MPI_File_set_view'
+              exit
+            endif
+c
+            call MPI_File_read(fhandle, buf, nreals,
+     >                         MPI_DOUBLE_PRECISION,
+     >                         fstat, ierr)
+            if (ierr .ne. MPI_SUCCESS) then
+              mpifunc = 'MPI_File_read_all'
+              exit
+            endif
+c
+            call MPI_Get_count(fstat, MPI_DOUBLE_PRECISION,
+     >                         nread, ierr)
+            if (ierr .eq. MPI_SUCCESS) then
+              if (nread .ne. nreals) then
+                write(*,*) 'Error, unable to read 1 +', ncoeffs,
+     >                     ' reals from ref model file.'
+              endif
+            else
+              mpifunc = 'MPI_Get_count'
+              exit
+            endif
+c
+            exit
+c
+          enddo
+c
+          if (file_open) then
+            call MPI_File_close(fhandle, ierr)
+          endif
+c
+          if (ierr .eq. MPI_SUCCESS) then
+            if (nread .eq. nreals) then
+              call MPI_BCAST(buf, nreals, MPI_DOUBLE_PRECISION,
+     >                       0, MPI_COMM_WORLD, ierr)
+            else
+              stop
+            endif
+          else
+            write(*,*) 'Error ', mpifunc, '() returned ', ierr
+            stop
+          endif
+c          
+        else
+c  Rank is not zero
+          call MPI_BCAST(buf, nreals, MPI_DOUBLE_PRECISION,
+     >                   0, MPI_COMM_WORLD, ierr)
+        endif
+c
+        call dy2mjd(buf(1), ryg)
+        bc(1:ncoeffs) = buf(2:nreals)
+c
+        deallocate(buf)
+c
+        end subroutine mpi_read_ref_model
+c
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c    subroutine mpi_read_ini_model
+c
+c  Read in starting model.
+c  Rank zero reads in file and then broadcasts to all other ranks.
+c
+c  input:
+c       fname   : character : name of model file
+c       nparams : integer : number of parameters
+c  output:
+c       bc(*)   : real*8  : parameters
+c
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+        subroutine mpi_read_ini_model(fname, nparams, bc)
+c
+        implicit none
+c
+        include 'mpif.h'
+c
+        character fname*100
+        integer nparams
+        real*8 bc(*)
+c
+        integer rank, ierr
+        integer fhandle, fsize, nreals, nread
+        integer (kind=MPI_OFFSET_KIND) :: disp = 0
+        integer fstat(MPI_STATUS_SIZE)
+c
+        logical file_open
+c       
+        character mpifunc*40  
+c
+c
+        call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
+c
+        if (rank .eq. 0) then
+c
+          file_open = .false.
+c
+          do while (.true.)
+c
+            call MPI_File_open(MPI_COMM_SELF, fname,
+     >                         MPI_MODE_RDONLY, MPI_INFO_NULL,
+     >                         fhandle, ierr)
+            if (ierr .eq. MPI_SUCCESS) then
+              file_open = .true.
+            else
+              mpifunc = 'MPI_File_open'
+              exit
+            endif 
+c        
+            call MPI_File_get_size(fhandle, fsize, ierr)
+            if (ierr .eq. MPI_SUCCESS) then
+              nreals = fsize / SIZE_OF_REAL
+            else
+              mpifunc = 'MPI_File_get_size'
+              exit
+            endif
+c
+            if (nreals .ne. nparams) then
+              write(*,*) 'Error, model file should have',
+     >                   nparams, ' reals.'
+              nread = 0
+              exit
+            endif
+c
+            call MPI_File_set_view(fhandle, disp,
+     >                             MPI_DOUBLE_PRECISION,
+     >                             MPI_DOUBLE_PRECISION,
+     >                             'native', 
+     >                             MPI_INFO_NULL, ierr)
+            if (ierr .ne. MPI_SUCCESS) then
+              mpifunc = 'MPI_File_set_view'
+              exit
+            endif
+c
+            call MPI_File_read(fhandle, bc, nparams,
+     >                         MPI_DOUBLE_PRECISION,
+     >                         fstat, ierr)
+            if (ierr .ne. MPI_SUCCESS) then
+              mpifunc = 'MPI_File_read_all'
+              exit
+            endif
+c
+            call MPI_Get_count(fstat, MPI_DOUBLE_PRECISION,
+     >                         nread, ierr)
+            if (ierr .eq. MPI_SUCCESS) then
+              if (nread .ne. nparams) then
+                write(*,*) 'Error, unable to read', nparams,
+     >                     ' reals from ref model file.'
+              endif
+            else
+              mpifunc = 'MPI_Get_count'
+              exit
+            endif
+c
+            exit
+c
+          enddo
+c
+          if (file_open) then
+            call MPI_File_close(fhandle, ierr)
+          endif
+c
+          if (ierr .eq. MPI_SUCCESS) then
+            if (nread .eq. nparams) then
+              call MPI_BCAST(bc, nparams, MPI_DOUBLE_PRECISION,
+     >                       0, MPI_COMM_WORLD, ierr)
+            else
+              stop
+            endif
+          else
+            write(*,*) 'Error ', mpifunc, '() returned ', ierr
+            stop
+          endif
+c         
+        else
+c  Rank is not zero
+          call MPI_BCAST(bc, nparams, MPI_DOUBLE_PRECISION,
+     >                   0, MPI_COMM_WORLD, ierr)
+        endif
+c
+        end subroutine mpi_read_ini_model
+c
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c    subroutine mpi_read_all_ref_model
+c
+c  Read in reference model.
+c  All ranks read entire file via MPI_File_read_all().
 c
 c  input:
 c       fname   : character : name of reference model file
@@ -130,7 +389,7 @@ c       ncoeffs : integer : number of coefficients/parameters
 c       bc(*)   : real*8  : coefficients/parameters
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine mpi_read_ref_model(fname, ncoeffs, bc)
+        subroutine mpi_read_all_ref_model(fname, ncoeffs, bc)
 c
         implicit none
 c
@@ -277,13 +536,13 @@ c
           call MPI_File_close(fhandle, ierr)
         endif
 
-        end subroutine mpi_read_ref_model
+        end subroutine mpi_read_all_ref_model
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c    subroutine mpi_read_model
+c    subroutine mpi_read_all_ini_model
 c
 c  Read in starting model.
-c  All ranks read entire file.
+c  All ranks read entire file via MPI_File_read_all().
 c
 c  input:
 c       fname   : character : name of model file
@@ -292,7 +551,7 @@ c       nparams : integer : number of parameters
 c       bc(*)   : real*8  : parameters
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine mpi_read_model(fname, nparams, bc)
+        subroutine mpi_read_all_ini_model(fname, nparams, bc)
 c
         implicit none
 c
@@ -426,10 +685,10 @@ c
           call MPI_File_close(fhandle, ierr)
         endif
 
-        end subroutine mpi_read_model
+        end subroutine mpi_read_all_ini_model
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c    subroutine mpi_read_data
+c    subroutine mpi_read_all_data
 c
 c  Read in data.
 c  Read just those points that have been assigned to the rank.
@@ -445,8 +704,8 @@ c  output:
 c       ppos(*,*) : real*8 : array of data points assigned to rank
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine mpi_read_data(fname, nd, ndatpts, nlocdatpts,
-     >                           imin_locdatpts, ppos)
+        subroutine mpi_read_all_data(fname, nd, ndatpts, nlocdatpts,
+     >                               imin_locdatpts, ppos)
 c
         implicit none
 c
@@ -569,10 +828,10 @@ c
           call MPI_File_close(fhandle, ierr)
         endif
 
-        end subroutine mpi_read_data
+        end subroutine mpi_read_all_data
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c    subroutine mpi_write_fit_data
+c    subroutine mpi_write_all_fit_data
 c
 c  Write out fit data.
 c  Write out the values for just those points that have been assigned to the rank.
@@ -590,8 +849,9 @@ c  output:
 c       diff       : real*8  : two element array
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine mpi_write_fit_data(fname, nd, np, imin, nmin, nmax,
-     >                                ppos, xyzf, diff)
+        subroutine mpi_write_all_fit_data(fname, nd, np,
+     >                                    imin, nmin, nmax,
+     >                                    ppos, xyzf, diff)
 c
         implicit none
 c
@@ -697,7 +957,7 @@ c
           call MPI_File_close(fhandle, ierr)
         endif
 c
-        end subroutine mpi_write_fit_data
+        end subroutine mpi_write_all_fit_data
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c    subroutine prepare_cm4_components
