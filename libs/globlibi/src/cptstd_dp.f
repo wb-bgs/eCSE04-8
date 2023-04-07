@@ -50,31 +50,38 @@ c
         integer ip,np,nlocpts
         integer ierr,rank,nranks
         real*8 dw
-        real*8, allocatable :: vstd(:),vnp(:)
+        real*8, allocatable :: vstd(:), vnp(:)
 c
         call MPI_Comm_size(MPI_COMM_WORLD,nranks,ierr)
         call MPI_Comm_rank(MPI_COMM_WORLD,rank,ierr)
         nlocpts = proc_np(rank+1)
-c
-        allocate(vstd(1:nranks),vnp(1:nranks))
 c
 c  All: Now does the work
         call cptstd_d2(npmax, 1, nlocpts, jcov,
      >                 cov, ddat, xyzf,
      >                 fun_std, std)
 c
-c  All: Gather the results from other Processes
-        vstd(rank+1)=std
-        call MPI_ALLGATHER(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL,
-     >                     vstd, 1, MPI_DOUBLE_PRECISION,
-     >                     MPI_COMM_WORLD, ierr)
+        if (rank .eq. 0) then
+          allocate(vstd(nranks))
+          allocate(vnp(nranks))
+          vnp = dble(proc_np(1:nranks))
+        endif
 c
-c  ALL: put together all STDs
-        vnp=dble(proc_np(1:nranks))
-        np=-nranks
-        ip=0
-        std=fun_std(ip,np,dw,vstd,vnp)
+c  0: Gather cptstd_d2 results from other ranks
+        call MPI_GATHER(std, 1, MPI_DOUBLE_PRECISION,
+     >                  vstd, 1, MPI_DOUBLE_PRECISION,
+     >                  0, MPI_COMM_WORLD, ierr)
 c
-        deallocate(vstd,vnp)
+        if (rank .eq. 0) then
+          ip  = 0
+          np  = -nranks
+          dw  = 0
+          std = fun_std(ip,np,dw,vstd,vnp)
+          deallocate(vstd,vnp)
+        endif
+c
+        call MPI_BCAST(std, 1, MPI_DOUBLE_PRECISION,
+     >                 0, MPI_COMM_WORLD, ierr)
+c     
         return
         end
