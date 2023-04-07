@@ -104,7 +104,7 @@ c  Settings
         ny=nint(1.0/resdeg)*360
         ndatpts=nx*ny
         nsampts=(shdeg+1)*(2*shdeg+1)
-        ncoeffs=nparams
+        ncoeffs=255
         npts=ndatpts+nsampts
 
         if (rank.eq.0) then
@@ -184,7 +184,7 @@ c  Read in reference model
         fname='./Data/coef_1990_15.dat.bin'
         if (rank.eq.0) write(*,*)
      >    'Reading in reference model, ', fname
-        call mpi_read_ref_model(fname, ncoeffs, bc)
+        call mpi_read_all_ref_model(fname, ncoeffs, bc)
         if (rank.eq.0) then
           write(*,*) 'Coefficients: ', ncoeffs
           write(*,*) ''
@@ -196,8 +196,8 @@ c  Read in data
         fname='./Data/wdmam_geocentric.dat.bin'
         if (rank.eq.0) write(*,*)
      >    'Reading in data, ', fname
-        call mpi_read_data(fname, ND, ndatpts, nlocdatpts,
-     >                     imin_locdatpts, ppos)
+        call mpi_read_all_data(fname, ND, ndatpts, nlocdatpts,
+     >                         imin_locdatpts, ppos)
         if (nlocdatpts .eq. 0) stop
         
 c
@@ -253,7 +253,7 @@ c  Prepare the CM4 components for use within sub_sph_wmam_l()
         do i=1,nlocpts
           call prepare_cm4_components(ppos(1,i))
         enddo
-
+        
 c
 c  Finalise covariance matrix
         call DS2Y(nlocpts,nlocpts,ijcov(1,1),ijcov(1,2),cov,0)
@@ -263,7 +263,7 @@ c  Read in starting model
         fname='./Data/model.in.bin'
         if (rank.eq.0) write(*,*)
      >    'Reading in starting model, ', fname
-        call mpi_read_model(fname, nparams, bc)
+        call mpi_read_all_ini_model(fname, nparams, bc)
         if (nparams .eq. 0) stop
 
 c
@@ -319,16 +319,16 @@ c
 c
 c
         fname='./Results/fit_No_P.out.bin'
-        call mpi_write_fit_data(fname, ND,
-     >                          ndatpts, imin_locdatpts,
-     >                          1, nlocdatpts,
-     >                          ppos, dw, diff(1:2))
+        call mpi_write_all_fit_data(fname, ND,
+     >                              ndatpts, imin_locdatpts,
+     >                              1, nlocdatpts,
+     >                              ppos, dw, diff(1:2))
 
         fname='./Results/fit_damp.out.bin'
-        call mpi_write_fit_data(fname, ND,
-     >                          nsampts, imin_locsampts,
-     >                          nlocdatpts+1, nlocpts,
-     >                          ppos, dw, diff(3:4))
+        call mpi_write_all_fit_data(fname, ND,
+     >                              nsampts, imin_locsampts,
+     >                              nlocdatpts+1, nlocpts,
+     >                              ppos, dw, diff(3:4))
 c
         if (rank .eq. 0) then
           call MPI_Reduce(MPI_IN_PLACE, diff, 4,
