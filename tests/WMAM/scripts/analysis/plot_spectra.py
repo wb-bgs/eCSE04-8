@@ -269,10 +269,13 @@ def load_tabbed(fname):
 ###############################################################################
 # v3.1 degree 2000 results analysis
 
-# Find all model output files below a given dir
-dir_results = '/users/globmod/eCSE_2021/outputs/3.1'  # don't use "~" for home!
+#dir_root = '/users/globmod/eCSE_2021/'
+dir_root = '/work/ecsead08/ecsead08/mrbad08/tests/WMAM/'
 
-dir_figs = '/users/globmod/eCSE_2021/outputs/figures_3.1'
+# Find all model output files below a given dir
+dir_results = dir_root+'outputs/3.1'  # don't use "~" for home!
+
+dir_figs = dir_root+'outputs/figures_3.1'
 if not os.path.exists(dir_figs):
     os.makedirs(dir_figs)
 
@@ -280,7 +283,7 @@ paths = glob.glob(os.path.join(dir_results ,"**", "model_No_P.out"),
                   recursive=True)
 
 # BGS degree 1440 model to use as benchmark
-truth = load_tabbed("/users/globmod/eCSE_2021/outputs/BGS1440/model_No_P.out")
+truth = load_tabbed(dir_root+"outputs/BGS1440/model_No_P.out")
 T = coef2spec(truth)
 
 P = []
@@ -320,9 +323,9 @@ sys.exit()
 # v3.0 results analysis
 
 # Find all model output files below a given dir
-dir_results = '/users/globmod/eCSE_2021/outputs/3.0'  # don't use "~" for home!
+dir_results = dir_root+'outputs/3.0'  # don't use "~" for home!
 
-dir_figs = '/users/globmod/eCSE_2021/outputs/figures_3.0'
+dir_figs = dir_root+'outputs/figures_3.0'
 if not os.path.exists(dir_figs):
     os.makedirs(dir_figs)
 
@@ -330,7 +333,7 @@ paths = glob.glob(os.path.join(dir_results ,"**", "model_No_P.out"),
                   recursive=True)
 
 # BGS degree 1440 model to use as benchmark
-truth = load_tabbed("/users/globmod/eCSE_2021/outputs/BGS1440/model_No_P.out")
+truth = load_tabbed(dir_root+"outputs/BGS1440/model_No_P.out")
 T = coef2spec(truth)
 
 P = []
@@ -363,7 +366,7 @@ sys.exit()
 ###############################################################################
 # Initial model files analysis plots:
 
-dir_figs = "/users/globmod/eCSE_2021/outputs/figures_initial_runs"
+dir_figs = dir_root+"outputs/figures_initial_runs"
 if not os.path.exists(dir_figs):
     os.makedirs(dir_figs)
 
