@@ -1,13 +1,13 @@
-Iterative Globel Model Fitting Library (globlibi)
+Iterative Globel Model Fitting Library (GlobLibI)
 =================================================
 
 This library contains general code for fitting global geomagnetic models;
 it makes use of the [SLATEC library](../slatec/README.md).
 
-The globlibi library is required by the World Magnetic Anomaly Model code (WMAM).
+The GlobLibI library is required by the World Magnetic Anomaly Model application (WMAM).
 The [build.sh](build.sh) script builds globlibi for [ARCHER2](https://www.archer2.ac.uk/).
 
-Simply run `./build.sh <CPE release> <compiler environment> <build type>` to build the globlibi library.
+Simply run `./build.sh <CPE release> <compiler environment> <build type>` to build the GlobLibI library.
 
 As of Dec 2022, the Cray Programming Environment (CPE) release can be `21.04`, `21.09` or `22.04`.
 The available releases may change in the future - this can be checked by running `module avail cpe`.

@@ -1,5 +1,5 @@
-WMAM input data for L=2000
-==========================
+WMAM input data for *L* = 2000
+==============================
 
 1. Generate reference model
 
@@ -31,5 +31,5 @@ WMAM input data for L=2000
 ../scripts/make_wdmam_file 0.05
 ```
 
-The "wdmam_geocentric.dat" and "model.in" files are too big to store
+The `wdmam_geocentric.dat` and `model.in` files are too big to store
 in this repository.

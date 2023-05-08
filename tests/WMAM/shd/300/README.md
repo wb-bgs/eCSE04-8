@@ -1,5 +1,5 @@
-WMAM input data for L=300
-=========================
+WMAM input data for *L* = 300
+=============================
 
 1. Generate reference model
 
