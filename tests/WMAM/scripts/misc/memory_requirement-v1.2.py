@@ -65,7 +65,7 @@ mem = []
 
 
 lab.append("mod_wmam_020") # mem[0]
-if shdeg == 2000:
+if shdeg == 2000 or shdeg == 1440:
   mem.append(SIZEOF_DOUBLE*(390*MB + 3) + SIZEOF_INT*(320*MB + 5))
 else:
   mem.append(SIZEOF_DOUBLE*(76*MB + 3) + SIZEOF_INT*(42*MB + 5))
