@@ -42,7 +42,7 @@ RESOLUTION=1.0
 SCHEME=1
 DAMPFAC=5.0
 APP_NAME=WMAM
-APP_VERSION=3.1
+APP_VERSION=3.7
 APP_MPI_LABEL=cmpich8
 APP_COMMS_LABEL=ofi
 APP_COMPILER_LABEL=cce12
@@ -71,10 +71,16 @@ export PAT_RT_EXPDIR_NAME=pat
 
 export PAT_RT_PERFCTR=PAPI_L1_DCA,PAPI_FP_OPS
 
-# setup app run directory
+
+# setup app run directory and input folder
 mkdir -p ${APP_RUN_PATH}/Data
+
+# copy input data
 cp ${APP_RUN_ROOT}/shd/${DEGREE}/* ${APP_RUN_PATH}/Data/
+
+# setup output folder
 mkdir ${APP_RUN_PATH}/Results
+lfs setstripe -c -1 ${APP_RUN_PATH}/Results
 
 
 # run app

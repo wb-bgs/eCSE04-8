@@ -42,7 +42,7 @@ RESOLUTION=0.05
 SCHEME=1
 DAMPFAC=5.0
 APP_NAME=WMAM
-APP_VERSION=3.1
+APP_VERSION=3.7
 APP_EXE_NAME=mod_wmam_020
 APP_EXE=${ROOT}/apps/${APP_NAME}/${APP_VERSION}/${PE_NAME}/${PE_RELEASE}/release/bin/${APP_EXE_NAME}
 APP_MPI_LABEL=cmpich8
@@ -56,10 +56,15 @@ APP_OUTPUT=${APP_RUN_PATH}/${APP_NAME}.o
 SRUN_PARAMS="--distribution=block:block --hint=nomultithread --unbuffered --chdir=${APP_RUN_PATH}"
 
 
-# setup app run directory
+# setup app run directory and input folder
 mkdir -p ${APP_RUN_PATH}/Data
+
+# copy input data
 cp ${APP_RUN_ROOT}/shd/${DEGREE}/* ${APP_RUN_PATH}/Data/
+
+# setup output folder
 mkdir ${APP_RUN_PATH}/Results
+lfs setstripe -c -1 ${APP_RUN_PATH}/Results
 
 
 # run app

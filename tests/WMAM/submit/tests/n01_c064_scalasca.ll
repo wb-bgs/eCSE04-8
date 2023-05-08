@@ -45,7 +45,7 @@ RESOLUTION=1.0
 SCHEME=1
 DAMPFAC=5.0
 APP_NAME=WMAM
-APP_VERSION=3.1
+APP_VERSION=3.7
 APP_MPI_LABEL=cmpich8
 APP_COMMS_LABEL=ofi
 APP_COMPILER_LABEL=cce12
@@ -74,10 +74,16 @@ export SCOREP_FILTERING_FILE=${APP_RUN_PATH}/2100419/scorep/initial_scorep.filte
 # scan -t for trace
 # square /path/to/folder/containing/cubex/file
 
-# setup app run directory
+
+# setup app run directory and input folder
 mkdir -p ${APP_RUN_PATH}/Data
+
+# copy input data
 cp ${APP_RUN_ROOT}/shd/${DEGREE}/* ${APP_RUN_PATH}/Data/
+
+# setup output folder
 mkdir ${APP_RUN_PATH}/Results
+lfs setstripe -c -1 ${APP_RUN_PATH}/Results
 
 
 # run app
