@@ -5,7 +5,7 @@ The SLATEC Common Mathematical Library, Version 4.1, July 1993
 is a comprehensive software library containing over 1400 general
 purpose mathematical and statistical routines written in Fortran 77.
 
-SLATEC is required by the World Magnetic Anomaly Model application (WMAM)
+SLATEC is required by the World Magnetic Anomaly Model (WMAM) code
 and by the iterative version of the global model fitting library (GlobLibI).
 
 The SLATEC source is stored in this GitLab repo (alongside WMAM and

@@ -8,7 +8,7 @@ for specific spherical harmonic degrees.
 There are also submission scripts for running WMAM with various profiling
 and debugging tools, see the [tests folder](./tests).
 
-The WMAM application itself is called with four arguments, the spherical harmonic degree (*L*),
+The WMAM code itself is called with four arguments, the spherical harmonic degree (*L*),
 the resolution degree (*R*), the inversion scheme id (Polak-Ribiere=1, Conjugate-Gradient=2)
 and the damping factor (usually 5.0).
 

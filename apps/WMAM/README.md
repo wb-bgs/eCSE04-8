@@ -1,17 +1,17 @@
 World Magnetic Anomaly Model (WMAM)
 ===================================
 
-This application contains general code for fitting global geomagnetic models;
+The purpose of this code is for fitting global geomagnetic models;
 it makes use of [GlobLibI](../../libs/globlibi/README.md) and the [SLATEC library](../../libs/slatec/README.md).
 
-The WMAM app takes as input, WDMAM anomaly data and infers a magnetic field
-represented in terms of spherical harmonics. The code offers a choice of two
+The WMAM code takes as input, WDMAM anomaly data and infers a magnetic field
+in the form of a spherical harmonic model. The code offers a choice of two
 flavours of the conjugate gradient iterative inversion scheme; one that
 that incorporates the Polak-Ribière formula and one that does not.
 
 The [build.sh](build.sh) script builds WMAM for [ARCHER2](https://www.archer2.ac.uk/)
 
-Simply run `./build.sh <CPE release> <compiler environment> <build type>` to build the WMAM application.
+Simply run `./build.sh <CPE release> <compiler environment> <build type>` to build the WMAM code.
 
 As of Dec 2022, the Cray Programming Environment (CPE) release can be `21.04`, `21.09` or `22.04`.
 The available releases may change in the future - this can be checked by running `module avail cpe`.
