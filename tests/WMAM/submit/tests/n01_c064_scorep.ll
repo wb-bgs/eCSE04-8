@@ -17,13 +17,13 @@ ulimit -c unlimited
 
 
 module -q restore
-module -q load cpe/21.09
+
 module -q load PrgEnv-cray
 
 module -q use /work/y23/shared/scalasca/modulefiles
-module -q load scalasca/2.6-cce
+module -q load scalasca/2.6.1-cray
 
-export LD_LIBRARY_PATH=${CRAY_LD_LIBRARY_PATH}:${LD_LIBRARY_PATH}
+
 
 
 # setup resource-related environment
@@ -37,7 +37,7 @@ export OMP_NUM_THREADS=1
 
 
 PE_NAME=${PE_MPICH_FIXED_PRGENV}
-PE_RELEASE=21.09
+PE_RELEASE=22.12
 
 ROOT=${HOME/home/work}
 DEGREE=200
@@ -48,7 +48,7 @@ APP_NAME=WMAM
 APP_VERSION=3.7
 APP_MPI_LABEL=cmpich8
 APP_COMMS_LABEL=ofi
-APP_COMPILER_LABEL=cce12
+APP_COMPILER_LABEL=cce15
 APP_RUN_ROOT=${ROOT}/tests/${APP_NAME}
 APP_RUN_PATH=${APP_RUN_ROOT}/results/${DEGREE}/${PE_RELEASE}/${APP_COMPILER_LABEL}/${APP_MPI_LABEL}-${APP_COMMS_LABEL}/n${NNODES}/c${NCORES}
 APP_EXE_NAME=mod_wmam_020

@@ -31,15 +31,21 @@ The magnetic anomaly data.
 The starting coefficients for the output field mode.
 
 
-As well as the Slurm output/error files, three files are produced by WMAM.
+As well as the Slurm output file, the following files are produced by WMAM.
 
 1. model_No_P.out
 The final field model coefficients.
 
-2. fit_No_P.out.bin
+2. opt_pr_p.log
+Diagnostic file.
+
+3. model_temp.out
+Diagnostic file.
+
+4. fit_No_P.out.bin
 Diagnostic info relating to the geographic points covered by the anomaly data.
 
-3. fit_damp.out.bin
+5. fit_damp.out.bin
 Diagnostic info relating to the nodal points of the spherical harmonic model.
 
 
@@ -48,12 +54,9 @@ Please email "wb@bgs.ac.uk" for access to this repository.
 
 
    - Installed by: M. Bareford, EPCC"
-   - Date: May 2023\n"
+   - Date: July 2023\n"
 
 ]])
-
-load("cpe/21.09")
-prepend_path("LD_LIBRARY_PATH", os.getenv("CRAY_LD_LIBRARY_PATH"))
 
 pushenv("SLURM_CPU_FREQ_REQ", "2250000")
 

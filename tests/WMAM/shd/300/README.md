@@ -22,7 +22,7 @@ WMAM input data for *L* = 300
 3. Generate input data
 
 ```bash
-# requires "wdmam.asc", "gmt" and "gd2gc_cmdln"
+# requires "wdmam.asc" and two utility codes, "gmt" and "gd2gc_cmdln" (see the top-level utils folder)
 # outputs "wdmam_geocentric.dat" (and "wdmam0p2_gdlo-gdla-dF.tmp",
 #                                     "wdmam0p2_gdlo-gdla-id.tmp",
 #                                     "wdmam_geocentric.tmp",

@@ -8,8 +8,8 @@ DEGREE=$1
 APP_LABEL=WMAM
 APP_VERSION=$2
 RESULTS_TYPE=$3
-TARGET_PATH=cce12/cmpich8-ofi
-PYPP_HOME=${ROOT}/utils/pypp/3.9.4.1
+TARGET_PATH=cce15/cmpich8-ofi
+PYPP_HOME=${ROOT}/utils/pypp
 SCRIPTS_HOME=${ROOT}/tests/${APP_LABEL}/scripts/postprocessing
 RESULTS_HOME=${ROOT}/tests/${APP_LABEL}/results/${RESULTS_TYPE}/${APP_VERSION}/${DEGREE}
 
@@ -18,4 +18,4 @@ RESULTS_HOME=${ROOT}/tests/${APP_LABEL}/results/${RESULTS_TYPE}/${APP_VERSION}/$
 
 python ${SCRIPTS_HOME}/get_performance_metric.py ${APP_LABEL} "${RESULTS_HOME}/${TARGET_PATH}/n*/c*/*/${APP_LABEL}.o" > ${RESULTS_HOME}/${TARGET_PATH}/summary.txt
 
-. ${PYPP_HOME}/bin/deactivate
+deactivate

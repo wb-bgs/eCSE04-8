@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# make_ascii_files.sh 200 21.09 cce12 cmpich8-ofi 1 64 3209856
+# make_ascii_files.sh 200 22.12 cce15 cmpich8-ofi 1 64 3209856
 
 SHD=$1
 CPE_VERSION=$2

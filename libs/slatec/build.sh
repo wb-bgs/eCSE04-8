@@ -89,12 +89,11 @@ if [[ "${BUILD}" == "craypat" ]]; then
 elif [[ "${BUILD}" == "scorep" ]]; then
   module -q use /work/y23/shared/scalasca/modulefiles
   if [[ "${PRGENV}" == "cray" ]]; then
-    module -q load scalasca/2.6-cce
+    module -q load scalasca/2.6.1-cray
   elif [[ "${PRGENV}" == "gnu" ]]; then
-    module -q load scalasca/2.6-gcc10
-  else
-    echo "Error, ${PRGENV} not supported by scorep, please try either cray or gnu."
-    exit
+    module -q load scalasca/2.6.1-gcc11
+  elif [[ "${PRGENV}" == "aocc" ]]; then
+    module -q load scalasca/2.6.1-aocc
   fi
 fi
 

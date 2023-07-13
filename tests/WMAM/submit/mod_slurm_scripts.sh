@@ -12,6 +12,14 @@ for shd in "${shdegrees[@]}"; do
 #  find ./${shd}/*.ll -type f -exec sed -i 's:results/\${DEGREE}/\${APP_COMPILER_LABEL}:results/\${PE_RELEASE}/\${APP_COMPILER_LABEL}:g' {} \;
 #  find ./${shd}/*.ll -type f -exec sed -i 's:(\${APP_MPI_LABEL}-\${APP_COMPILER_LABEL}):(\${PE_RELEASE},\${APP_COMPILER_LABEL},\${APP_MPI_LABEL}-\${APP_COMMS_LABEL}):g' {} \;
 
-  find ./${shd}/*.ll -type f -exec sed -i 's:results/\${PE_RELEASE}/\${APP_COMPILER_LABEL}:results/\${DEGREE}/\${PE_RELEASE}/\${APP_COMPILER_LABEL}:g' {} \;
+#  find ./${shd}/*.ll -type f -exec sed -i 's:results/\${PE_RELEASE}/\${APP_COMPILER_LABEL}:results/\${DEGREE}/\${PE_RELEASE}/\${APP_COMPILER_LABEL}:g' {} \;
+
+#  find ./${shd}/*.ll -type f -exec sed -i 's:module -q load cpe/21.09::g' {} \;
+
+#  find ./${shd}/*.ll -type f -exec sed -i 's:export LD_LIBRARY_PATH=\${CRAY_LD_LIBRARY_PATH}\:\${LD_LIBRARY_PATH}::g' {} \;
+
+#  find ./${shd}/*.ll -type f -exec sed -i 's:PE_RELEASE=21.09:PE_RELEASE=22.12:g' {} \;
+
+#  find ./${shd}/*.ll -type f -exec sed -i 's:APP_COMPILER_LABEL=cce12:APP_COMPILER_LABEL=cce15:g' {} \;
 
 done

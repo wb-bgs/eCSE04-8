@@ -17,12 +17,12 @@ ulimit -c unlimited
 
 
 module -q restore
-module -q load cpe/21.09
+
 module -q load PrgEnv-cray
 
-module -q load arm/forge/22.0.2
+module -q load arm/forge
 
-export LD_LIBRARY_PATH=${CRAY_LD_LIBRARY_PATH}:${LD_LIBRARY_PATH}
+
 
 
 
@@ -37,7 +37,7 @@ export OMP_NUM_THREADS=1
 
 
 PE_NAME=${PE_MPICH_FIXED_PRGENV}
-PE_RELEASE=21.09
+PE_RELEASE=22.12
 
 ROOT=${HOME/home/work}
 DEGREE=200
@@ -50,7 +50,7 @@ APP_EXE_NAME=mod_wmam_020
 APP_EXE=${ROOT}/apps/${APP_NAME}/${APP_VERSION}/${PE_NAME}/${PE_RELEASE}/debug/bin/${APP_EXE_NAME}
 APP_MPI_LABEL=cmpich8
 APP_COMMS_LABEL=ofi
-APP_COMPILER_LABEL=cce12
+APP_COMPILER_LABEL=cce15
 APP_RUN_ROOT=${ROOT}/tests/${APP_NAME}
 APP_RUN_PATH=${APP_RUN_ROOT}/results/${DEGREE}/${PE_RELEASE}/${APP_COMPILER_LABEL}/${APP_MPI_LABEL}-${APP_COMMS_LABEL}/n${NNODES}/c${NCORES}
 APP_PARAMS="${DEGREE} ${RESOLUTION} ${SCHEME} ${DAMPFAC}"

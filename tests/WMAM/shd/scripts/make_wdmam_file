@@ -3,10 +3,7 @@
 DEG_INTERVAL=$1
 
 module -q restore
-module -q load cpe/21.09
 module -q load PrgEnv-gnu
-
-LD_LIBRARY_PATH=${CRAY_LD_LIBRARY_PATH}:${LD_LIBRARY_PATH}
 
 module -q load cray-hdf5
 module -q load cray-netcdf

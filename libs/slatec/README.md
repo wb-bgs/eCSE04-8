@@ -14,15 +14,16 @@ the SLATEC library for [ARCHER2](https://www.archer2.ac.uk/).
 
 Simply run `./build.sh <CPE release> <compiler environment> <build type>` to build the SLATEC library.
 
-As of Dec 2022, the Cray Programming Environment (CPE) release can be `21.04`, `21.09` or `22.04`.
-The available releases may change in the future - this can be checked by running `module avail cpe`.
+As of July 2023, the Cray Programming Environment (CPE) release installed on ARCHER2 is `22.12`.
+The available CPE version may change in the future - this can be checked by running `module avail cpe`.
 If the chosen CPE release is not installed on ARCHER2, the default CPE release will be used instead.
 
 The compiler environment can be `cray`, `gnu` or `aocc`; these are the three compiler environments
 provided by the CPE release.
 
 The build type can be `release`, `debug`, `craypat`, `armmap` or `scalasca`; the last three
-build types refer to profiling tools, [Cray PAT](https://docs.archer2.ac.uk/user-guide/profile/#craypat), [Arm MAP](https://docs.archer2.ac.uk/data-tools/arm-forge/) and [Scalasca](https://www.archer2.ac.uk/training/courses/220509-scalasca/).
+build types refer to profiling tools, [Cray PAT](https://docs.archer2.ac.uk/user-guide/profile/#craypat), \
+[Arm MAP](https://docs.archer2.ac.uk/data-tools/arm-forge/) and [Scalasca](https://www.archer2.ac.uk/training/courses/230822-scalasca/).
 
 Once the build has completed the library file(s) will be written to
 `${HOME/home/work}/libs/slatec/`.

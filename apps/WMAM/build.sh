@@ -97,15 +97,14 @@ if [[ "${BUILD}" == "craypat" ]]; then
 elif [[ "${BUILD}" == "scorep" ]]; then
   module -q use /work/y23/shared/scalasca/modulefiles
   if [[ "${PRGENV}" == "cray" ]]; then
-    module -q load scalasca/2.6-cce
+    module -q load scalasca/2.6.1-cray
   elif [[ "${PRGENV}" == "gnu" ]]; then
-    module -q load scalasca/2.6-gcc10
-  else
-    echo "Error, ${PRGENV} not supported by scorep, please try either cray or gnu."
-    exit
+    module -q load scalasca/2.6.1-gcc11
+  elif [[ "${PRGENV}" == "aocc" ]]; then
+    module -q load scalasca/2.6.1-aocc
   fi
 elif [[ "${BUILD}" == "armmap" ]]; then
-  module -q load arm/forge/22.1.1  
+  module -q load arm/forge
 fi
 
 export LD_LIBRARY_PATH=${CRAY_LD_LIBRARY_PATH}:${LD_LIBRARY_PATH}
@@ -123,7 +122,7 @@ set_compile_options ./makefile
 
 LIBS_MAKEFILE_LINE="${GLOBLIBI_ROOT}/lib/libgloblibi.a ${SLATEC_ROOT}/lib/libslatec.a"
 if [[ "${BUILD}" == "armmap" ]]; then
-  ARM_MAPLIB_PATH=${FORGE_DIR}/map/libs/cpe-${PE_RELEASE}/${PRGENV}
+  ARM_MAPLIB_PATH=${FORGE_DIR}/map/libs/cpe-${PE_RELEASE}/${PRGENV}/ofi
   LIBS_MAKEFILE_LINE="${LIBS_MAKEFILE_LINE} -L${ARM_MAPLIB_PATH} -lmap-sampler-pmpi -lmap-sampler -Wl,--eh-frame-hdr -Wl,-rpath=${ARM_MAPLIB_PATH}"
 fi
 sed -i "s:LIBS =:LIBS = ${LIBS_MAKEFILE_LINE}:g" ./makefile
