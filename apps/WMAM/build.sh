@@ -56,8 +56,8 @@ function set_compile_options {
 PE_RELEASE=$1
 PRGENV=$2
 BUILD=$3
-VERSION=3.7
-GLOBLIBI_VERSION=3.7
+VERSION=4.0
+GLOBLIBI_VERSION=4.0
 SLATEC_VERSION=4.1
 ERRMSG="Invalid syntax: build.sh <CPE release> cray|gnu|aocc release|debug|craypat|armmap|scorep"
 
