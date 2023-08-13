@@ -9,6 +9,7 @@ c
 c       limitations of mklf_F apply
 c
 c       Fast version: tests reduced to minimum
+c       test in loop in else branch eliminated  
 c
 c       input:
 c         nm/ilg        order and degree max
@@ -50,16 +51,13 @@ c
 
         else
 
-            do il=ilg,nm,-1
+            do il=ilg,nm+1,-1
                 jl = il - nm + 1
-                if (il-nm.gt.0) then
-                    d1 = dsqrt(dble((il-nm)*(il+nm)))
-                    d2 = dble(il) 
-                    ddlf(jl) = (d2*dc*dlf(jl) - d1*dlf(jl-1)) / ds
-                else
-                    ddlf(1) = nm * dc * dlf(1)/ds
-                endif
+                d1 = dsqrt(dble((il-nm)*(il+nm)))
+                d2 = dble(il) 
+                ddlf(jl) = (d2*dc*dlf(jl) - d1*dlf(jl-1)) / ds
             enddo
+            ddlf(1) = nm * dc * dlf(1)/ds
 
         endif
 c
