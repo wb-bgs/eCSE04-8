@@ -17,13 +17,10 @@ ulimit -c unlimited
 
 
 module -q restore
-
 module -q load PrgEnv-cray
 
 module -q use /work/y23/shared/scalasca/modulefiles
 module -q load scalasca/2.6.1-cray
-
-
 
 
 # setup resource-related environment
@@ -45,7 +42,7 @@ RESOLUTION=1.0
 SCHEME=1
 DAMPFAC=5.0
 APP_NAME=WMAM
-APP_VERSION=3.7
+APP_VERSION=4.0
 APP_MPI_LABEL=cmpich8
 APP_COMMS_LABEL=ofi
 APP_COMPILER_LABEL=cce15

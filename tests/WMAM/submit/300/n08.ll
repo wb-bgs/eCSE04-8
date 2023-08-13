@@ -17,10 +17,7 @@ ulimit -c unlimited
 
 
 module -q restore
-
 module -q load PrgEnv-cray
-
-
 
 
 # setup resource-related environment
@@ -42,7 +39,7 @@ RESOLUTION=0.5
 SCHEME=1
 DAMPFAC=5.0
 APP_NAME=WMAM
-APP_VERSION=3.7
+APP_VERSION=4.0
 APP_EXE_NAME=mod_wmam_020
 APP_EXE=${ROOT}/apps/${APP_NAME}/${APP_VERSION}/${PE_NAME}/${PE_RELEASE}/release/bin/${APP_EXE_NAME}
 APP_MPI_LABEL=cmpich8
