@@ -23,7 +23,8 @@ c       Called: cptstd_d2, MPI_ALLGATHER
 c
 c       input:
 c          npmax          number max of data point with correlated errors
-c          proc_np        number of data+sampling points for all ranks
+c          npts           Total number of points (data + sampling) for all ranks
+c          nlocpts        Total number of points for this rank
 c          jcov           integer arrays describing cov format
 c          cov            Covariance matrix in SLAP column format
 c          ddat           data vector
@@ -34,54 +35,35 @@ c       output:
 c          std            STD value
 c        
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine cptstd_dp(npmax, proc_np, jcov, cov, ddat, xyzf,
-     >                       fun_std, std)
+        subroutine cptstd_dp(npmax, npts, nlocpts, jcov, cov, ddat,
+     >                       xyzf, fun_std, std)
 c
         implicit none
 c
         include 'mpif.h'
 c
-        integer :: npmax,proc_np(*),jcov(*)
+        integer :: npmax,npts,nlocpts,jcov(*)
         real*8  :: cov(*),ddat(*),xyzf(*)       
         real*8 fun_std
         external fun_std
         real*8 std
 
-        integer ip,np,nlocpts
-        integer ierr,rank,nranks
-        real*8 dw
-        real*8, allocatable :: vstd(:), vnp(:)
+        integer ierr
 c
-        call MPI_Comm_size(MPI_COMM_WORLD,nranks,ierr)
-        call MPI_Comm_rank(MPI_COMM_WORLD,rank,ierr)
-        nlocpts = proc_np(rank+1)
 c
 c  All: Now does the work
         call cptstd_d2(npmax, 1, nlocpts, jcov,
      >                 cov, ddat, xyzf,
      >                 fun_std, std)
 c
-        if (rank .eq. 0) then
-          allocate(vstd(nranks))
-          allocate(vnp(nranks))
-          vnp = dble(proc_np(1:nranks))
-        endif
+c  Compute the standard deviation across all ranks
+        std = nlocpts*(std**2)
 c
-c  0: Gather cptstd_d2 results from other ranks
-        call MPI_GATHER(std, 1, MPI_DOUBLE_PRECISION,
-     >                  vstd, 1, MPI_DOUBLE_PRECISION,
-     >                  0, MPI_COMM_WORLD, ierr)
+        call MPI_ALLREDUCE(MPI_IN_PLACE, std, 1,
+     >                     MPI_DOUBLE_PRECISION,
+     >                     MPI_SUM, MPI_COMM_WORLD, ierr)
 c
-        if (rank .eq. 0) then
-          ip  = 0
-          np  = -nranks
-          dw  = 0
-          std = fun_std(ip,np,dw,vstd,vnp)
-          deallocate(vstd,vnp)
-        endif
-c
-        call MPI_BCAST(std, 1, MPI_DOUBLE_PRECISION,
-     >                 0, MPI_COMM_WORLD, ierr)
-c     
+        std = dsqrt(std/dble(npts))
+c        
         return
         end
