@@ -22,4 +22,6 @@ for shd in "${shdegrees[@]}"; do
 
 #  find ./${shd}/*.ll -type f -exec sed -i 's:APP_COMPILER_LABEL=cce12:APP_COMPILER_LABEL=cce15:g' {} \;
 
+#  find ./${shd}/*.ll -type f -exec sed -i 's:APP_VERSION=3.7:APP_VERSION=4.0:g' {} \;
+
 done
