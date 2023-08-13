@@ -23,7 +23,8 @@ c         iunit         unit to write outputs
 c         itm           Maximum number of iterations
 c         npmax         number max of data point with correlated errors
 c         nd            space dimension
-c         proc_np       number of data+sampling points for all ranks
+c         npts          Total number of points (data + sampling) for all ranks
+c         nlocpts       Total number of points for this rank
 c         ppos          data point position in ndD
 c         ddat          data values
 c         nb            Number or base function to use
@@ -43,7 +44,7 @@ c         std           STD value for given BC+stp*DS
 c         xyzf(*)       Forward modelling for given BC+stp*DS
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine lsearch_p(iunit, itm, npmax, nd, 
-     >                       proc_np, ppos, ddat,
+     >                       npts, nlocpts, ppos, ddat,
      >                       nb, bc, src_stat, MPI_SEARCH_STATUS,
      >                       dl, fun_base, fun_std, cov, jcov,
      >                       std, ds, stp, xyzf)
@@ -53,7 +54,7 @@ c
         include 'mpif.h'
         include 'mpi_status_types.h'
 c
-        integer iunit,itm,npmax,nd,proc_np(*)
+        integer iunit,itm,npmax,nd,npts,nlocpts
         real*8 ppos(*),ddat(*)
         integer nb
         real*8 bc(*)
@@ -67,7 +68,7 @@ c
         external fun_base, fun_std
 c
         integer i,im1,im2,it
-        integer ierr,rank,nlocpts
+        integer ierr,rank
         real*8 dj(3),st(3),fct,fctt,fctl,fcts,dd,rt
         real*8 epss,stp1,stp2,gr,gl,numer,denom
         real*8, allocatable :: bcn(:)
@@ -75,8 +76,7 @@ c
 c
 c  All defining parallel enviroment
         call MPI_Comm_rank(MPI_COMM_WORLD,rank,ierr)
-        nlocpts = proc_np(rank+1)
-
+ 
         src_stat%stp=stp
 c
         allocate(bcn(1:nb))
@@ -115,7 +115,7 @@ c               write(*,*)'lsearch_p: 1'
                 call cpt_dat_vals_p2(nd, nlocpts,
      >                               ppos, nb, bcn,
      >                               fun_base, xyzf)
-                call cptstd_dp(npmax, proc_np,
+                call cptstd_dp(npmax, npts, nlocpts,
      >                         jcov, cov, ddat,
      >                         xyzf, fun_std, std)
                 dj(3)=std
@@ -149,7 +149,7 @@ c                       write(*,*)'lsearch_p: 2'
                         call cpt_dat_vals_p2(nd, nlocpts,
      >                                       ppos, nb, bcn,
      >                                       fun_base, xyzf)
-                        call cptstd_dp(npmax, proc_np,
+                        call cptstd_dp(npmax, npts, nlocpts,
      >                                 jcov, cov, ddat,
      >                                 xyzf, fun_std, std)
                         dj(i)=std
@@ -181,7 +181,7 @@ c                       write(*,*)'lsearch_p: 3'
                         call cpt_dat_vals_p2(nd, nlocpts,
      >                                       ppos, nb, bcn,
      >                                       fun_base, xyzf)
-                        call cptstd_dp(npmax, proc_np,
+                        call cptstd_dp(npmax, npts, nlocpts,
      >                                 jcov, cov, ddat,
      >                                 xyzf, fun_std, std)
                         dj(im2)=std
@@ -263,7 +263,7 @@ c                   write(*,*)'lsearch_p: 4'
                     call cpt_dat_vals_p2(nd, nlocpts,
      >                                   ppos, nb, bcn,
      >                                   fun_base, xyzf)
-                    call cptstd_dp(npmax, proc_np,
+                    call cptstd_dp(npmax, npts, nlocpts,
      >                             jcov, cov, ddat,
      >                             xyzf, fun_std, std)
 
@@ -326,7 +326,7 @@ c           write(*,*)'lsearch_p: 5'
             call cpt_dat_vals_p2(nd, nlocpts,
      >                           ppos, nb, bcn,
      >                           fun_base, xyzf)
-            call cptstd_dp(npmax, proc_np,
+            call cptstd_dp(npmax, npts, nlocpts,
      >                     jcov, cov, ddat,
      >                     xyzf, fun_std, std)
 c
@@ -347,7 +347,7 @@ c  SP do the work
      >                               ppos, nb, bcn,
      >                               fun_base, xyzf)
 
-                call cptstd_dp(npmax, proc_np,
+                call cptstd_dp(npmax, npts, nlocpts,
      >                         jcov, cov, ddat,
      >                         xyzf, fun_std, std)
 
@@ -363,7 +363,7 @@ c  SP receive final stp from master & does the final piece of work
      >                           ppos, nb, bcn,
      >                           fun_base, xyzf)
 
-            call cptstd_dp(npmax, proc_np,
+            call cptstd_dp(npmax, npts, nlocpts,
      >                     jcov, cov, ddat,
      >                     xyzf, fun_std, std)
         endif

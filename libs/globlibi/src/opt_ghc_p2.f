@@ -16,7 +16,8 @@ c         itmax(3)      array for Maximum number of iterations
 c         npmax         number max of data point with correlated errors
 c         nd            space dimension
 c         nb            Number of parameters
-c         proc_np       number of data+sampling points for all ranks
+c         npts          Total number of points (data + sampling) for all ranks
+c         nlocpts       Total number of points for this rank
 c         ppos          data point position in ndD + data value
 c         BC            Estimate of Base function coefficients
 c         dl(3)         control process parameter
@@ -35,7 +36,7 @@ c         xyzf(*)       Forward modelling for given BC
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine opt_ghc_p2(path, itmax, npmax, nd, nb,
-     >                        proc_np, ppos, bc, dl,
+     >                        npts, nlocpts, ppos, bc, dl,
      >                        sub_base_i, sub_damp,
      >                        fun_base_f, fun_mf, fun_std,
      >                        cov, jcov, stdt,
@@ -46,7 +47,7 @@ c
         include 'mpif.h'
 c
         integer itmax(*),npmax,nd,nb
-        integer proc_np(*)
+        integer npts,nlocpts
         real*8 ppos(*),bc(*),dl(*),cov
         integer jcov(*)
         real*8 stdt,xyzf(*)
@@ -58,7 +59,7 @@ c
         external fun_base_f, fun_mf, fun_std
 c
         integer i,ip,it,itm,iunit,ipth,itm_r
-        integer ierr,rank,nlocpts
+        integer ierr,rank
         real*8 stdo,stp,std,epss,dd,cond,dm,beta
         character yon*5
 c
@@ -74,7 +75,6 @@ c
 c
 c All defining parallel enviroment
         call MPI_Comm_rank(MPI_COMM_WORLD,rank,ierr)
-        nlocpts = proc_np(rank+1)
 c
         if (rank.eq.0) allocate (gjo(1:nb),ghjo(1:nb))
         allocate (zz(1:nb))
@@ -133,7 +133,7 @@ c All: do their part in forward modelling
                 call cpt_dat_vals_p2(nd, nlocpts,
      >                               ppos, nb, bc,
      >                               fun_base_f, xyzf)
-                call cptstd_dp(npmax, proc_np,
+                call cptstd_dp(npmax, npts, nlocpts,
      >                         jcov, cov, ddat, xyzf,
      >                         fun_std, std)
             endif

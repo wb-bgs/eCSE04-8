@@ -24,7 +24,8 @@ c     input:
 c         iunit         integer unit number for I/O
 c         npmax         number max of data point with correlated errors
 c         nd            space dimension
-c         proc_np       number of data+sampling points for all ranks
+c         npts          Total number of points (data + sampling) for all ranks
+c         nlocpts       Total number of points for this rank
 c         ppos          data point position in ndD
 c         ddat          data values
 c         nb            Number or base function to use
@@ -44,7 +45,7 @@ c         std           STD value for given BC+stp*DS
 c         xyzf(*)       Forward modelling for given BC+stp*DS
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine gc_step_p(iunit, npmax, nd, 
-     >                       proc_np, ppos, ddat, nb, bc,
+     >                       npts, nlocpts, ppos, ddat, nb, bc,
      >                       fun_std, fun_base, cov, jcov,
      >                       std, gj, ghj, ds, stp, xyzf)
 c
@@ -52,7 +53,7 @@ c
 c
         include 'mpif.h'
 c
-        integer iunit,npmax,nd,proc_np(*)
+        integer iunit,npmax,nd,npts,nlocpts
         real*8 ppos(*),ddat(*)
         integer nb
         real*8 bc(*),cov(*)
@@ -63,14 +64,13 @@ c
         real*8 fun_base,fun_std
         external fun_base,fun_std
 c
-        integer i,nlocpts
+        integer i
         integer ierr,rank 
         real*8, allocatable :: bcn(:),zz(:)
         real*8 zzs        
 c
 c All: Defining parallel enviroment
         call MPI_Comm_rank(MPI_COMM_WORLD,rank,ierr)
-        nlocpts = proc_np(rank+1)
 c
 c All: Calculate  sqrt(w).A.DS 
         allocate(zz(1:nlocpts))
@@ -107,7 +107,7 @@ c ALL: Do the forward modelling
         call cpt_dat_vals_p2(nd, nlocpts,
      >                       ppos, nb, bcn,
      >                       fun_base, xyzf)
-        call cptstd_dp(npmax, proc_np,
+        call cptstd_dp(npmax, npts, nlocpts,
      >                 jcov, cov, ddat,
      >                 xyzf, fun_std, std)
 c

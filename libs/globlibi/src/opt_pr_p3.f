@@ -51,7 +51,8 @@ c         itmax(3)      array for Maximum number of iterations
 c         npmax         number max of data point with correlated errors
 c         nd            space dimension
 c         nb            Number of parameters
-c         proc_np       number of data+sampling points for all ranks
+c         npts          Total number of points (data + sampling) for all ranks
+c         nlocpts       Total number of points for this rank
 c         ppos          data point position in ndD + data value
 c         bc            Estimate of Base function coefficients
 c         dl(3)         control process + damping factor
@@ -70,7 +71,7 @@ c         xyzf(*)       Forward modelling for given BC
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine opt_pr_p3(path, itmax, npmax, nd, nb,
-     >                       proc_np, ppos, bc, dl,
+     >                       npts, nlocpts, ppos, bc, dl,
      >                       sub_base_i, sub_damp,
      >                       fun_base_f, fun_mf, fun_std,
      >                       cov, jcov, stdt, xyzf, bb, gg)
@@ -80,7 +81,7 @@ c
         include 'mpif.h'
         include 'mpi_status_types.h'
 c
-        integer itmax(*),npmax,nd,nb,proc_np(*)
+        integer itmax(*),npmax,nd,nb,npts,nlocpts
         real*8 ppos(*),bc(*),dl(*),cov(*)
         integer jcov(*)
         real*8 stdt,xyzf(*)
@@ -92,7 +93,7 @@ c
         external fun_base_f, fun_mf, fun_std     
 c
         integer i,ip,it,itm,iunit,ipth,itm_l,itm_r
-        integer ierr,rank,nlocpts
+        integer ierr,rank
         real*8 stdo,stp,std,epss,dd,cond,dm,beta
 c
         type(inversion_status) inv_stat
@@ -112,7 +113,6 @@ c
 c All defining parallel enviroment
 
         call MPI_Comm_rank(MPI_COMM_WORLD,rank,ierr)
-        nlocpts = proc_np(rank+1)
 
 c
 c Commit the inversion and gradient search MPI status types
@@ -180,7 +180,7 @@ c               if(rank.eq.0)write(*,*)'opt_pr_p3: 1'
      >                               ppos, nb, inv_stat%bc,
      >                               fun_base_f, xyzf)
 c
-                call cptstd_dp(npmax, proc_np,
+                call cptstd_dp(npmax, npts, nlocpts,
      >                         jcov, cov, ddat, xyzf,
      >                         fun_std, std)
                 stdo=std
@@ -288,7 +288,7 @@ c ALL: search minimum in descent direction
                     if (itmax(3).ge.0) then
 c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 4'
                         call gc_step_p(iunit, npmax, nd,
-     >                                 proc_np,
+     >                                 npts, nlocpts,
      >                                 ppos, ddat,
      >                                 nb, inv_stat%bc,
      >                                 fun_std, fun_base_f,
@@ -297,7 +297,7 @@ c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 4'
                     else
 c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 5'
                         call lsearch_p(iunit, itm_l, npmax, nd, 
-     >                                 proc_np, ppos, ddat,
+     >                                 npts, nlocpts, ppos, ddat,
      >                                 nb, inv_stat%bc,
      >                                 src_stat, MPI_SEARCH_STATUS,
      >                                 dl, fun_base_f, fun_std,
@@ -307,7 +307,7 @@ c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 5'
                 else
 c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 6'
                     call lsearch_p(iunit, itm_l, npmax, nd, 
-     >                             proc_np, ppos, ddat,
+     >                             npts, nlocpts, ppos, ddat,
      >                             nb, inv_stat%bc,
      >                             src_stat, MPI_SEARCH_STATUS,
      >                             dl, fun_base_f, fun_std,
