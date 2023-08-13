@@ -4,6 +4,7 @@ c		M. Bareford 28/10/2022
 c
 c       Identical to  mklf_F() but with a precomputed d2a array:
 c       this avoids having to repeatedly call dgamln.     
+c       loop is split into two to aid vectorisation 
 c
 c    inputs:
 c       nm/ilg          order and degree max
@@ -21,7 +22,7 @@ c
         real*8 ds, dc, d2a(0:ilg), dlf(*)
 c
         integer il, d0
-        real*8 d1, d2, dbeta, dalpha
+        real*8 d1, d2, dbeta(0:ilg), dalpha(0:ilg) 
 c
         d1 = ds
         if (d1.ne.0.0d0) then
@@ -40,13 +41,14 @@ c
           d0 = il+2*nm
           d1 = dble((il-1) * (d0-1))         ! (l-m)*(l+m)
           d2 = dble(il * d0)                 ! (l-m+1)*(l+m+1)	
-          dbeta = dsqrt(d1/d2)               ! recurrence coeff.
+          dbeta(il) = dsqrt(d1/d2)               ! recurrence coeff.
           d1 = dble(2*(il+nm)-1)             ! 2l+1
-          dalpha = d1/dsqrt(d2)              !
+          dalpha(il) = d1/dsqrt(d2)              !
+        enddo
 c
+        do il=2,ilg-nm                       ! l=nm+il-1
           ! leg. func. (nm+il-1,nm) 
-          dlf(il+1) = dalpha*dlf(il)*dc - dbeta*dlf(il-1)
-
+          dlf(il+1) = dalpha(il)*dlf(il)*dc - dbeta(il)*dlf(il-1)
         enddo
 c
         return
