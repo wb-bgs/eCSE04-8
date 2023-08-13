@@ -13,7 +13,7 @@ c
 c
         include 'mpif.h'
 c
-        character(len=*), parameter :: VERSION="3.7.0"
+        character(len=*), parameter :: VERSION="4.0.0"
 c
         integer, parameter :: POLAK_RIBIERE=1
         integer, parameter :: CONJUGATE_GRADIENT=2
@@ -28,7 +28,7 @@ c
         integer itmax(3), nub
         real*8  std, stdt, dd, dl(3), dampfac
         real*8  resdeg
-        integer cmdcnt, shdeg, scheme
+        integer cmdcnt, shdeg, scheme, serialrd
         integer ncoeffs, nparams
         integer ndatpts, nsampts, npts
         integer nlocdatpts, imin_locdatpts
@@ -87,6 +87,17 @@ c  Read in command line arguments
         else
           dampfac=5.0d0
         endif
+        if (cmdcnt.ge.5) then
+          call GET_COMMAND_ARGUMENT(5,argstr)
+          read(argstr,*) serialrd
+          if (serialrd .lt. 0) then
+            serialrd = 0
+          elseif (serialrd .gt. 2) then
+            serialrd = 2
+          endif
+        else
+          serialrd=0
+        endif
         if (rank.eq.0) then
           write(*,*) 'WMAM v', VERSION
           write(*,*) ''
@@ -94,6 +105,7 @@ c  Read in command line arguments
           write(*,*) 'resdeg: ', resdeg
           write(*,*) 'scheme: ', scheme
           write(*,*) 'dampfac: ', dampfac
+          write(*,*) 'serialrd: ', serialrd
           write(*,*) ''
         endif
 
@@ -184,7 +196,11 @@ c  Read in reference model
         fname='./Data/coef_1990_15.dat.bin'
         if (rank.eq.0) write(*,*)
      >    'Reading in reference model, ', fname
-        call mpi_read_all_ref_model(fname, ncoeffs, bc)
+        if (serialrd .gt. 0) then
+          call mpi_read_ref_model(fname, ncoeffs, bc)
+        else
+          call mpi_read_all_ref_model(fname, ncoeffs, bc)
+        endif
         if (rank.eq.0) then
           write(*,*) 'Coefficients: ', ncoeffs
           write(*,*) ''
@@ -263,7 +279,11 @@ c  Read in starting model
         fname='./Data/model.in.bin'
         if (rank.eq.0) write(*,*)
      >    'Reading in starting model, ', fname
-        call mpi_read_all_ini_model(fname, nparams, bc)
+        if (serialrd .gt. 1) then
+          call mpi_read_ini_model(fname, nparams, bc)
+        else
+          call mpi_read_all_ini_model(fname, nparams, bc)
+        endif
         if (nparams .eq. 0) stop
 
 c
@@ -292,7 +312,7 @@ c
 c
         if (scheme.eq.POLAK_RIBIERE) then
           call opt_pr_p3(fname, itmax, NPMAX, ND, nparams,
-     >                   proc_np, ppos, bc, dl,
+     >                   npts, nlocpts, ppos, bc, dl,
      >                   sub_base_i, damp_rien,
      >                   fun_base_f, l2_norm, l2_std,
      >                   cov, ijcov(1,2),
@@ -300,7 +320,7 @@ c
         else
 c         CONJUGATE_GRADIENT
           call opt_ghc_p2(fname, itmax, NPMAX, ND, nparams,
-     >                    proc_np, ppos, bc, dl,
+     >                    npts, nlocpts, ppos, bc, dl,
      >                    sub_base_i, damp_rien,
      >                    fun_base_f, l2_norm, l2_std,
      >                    cov, ijcov(1,2),
