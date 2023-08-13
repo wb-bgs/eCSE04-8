@@ -15,9 +15,6 @@ c        ilg : integer : internal SH degree value (see below)
 c       nldp : integer : number of data points assigned to rank
 c        ryg : real*8  : reference year for the model
 c        rag : real*8  : radius for lithosphere
-c       dwx, dwy, dwz : real*8 : allocatable arrays of size nb
-c       fbf_be : real*8 : allocatable array of size nb used in
-c                         fun_base_f()
 c       d2a : real*8  : allocatable array of size 0:ilg;
 c                       holds pre-computed values for mklf_F2()
 c    Subroutines:
@@ -49,9 +46,8 @@ c
         integer ilg, nldp
         real*8 ryg, rag
 c
-        real*8, allocatable :: dwx(:), dwy(:), dwz(:)
-        real*8, allocatable :: fbf_be(:)
         real*8, allocatable :: d2a(:)
+
 c
         contains
 c
@@ -79,13 +75,10 @@ c
 c
         external dgamln 
 c
-        call dy2mjd(1990.d0,ryg)
         rag=6371.2d0
         ilg=shdeg
         nldp=nlocdatpts
 c
-        allocate(dwx(nb),dwy(nb),dwz(nb))
-        allocate(fbf_be(nb))
         allocate(d2a(0:ilg))
 c
         do nm=0,ilg
@@ -113,8 +106,6 @@ c    subroutine fini_sph_wmam
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine fini_sph_wmam()
-        deallocate(dwx,dwy,dwz)
-        deallocate(fbf_be)
         deallocate(d2a)
         return
         end subroutine fini_sph_wmam
@@ -986,13 +977,9 @@ c   That is for a linearized inversion of the lithosphere field.
 c   This subroutine is called from either sub_base_i() or fun_base_f().
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-       subroutine sub_sph_wmam_l(nub, nb, bc, bp, be)
+       subroutine sub_sph_wmam_l(nub, nb, bc, bp, be, bedotbc, fun)
 c
        implicit none
-c
-#ifdef CRAYPAT
-       include 'pat_apif.h'
-#endif
 c
        integer nub, nb
        real*8 bc(*), bp(*), be(*)
@@ -1009,32 +996,27 @@ c
 c
        real*8 bex, bey, bez
        real*8 bex2, bey2, bez2
+       real*8 bedotbc 
+       integer i 
+       logical fun 
 
-#ifdef CRAYPAT
-       integer cpstat
-
-       call PAT_record(PAT_STATE_ON,cpstat)
-       call PAT_region_begin(1,"XYZsph_bi0",cpstat)
-#endif
-
+c 
+c    if 'fun' is set to .true. then this routine is being called from fun_base_f() 
+c    and returns the dot product of 'be' and 'bc' in 'bedotbc', but 'be' does not
+c    contain valid values
+c
+c    if 'fun' is set to .false. then this routine is being called from sub_base_i()
+c    and returns the array 'be', and 'bedotbc' does not contain a valid value.   
+c     
 c    calculate internal field component
-       call XYZsph_bi0(ilg, rag, bp, d2a,
-     >                 dwx, dwy, dwz)
-
-#ifdef CRAYPAT
-       call PAT_region_end(1,cpstat)
-       call PAT_record(PAT_STATE_OFF,cpstat)
-#endif
-
-       bex = bp(5)
-       bey = bp(6)
-       bez = bp(7)
-
        if (nub .gt. nldp) then
-c    sampling point
-         dx = dot_product(dwx(1:nb), bc(1:nb))
-         dy = dot_product(dwy(1:nb), bc(1:nb))
-         dz = dot_product(dwz(1:nb), bc(1:nb))
+c    this is a sampling point
+         call XYZsph_bi0_sample(ilg, rag, bp, d2a, bc,
+     >                          dx, dy, dz)
+
+         bex = bp(5)
+         bey = bp(6)
+         bez = bp(7)
 c
          dxbey = dx*bey
          dxbez = dx*bez
@@ -1059,11 +1041,25 @@ c
          bex = bex2
          bey = bey2
          bez = bez2
-       endif
-c
-       be(1:nb) = dwx(1:nb)*bex
-     >          + dwy(1:nb)*bey
-     >          + dwz(1:nb)*bez
+
+       else
+c this is a data point 
+
+         bex = bp(5)
+         bey = bp(6)
+         bez = bp(7)
+
+       endif 
+
+       if (fun) then 
+c        computes 'bedotbc' as dot product of 'be' and 'bc' 
+         call XYZsph_bi0_fun(ilg, rag, bp, d2a, bc,
+     >                       bedotbc, bex, bey, bez)
+       else
+c        computes 'be' 
+         call XYZsph_bi0_sub(ilg, rag, bp, d2a,
+     >                       be, bex, bey, bez)
+       end if 
 c
        return
        end subroutine sub_sph_wmam_l
@@ -1078,8 +1074,9 @@ c
 c
        integer nub, nb
        real*8 bc(*), bp(*), be(*)
+       real*8 dummybedotbc
 c
-       call sub_sph_wmam_l(nub, nb, bc, bp, be)
+       call sub_sph_wmam_l(nub, nb, bc, bp, be, dummybedotbc, .false.)
 c 
        return
        end subroutine sub_base_i
@@ -1093,16 +1090,17 @@ c
        implicit none
 c
        integer nub, nb
-       real*8 bc(*), bp(*)
+       real*8 bc(*), bp(*), bedotbc
+       real*8 dummybe(1) 
 c
-       call sub_sph_wmam_l(nub, nb, bc, bp, fbf_be)
+       call sub_sph_wmam_l(nub, nb, bc, bp, dummybe, bedotbc, .true.)
 c
-       fun_base_f = dot_product(fbf_be(1:nb), bc(1:nb))
+       fun_base_f = bedotbc 
 c
        return
        end function fun_base_f
 c 
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
        real*8 function wmam_norm(i,nub,mv)
 c
        implicit none
