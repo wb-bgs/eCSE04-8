@@ -21,7 +21,6 @@ c
 c       input:
 c          npmax          number max of data points handled together
 c          nlocpts        number of data+sampling points local to rank
-c          ipg            where to start in data file!
 c          nd             space dimension
 c          ppos           data point position in ndD
 c          nb             Number or base function to use
@@ -31,8 +30,6 @@ c          bc             Estimation of Base function coefficients
 c          jcov           integer arrays describing cov format
 c          cov            Covariance matrix in SLAP column format
 c          ddat           data vector
-c          ntv(2)         basis number for each point
-c          ntn(2)         point count for each basis number
 c          xyzf           result of forward modelling
 c
 c       output:
@@ -40,78 +37,73 @@ c          gj             gradient of the weighted sum of squares (nb)
 c          hj             diagonal of the Hessian (nb)
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine ssqgh_d(npmax, nlocpts, ipg,
+        subroutine ssqgh_d(npmax, nlocpts,
      >                     nd, ppos, nb,
      >                     fun_mf, sub_base, bc, jcov, cov,
      >                     ddat, xyzf, gj, hj)
 c
         implicit none
 c
-        integer ip,nlocpts
-        integer np,npmax,nd,nb,jcov(*)
-        integer i,ipg,ipl
-        integer, allocatable :: ntval(:)
-        real*8 ddat(*),xyzf(*),cov(*),ppos(nd+1,*),bc(*)
-        real*8 gj(*),hj(*)
-c       real*8, allocatable :: vmf(:)
+        integer rank, npmax, nlocpts, nd, nb
+        integer jcov(*)
+        real*8 ppos(nd+1,*), bc(*), cov(*), ddat(*)
+        real*8 xyzf(*), gj(nb), hj(nb)
+c        
+        real*8 fun_mf
+        external fun_mf, sub_base
+c
+        integer nchk, nrem
+        integer np, ip, ip2, i, j
         real*8, allocatable :: dwgh(:),ddif(:)
         real*8, allocatable :: aa(:,:)
 c
-        real*8 fun_mf
-        external fun_mf,sub_base
-c
-c  ipg : ip global
-c  ipl : ip local
-c
-c       allocate(vmf(npmax))
-        allocate(dwgh(npmax),ddif(npmax))
-        allocate(aa(nb,npmax))
-        allocate(ntval(npmax))
 c
         gj(1:nb)=0.0d0
         hj(1:nb)=0.0d0
-        ntval(1:npmax)=0
+c
+        nchk = nlocpts / npmax
+        nrem = MOD(nlocpts, npmax)
+        np = npmax
 c
 c
-        ip=1
-        do while (ip.le.nlocpts) 
-          ipl=ipg+ip-1
-          np=min0(nlocpts-ip+1,npmax)
+!$OMP PARALLEL
+!$OMP& DEFAULT(NONE)
+!$OMP& SHARED(nchk,nrem,npmax,nd,nb)
+!$OMP& SHARED(ddat,xyzf,cov,jcov,ppos,bc)
+!$OMP& SHARED(gj,hj)
+!$OMP& FIRSTPRIVATE(np)
+!$OMP& PRIVATE(i,ip,ip2,j,dwgh,ddif,aa)
+        allocate(dwgh(npmax),ddif(npmax))
+        allocate(aa(nb,npmax))
+c
+!$OMP DO
+!$OMP& SCHEDULE(STATIC)
+!$OMP& REDUCTION(+:gj(1:nb),hj(1:nb))
+        do i = 1,nchk+1
+          if (i .gt. nchk) then
+            np = nrem
+          endif
+          ip = 1 + (i-1)*npmax
 
-          do i=1,np
-            ntval(i)=ip-1+i
+          ip2 = ip
+          do j = 1,np
+            ddif(j) = ddat(ip2)-xyzf(ip2)
+            dwgh(j) = 1.d0/cov(jcov(ip2))
+            ip2 = ip2+1
           enddo
 c        
-c
-c  calculate the equations of condition
-          call mkArows(np,ntval,nd,nb,ppos(1,ipl),sub_base,bc,aa)
-c
-c  calculate the delta data
-          do i=1,np
-            ddif(i)=ddat(ipl+i-1)-xyzf(ipl+i-1)
-          enddo
-c
-c  calculate the inverse covariance matrix
-          do i=1,np
-            dwgh(i)=1.d0/cov(jcov(ipl+i-1))
-          enddo
-c
-c  calculate msft vector
-c         do i=1,np
-c            vmf(i)=ddif(i)*dsqrt(dwgh(i))
-c         enddo
-
+c  calculate the equations of condition          
+          call mkArows(np,ip,nd,nb,ppos(1,ip),sub_base,bc,aa)
 c
 c  update the G matrix and B vector
           call concoct_GJ(fun_mf,nb,np,dwgh,aa,ddif,gj)
           call concoct_HJ(fun_mf,nb,np,dwgh,aa,hj)
-c
-          ip = ip + np
         enddo
+!$OMP END DO
 c
         deallocate(dwgh,ddif,aa)
-        deallocate(ntval)
-c       deallocate(vmf)
+!$OMP END PARALLEL
+c
 c
         return
         end
