@@ -51,7 +51,7 @@ c  All defining parallel enviroment
         call MPI_Comm_rank(MPI_COMM_WORLD,rank,ierr)
 c
 c  All: Now does the work
-        call ssqgh_d(npmax, nlocpts, 1,
+        call ssqgh_d(npmax, nlocpts,
      >               nd, ppos, nb,
      >               fun_mf, sub_base, bc,
      >               jcov, cov,
