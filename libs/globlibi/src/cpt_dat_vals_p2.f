@@ -31,9 +31,13 @@ c
 c
         external fun_base
 
+!$OMP PARALLEL DO DEFAULT(NONE)
+!$OMP& SHARED(nlocpts,nb,bc)
+!$OMP& SCHEDULE(STATIC)
         do i=1,nlocpts
           xyzf(i) = fun_base(i,nb,bc,ppos(1,i))
         enddo
+!$OMP END PARALLEL DO
 
         return
         end
