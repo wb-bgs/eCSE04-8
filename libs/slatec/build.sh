@@ -44,12 +44,6 @@ function set_compile_options {
       sed -i "s:FFLAGS= -O2:FFLAGS= -g1 -O1:g" ${MAKEFILE}
     fi
   fi
-
-  if [[ "${PRGENV}" == "gnu" ]]; then
-    if [[ "${PE_RELEASE}" == "21.04" ]]; then
-      sed -i "s:-fallow-argument-mismatch::g" ${MAKEFILE}
-    fi
-  fi
 }
 
 
