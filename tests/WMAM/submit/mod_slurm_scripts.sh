@@ -24,4 +24,11 @@ for shd in "${shdegrees[@]}"; do
 
 #  find ./${shd}/*.ll -type f -exec sed -i 's:APP_VERSION=3.7:APP_VERSION=4.0:g' {} \;
 
+
+#  find ./${shd}/*.ll -type f -exec sed -i 's:SRUN_PARAMS=\"--distribution=block\:block --hint=nomultithread --unbuffered --chdir=\${APP_RUN_PATH}\":export SRUN_CPUS_PER_TASK=\${SLURM_CPUS_PER_TASK}\nSRUN_PARAMS=\"--distribution=block\:block --hint=nomultithread --unbuffered --chdir=\${APP_RUN_PATH}\":g' {} \;
+
+
+  find ./${shd}/*.ll -type f -exec sed -i 's:DAMPFAC=5.0:DAMPFAC=5.0\nSERIALRD=0:g' {} \;
+  find ./${shd}/*.ll -type f -exec sed -i 's:\${DAMPFAC}:\${DAMPFAC} \${SERIALRD}:g' {} \;
+
 done
