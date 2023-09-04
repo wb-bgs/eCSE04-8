@@ -1,8 +1,8 @@
 #!/usr/bin/env python 
 
-# python make_binary_file.py /work/ecsead08/ecsead08/mrbad08/tests/WMAM/shd/300 coef_1990_15.dat
-# python make_binary_file.py /work/ecsead08/ecsead08/mrbad08/tests/WMAM/shd/300 model.in
-# python make_binary_file.py /work/ecsead08/ecsead08/mrbad08/tests/WMAM/shd/300 wdmam_geocentric.dat
+# python make_binary_file.py ${HOME/home/work}/tests/WMAM/shd/300 coef_1990_15.dat
+# python make_binary_file.py ${HOME/home/work}/tests/WMAM/shd/300 model.in
+# python make_binary_file.py ${HOME/home/work}/tests/WMAM/shd/300 wdmam_geocentric.dat
 
 import sys
 import os
