@@ -898,6 +898,8 @@ c
           buf_allocated = .true.
 c
           j = 0
+          diff(1) = 0.0d0
+          diff(2) = 0.0d0
           do i = nmin, nmax
             buf(j+1:j+8) = ppos(1:8,i)
             buf(j+9)     = xyzf(i)
