@@ -39,8 +39,6 @@ c
         real*8 ddat(*),xyzf(*),cov(*),ppos(*),bc(*),ds(*)
         real*8 zz(*)
 c
-        integer :: ip,np
-c
         real*8 fun_mf
         external fun_mf,sub_base
 c
