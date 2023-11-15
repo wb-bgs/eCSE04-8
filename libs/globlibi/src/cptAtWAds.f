@@ -35,7 +35,6 @@ c
 c
         integer ip,nlocpts,np,npmax,nd,nb,jcov(*)
         integer i,ipg,ipl
-        integer, allocatable :: ntval(:)
         real*8 ddat(*),xyzf(*),cov(*),ppos(nd+1,*),bc(*),ds(*)
         real*8 zz(*)
 c       real*8, allocatable :: vmf(:)
@@ -50,22 +49,17 @@ c
 c       allocate(vmf(1:npmax))
         allocate(dwgh(1:npmax),ddif(1:npmax))
         allocate(aa(nb,npmax))
-        allocate(ntval(1:npmax))
 c
         zz(1:nb)=0.0d0
-        ntval(1:npmax)=0
 c
         ip=1
         do while (ip.le.nlocpts) 
           ipl=ipg+ip-1
           np=min0(nlocpts-ip+1,npmax)
 
-          do i=1,np
-            ntval(i)=ip-1+i
-          enddo
 c
 c  calculate the equations of condition
-          call mkArows(np,ntval,nd,nb,ppos(1,ipl),sub_base,bc,aa)
+          call mkArows(np,ipl,nd,nb,ppos(1,ipl),sub_base,bc,aa)
 c
 c  calculate the delta data
           do i=1,np
@@ -90,7 +84,7 @@ c
 c
 c       deallocate(vmf)
         deallocate(dwgh,ddif,aa)
-        deallocate(ntval)
 c
         return
         end
+
