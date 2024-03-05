@@ -53,14 +53,12 @@ c         nd            space dimension
 c         nb            Number of parameters
 c         npts          Total number of points (data + sampling) for all ranks
 c         nlocpts       Total number of points for this rank
+c         nlocdatpts    number of data points assigned to rank
+c         shdeg         max SH degree value
+c         d2a           pre-computed array for mklf_F2()
 c         ppos          data point position in ndD + data value
 c         bc            Estimate of Base function coefficients
 c         dl(3)         control process + damping factor
-c         sub_base_i    Base subroutine to use (see mkArows.f)
-c         sub_damp      damping -- not implemented
-c         fun_base_f    Base subroutine to use (see cpt_dat_vals_p[2].f)
-c         fun_mf        misfit function (like l2_norm.f)
-c         fun_std       std function
 c         cov(*)        covariance matrix in SLAP Column format
 c         jcov          Integer vector describing cov format
 c         stdt          target STD value
@@ -71,26 +69,23 @@ c         xyzf(*)       Forward modelling for given BC
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine opt_pr_p3(path, itmax, npmax, nd, nb,
-     >                       npts, nlocpts, ppos, bc, dl,
-     >                       sub_base_i, sub_damp,
-     >                       fun_base_f, fun_mf, fun_std,
+     >                       npts, nlocpts, nlocdatpts, shdeg,
+     >                       d2a, ppos, bc, dl,
      >                       cov, jcov, stdt, xyzf, bb, gg)
+c
+        use omp_lib
 c
         implicit none
 c
         include 'mpif.h'
         include 'mpi_status_types.h'
 c
-        integer itmax(*),npmax,nd,nb,npts,nlocpts
-        real*8 ppos(*),bc(*),dl(*),cov(*)
+        integer itmax(*),npmax,nd,nb,npts,nlocpts,nlocdatpts,shdeg
+        real*8 d2a(*),ppos(nd+1,*),bc(*),dl(*),cov(*)
         integer jcov(*)
         real*8 stdt,xyzf(*)
         real*8, optional :: bb(:),gg(:)
         character path*100
-c
-        real*8 fun_base_f, fun_mf, fun_std
-        external sub_base_i, sub_damp
-        external fun_base_f, fun_mf, fun_std     
 c
         integer i,ip,it,itm,iunit,ipth,itm_l,itm_r
         integer ierr,rank
@@ -110,10 +105,21 @@ c
         real*8, allocatable :: gj(:),gjo(:)
         real*8, allocatable :: ghj(:),ghjo(:)
 c
+c
 c All defining parallel enviroment
 
         call MPI_Comm_rank(MPI_COMM_WORLD,rank,ierr)
-
+c
+c
+#ifdef OMP_OFFLOAD
+        call omp_set_default_device(MOD(rank,4))
+c call omp_set_num_teams(80)
+c call omp_set_teams_thread_limit(32)
+c omp_get_num_devices()
+c omp_get_max_teams()
+c omp_get_teams_thread_limit()
+#endif
+c        
 c
 c Commit the inversion and gradient search MPI status types
         call init_mpi_status_types(nb,bc,inv_stat,src_stat,
@@ -165,7 +171,7 @@ c Starting conditions
 c
 c All define data set
         do ip=1,nlocpts
-            ddat(ip)=ppos(ip*(nd+1))
+            ddat(ip)=ppos(nd+1,ip)
         enddo
 
 c
@@ -176,13 +182,13 @@ c All: do their part in forward modelling
             if (inv_stat%yon(2:2).eq.'y') then
 c               if(rank.eq.0)write(*,*)'opt_pr_p3: 1'
                 
-                call cpt_dat_vals_p2(nd, nlocpts,
-     >                               ppos, nb, inv_stat%bc,
-     >                               fun_base_f, xyzf)
+                call cpt_dat_vals_p2(nd, nlocpts, nlocdatpts, shdeg,
+     >                               d2a, ppos, nb, inv_stat%bc,
+     >                               xyzf)
 c
                 call cptstd_dp(npmax, npts, nlocpts,
      >                         jcov, cov, ddat, xyzf,
-     >                         fun_std, std)
+     >                         std)
                 stdo=std
             endif
 c
@@ -195,8 +201,8 @@ c All: do their part in finding GJ, DH
 c
                 if (itmax(1).ge.0.or.it.ne.1) then
 c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 2'
-                    call ssqgh_dp(npmax, nd, nlocpts,
-     >                            ppos, nb, fun_mf, sub_base_i,
+                    call ssqgh_dp(npmax, nd, nlocpts, nlocdatpts,
+     >                            shdeg, d2a, ppos, nb,
      >                            inv_stat%bc,
      >                            jcov, cov, ddat,
      >                            xyzf, gj, dh)
@@ -288,30 +294,29 @@ c ALL: search minimum in descent direction
                     if (itmax(3).ge.0) then
 c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 4'
                         call gc_step_p(iunit, npmax, nd,
-     >                                 npts, nlocpts,
-     >                                 ppos, ddat,
+     >                                 npts, nlocpts, nlocdatpts,
+     >                                 shdeg, d2a, ppos, ddat,
      >                                 nb, inv_stat%bc,
-     >                                 fun_std, fun_base_f,
      >                                 cov, jcov, std,
      >                                 gj, ghj, ds, stp, xyzf)
                     else
 c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 5'
                         call lsearch_p(iunit, itm_l, npmax, nd, 
-     >                                 npts, nlocpts, ppos, ddat,
+     >                                 npts, nlocpts, nlocdatpts,
+     >                                 shdeg, d2a, ppos, ddat,
      >                                 nb, inv_stat%bc,
      >                                 src_stat, MPI_SEARCH_STATUS,
-     >                                 dl, fun_base_f, fun_std,
-     >                                 cov, jcov,
+     >                                 dl, cov, jcov,
      >                                 std, ds, stp, xyzf)
                     endif
                 else
 c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 6'
                     call lsearch_p(iunit, itm_l, npmax, nd, 
-     >                             npts, nlocpts, ppos, ddat,
+     >                             npts, nlocpts, nlocdatpts,
+     >                             shdeg, d2a, ppos, ddat,
      >                             nb, inv_stat%bc,
      >                             src_stat, MPI_SEARCH_STATUS,
-     >                             dl, fun_base_f, fun_std,
-     >                             cov, jcov,
+     >                             dl, cov, jcov,
      >                             std, ds, stp, xyzf)
                 endif
 
@@ -434,6 +439,7 @@ c Free the inversion and gradient search MPI status types
         call free_mpi_status_types(nb,bc,inv_stat,
      >                             MPI_INVERSION_STATUS,
      >                             MPI_SEARCH_STATUS)
+c
 c
         return
         end
