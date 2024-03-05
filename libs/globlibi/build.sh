@@ -50,7 +50,7 @@ function set_compile_options {
 PE_RELEASE=$1
 PRGENV=$2
 BUILD=$3
-VERSION=4.2
+VERSION=5.0
 ERRMSG="Invalid syntax: build.sh <CPE release> cray|gnu|aocc release|debug|craypat|armmap|scorep"
 
 
@@ -73,7 +73,7 @@ PRFX=${HOME/home/work}
 GLOBLIB_LABEL=globlibi
 GLOBLIB_VERSION=${VERSION}
 GLOBLIB_NAME=${GLOBLIB_LABEL}-${GLOBLIB_VERSION}
-GLOBLIB_BUILD_ROOT=${PRFX}/eCSE04-8/libs/${GLOBLIB_LABEL}/src
+GLOBLIB_BUILD_ROOT=${PRFX}/projects/eCSE04-8/libs/${GLOBLIB_LABEL}/src
 GLOBLIB_INSTALL_ROOT=${PRFX}/libs/${GLOBLIB_LABEL}/${GLOBLIB_VERSION}
 
 
