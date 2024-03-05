@@ -26,12 +26,16 @@ c
 c
         integer nm, ilg
         real*8 ds, dc, d2a(0:ilg)
-        real*8 dlf(*), ddlf(*)
+        real*8 dlf(ilg+1), ddlf(ilg+1)
 c
         integer il, jl
         real*8 d1, d2
 c
-c       call mklf_F(nm, ilg, ds, dc, dlf)
+c
+#ifdef OMP_OFFLOAD
+!$omp declare target
+#endif
+c
         call mklf_F2(nm, ilg, ds, dc, d2a, dlf)
 c
         if (ds.eq.0.0d0) then

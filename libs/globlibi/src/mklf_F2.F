@@ -19,10 +19,15 @@ c
         implicit none
 c
         integer nm, ilg
-        real*8 ds, dc, d2a(0:ilg), dlf(*)
+        real*8 ds, dc, d2a(0:ilg), dlf(ilg+1)
 c
         integer il, d0
-        real*8 d1, d2, dbeta(0:ilg), dalpha(0:ilg) 
+        real*8 d1, d2, dbeta(0:ilg), dalpha(0:ilg)
+c
+c
+#ifdef OMP_OFFLOAD 
+!$omp declare target
+#endif
 c
         d1 = ds
         if (d1.ne.0.0d0) then
