@@ -9,8 +9,6 @@ c             W2 is the weight matrix (diag nl2)
 c             R  is the Misfit matrix (diag nl2)
 c
 c   Input:
-c       fun_mf  Misfit Function 
-c               (user provided, external in calling program)
 c       nl1/2   number of lignes
 c       w2s     Inverse of Diagonal covariance martix (W2 matrix squared) (nl2)
 c       a2      Matrice of equations of condition (nl2Xnl1)
@@ -20,19 +18,21 @@ c   output:
 c	zz      UPDATED VECTOR 	AtWADS
 c       
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-	subroutine concoct_ZZ(fun_mf,nl1,nl2,w2s,a2,ds,zz)
+        subroutine concoct_ZZ(nl1,nl2,w2s,a2,ds,zz)
 c
         implicit none
 c
         integer nl1,nl2,il,j
         real*8 ds(*),w2s(*),a2(nl1,*),zz(*),dw1
 c
-        real*8 fun_mf
-        external fun_mf
+c       real*8 l2_norm
+c       external l2_norm
+c
 c
         do j=1,nl2
           dw1=dot_product(a2(1:nl1,j),ds(1:nl1))
-          dw1=2.d0*fun_mf()*w2s(j)*dw1
+c         dw1=2.d0*l2_norm()*w2s(j)*dw1
+          dw1=2.d0*w2s(j)*dw1
           do il=1,nl1
             zz(il)=zz(il)+dw1*a2(il,j)
           enddo
