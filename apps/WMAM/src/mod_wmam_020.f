@@ -1,3 +1,23 @@
+
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c    subroutine prepare_cm4_components
+c
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+        subroutine prepare_cm4_components(bp)
+c
+        implicit none
+c 
+        real*8 bp(*)
+        real*8 dd
+c 
+        dd = dsqrt(bp(5)**2 + bp(6)**2 + bp(7)**2)
+        bp(5) = bp(5) / dd
+        bp(6) = bp(6) / dd
+        bp(7) = bp(7) / dd
+c 
+        end subroutine prepare_cm4_components
+c
+c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c	Program MOD_WMAM
 c    
@@ -5,15 +25,13 @@ c    Build a spherical harmonic model from a regular grid of
 c    total intensity data in Geocentric
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-	program mod_wmam
-c
-        use sph_wmam
+        program mod_wmam
 c
         implicit none
 c
         include 'mpif.h'
 c
-        character(len=*), parameter :: VERSION="4.2.0"
+        character(len=*), parameter :: VERSION="5.0.0"
 c
         integer, parameter :: POLAK_RIBIERE=1
         integer, parameter :: CONJUGATE_GRADIENT=2
@@ -46,14 +64,21 @@ c
         real*8, allocatable :: gg(:,:), bb(:)
         real*8, allocatable :: err(:)
         real*8 diff(4)
+        real*8 ryg
+c
+c  variables for populating d2a array 
+        integer nm
+        real*8  dnm, d1, d2
+        real*8, allocatable :: d2a(:)
 c
 c  globlibi functions
-        real*8 dsind, l2_std, l2_norm
-        external dsind, l2_std, l2_norm
+        real*8 dsind
+        external dsind
 c
-c  globlibi subroutines
-        external sph_bi, damp_rien
-
+c  slatec subroutine
+        real*8 dgamln
+        external dgamln 
+c
 c
 c  Initialize MPI, determine rank
         integer ierr, nranks, rank
@@ -166,8 +191,25 @@ c  Array allocations
         allocate(dw(nlocpts))
 
 c
-c  Initialize sph_wmam module
-        call init_sph_wmam(shdeg, nparams, nlocdatpts)
+c  Initialize d2a array
+        allocate(d2a(0:shdeg))
+c
+        do nm=0,shdeg
+          dnm = dble(nm)                    ! dble real for nm
+          d1 = dgamln(2*dnm+1.0d0,ierr)     ! d1=log(fact(2dnm))
+          d2 = dgamln(dnm+1.0d0,ierr)       ! d2=log(fact(dnm))
+          if (ierr.ne.0) then
+            write(*,*) 'mklf_F: Cannot computes normalisation cst !'
+            stop
+          endif
+c
+          d2 = 0.5d0*d1 - d2                ! d2=sqrt(fact(2dnm))/fact(dnm)
+          d2 = d2 - nm*dlog(2.0d0)          !
+          d2 = dexp(d2)                     ! normalisation cst.
+          if (nm.ne.0) d2 = d2*dsqrt(2.0d0) ! special case  m=0
+c
+          d2a(nm) = d2
+        enddo
 
 c
 c  Output array sizes
@@ -197,9 +239,9 @@ c  Read in reference model
         if (rank.eq.0) write(*,*)
      >    'Reading in reference model, ', fname
         if (serialrd .gt. 0) then
-          call mpi_read_ref_model(fname, ncoeffs, bc)
+          call mpi_read_ref_model(fname, ncoeffs, ryg, bc)
         else
-          call mpi_read_all_ref_model(fname, ncoeffs, bc)
+          call mpi_read_all_ref_model(fname, ncoeffs, ryg, bc)
         endif
         if (rank.eq.0) then
           write(*,*) 'Coefficients: ', ncoeffs
@@ -213,7 +255,7 @@ c  Read in data
         if (rank.eq.0) write(*,*)
      >    'Reading in data, ', fname
         call mpi_read_all_data(fname, ND, ndatpts, nlocdatpts,
-     >                         imin_locdatpts, ppos)
+     >                         imin_locdatpts, ryg, ppos)
         if (nlocdatpts .eq. 0) stop
         
 c
@@ -222,19 +264,19 @@ c  Calculate CM4 components
 
         dw=0.0d0
         call cpt_dat_vals_p(ND, nlocdatpts, 1, ppos, ncoeffs,
-     >                      bc, sph_bi, dw)
+     >                      bc, dw)
         ppos(5,1:nlocdatpts)=dw(1:nlocdatpts)
         if (rank.eq.0) write(*,*) ' X CM4 component calculated'
         
         dw=0.0d0
         call cpt_dat_vals_p(ND, nlocdatpts, 2, ppos, ncoeffs,
-     >                      bc, sph_bi, dw)
+     >                      bc, dw)
         ppos(6,1:nlocdatpts)=dw(1:nlocdatpts)
         if (rank.eq.0) write(*,*) ' Y CM4 component calculated'
 
         dw=0.0d0
         call cpt_dat_vals_p(ND, nlocdatpts, 3, ppos, ncoeffs,
-     >                      bc, sph_bi, dw)
+     >                      bc, dw)
         ppos(7,1:nlocdatpts)=dw(1:nlocdatpts)
         if (rank.eq.0) then
           write(*,*) ' Z CM4 component calculated'
@@ -261,8 +303,8 @@ c  Add smoothing equations
         if (rank.eq.0) write(*,*) 'Define regularisation'
         call build_damp_space(nlocdatpts, nlocsampts,
      >                        imin_locpts, imin_locsampts,
-     >                        ND, ncoeffs, shdeg, dampfac,
-     >                        bc, ijcov, cov, ppos)
+     >                        ND, ncoeffs, shdeg, ryg,
+     >                        dampfac, bc, ijcov, cov, ppos)
 
 c
 c  Prepare the CM4 components for use within sub_sph_wmam_l()
@@ -312,17 +354,15 @@ c
 c
         if (scheme.eq.POLAK_RIBIERE) then
           call opt_pr_p3(fname, itmax, NPMAX, ND, nparams,
-     >                   npts, nlocpts, ppos, bc, dl,
-     >                   sub_base_i, damp_rien,
-     >                   fun_base_f, l2_norm, l2_std,
+     >                   npts, nlocpts, nlocdatpts, shdeg,
+     >                   d2a, ppos, bc, dl,
      >                   cov, ijcov(1,2),
      >                   stdt, dw, bb, gg)
         else
 c         CONJUGATE_GRADIENT
           call opt_ghc_p2(fname, itmax, NPMAX, ND, nparams,
-     >                    npts, nlocpts, ppos, bc, dl,
-     >                    sub_base_i, damp_rien,
-     >                    fun_base_f, l2_norm, l2_std,
+     >                    npts, nlocpts, nlocdatpts, shdeg,
+     >                    d2a, ppos, bc, dl,
      >                    cov, ijcov(1,2),
      >                    stdt, dw, bb, gg)
         endif
@@ -404,14 +444,13 @@ c  Saving update base coefficients
         endif
 c
 c  Deallocate arrays
+        deallocate(d2a)
         deallocate(dw)
         deallocate(ijcov)
         deallocate(cov)
         deallocate(ppos)
         deallocate(bc)
         deallocate(proc_np,proc_ip)
-c
-        call fini_sph_wmam()
 c
         call MPI_Finalize(ierr)
 c
