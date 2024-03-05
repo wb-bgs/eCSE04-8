@@ -18,14 +18,12 @@ c         nd            space dimension
 c         nb            Number of parameters
 c         npts          Total number of points (data + sampling) for all ranks
 c         nlocpts       Total number of points for this rank
+c         nlocdatpts    number of data points assigned to rank
+c         shdeg         max SH degree value
+c         d2a           pre-computed array for mklf_F2()
 c         ppos          data point position in ndD + data value
 c         BC            Estimate of Base function coefficients
 c         dl(3)         control process parameter
-c         sub_base_i    Base subroutine to use (see mkArows.f)
-c         sub_damp      damping -- not implemented
-c         fun_base_f    Base subroutine to use (see cpt_dat_vals_p[2].f)
-c         fun_mf        misfit function (like l2_norm.f)
-c         fun_std       std function
 c         cov(*)        covariance matrix in SLAP Column format
 c         jcov          Integer vector describing cov format
 c         stdt          target STD value
@@ -36,9 +34,8 @@ c         xyzf(*)       Forward modelling for given BC
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine opt_ghc_p2(path, itmax, npmax, nd, nb,
-     >                        npts, nlocpts, ppos, bc, dl,
-     >                        sub_base_i, sub_damp,
-     >                        fun_base_f, fun_mf, fun_std,
+     >                        npts, nlocpts, nlocdatpts, shdeg,
+     >                        d2a, ppos, bc, dl,
      >                        cov, jcov, stdt,
      >                        xyzf, bb, gg)
 c
@@ -47,16 +44,12 @@ c
         include 'mpif.h'
 c
         integer itmax(*),npmax,nd,nb
-        integer npts,nlocpts
-        real*8 ppos(*),bc(*),dl(*),cov
+        integer npts,nlocpts,nlocdatpts,shdeg
+        real*8 d2a(*),ppos(*),bc(*),dl(*),cov
         integer jcov(*)
         real*8 stdt,xyzf(*)
         real*8, optional :: bb(:),gg(:)
         character path*100
-c
-        real*8 fun_base_f, fun_mf, fun_std
-        external sub_base_i, sub_damp
-        external fun_base_f, fun_mf, fun_std
 c
         integer i,ip,it,itm,iunit,ipth,itm_r
         integer ierr,rank
@@ -130,19 +123,19 @@ c
 c All: do their part in forward modelling
             if (yon(2:2).eq.'y') then
                 stdo=std
-                call cpt_dat_vals_p2(nd, nlocpts,
-     >                               ppos, nb, bc,
-     >                               fun_base_f, xyzf)
+                call cpt_dat_vals_p2(nd, nlocpts, nlocdatpts,
+     >                               shdeg, d2a, ppos, nb, bc,
+     >                               xyzf)
                 call cptstd_dp(npmax, npts, nlocpts,
      >                         jcov, cov, ddat, xyzf,
-     >                         fun_std, std)
+     >                         std)
             endif
 c
 c All: do their part in finding GJ, DH
             if (yon(3:3).eq.'y') then
                 ip=1
-                call ssqgh_dp(npmax, nd, nlocpts,
-     >                        ppos, nb, fun_mf, sub_base_i, bc,
+                call ssqgh_dp(npmax, nd, nlocpts, nlocdatpts, shdeg,
+     >                        d2a, ppos, nb, bc,
      >                        jcov, cov, ddat, xyzf,
      >                        gj, dh)
 c All: check ZEROgradiant
@@ -200,8 +193,8 @@ c ALL: Find GC step
                 stp=0.d0
 c ALL: compute zz=2.A^t.W.A.ds
                 ip=1
-                call cptAtWAds_p(npmax, nd, nlocpts,
-     >                           ppos, nb, fun_mf, sub_base_i, bc, ds,
+                call cptAtWAds_p(npmax, nd, nlocpts, nlocdatpts, shdeg,
+     >                           d2a, ppos, nb, bc, ds,
      >                           jcov, cov, ddat,
      >                           xyzf, zz)
 c MP:  compute step
