@@ -4,7 +4,7 @@
 main=mod_wmam_020
 
 # decide which compiler to use the library depending on the architecture
-FC = ftn
+FC = mpiifort
 FFLAGS =
 LIBS =
 RANLIB = ranlib

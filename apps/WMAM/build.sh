@@ -50,8 +50,8 @@ function set_compile_options {
 PE_RELEASE=$1
 PRGENV=$2
 BUILD=$3
-VERSION=4.2
-GLOBLIBI_VERSION=4.2
+VERSION=5.0
+GLOBLIBI_VERSION=5.0
 SLATEC_VERSION=4.1
 ERRMSG="Invalid syntax: build.sh <CPE release> cray|gnu|aocc release|debug|craypat|armmap|scorep"
 
@@ -75,7 +75,7 @@ PRFX=${HOME/home/work}
 WMAM_LABEL=WMAM
 WMAM_VERSION=${VERSION}
 WMAM_NAME=${WMAM_LABEL}-${WMAM_VERSION}
-WMAM_BUILD_ROOT=${PRFX}/eCSE04-8/apps/${WMAM_LABEL}/src
+WMAM_BUILD_ROOT=${PRFX}/projects/eCSE04-8/apps/${WMAM_LABEL}/src
 WMAM_INSTALL_ROOT=${PRFX}/apps/${WMAM_LABEL}/${WMAM_VERSION}
 
 
