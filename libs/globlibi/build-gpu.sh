@@ -41,7 +41,7 @@ echo -e "\n\nBuilding ${GLOBLIB_LABEL} ${GLOBLIB_VERSION} (${BUILD}) using GNU (
 
 cd ${GLOBLIB_BUILD_ROOT}
 
-cp makefile.cirrus.gnu makefile
+cp makefile.cirrus.gpu makefile
 sed -i "s:libdir =:libdir = ${GLOBLIB_INSTALL_PATH}:g" ./makefile
 
 set_compile_options ./makefile
