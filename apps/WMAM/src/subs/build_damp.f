@@ -23,10 +23,14 @@ c       ijcov(*)  integer    array defining cov matrix
 c       cov(*)    real*8     array of cov matrix
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine build_damp(nub,npm,npt,ncm,nc,nd
-     >                                   ,llm,wgh,nt,ijcov,cov,ddat)
+        subroutine build_damp(nub,npm,npt,ncm,nc,nd,
+     >                        llm,wgh,nt,ijcov,cov,ddat)
+c
+        use sph_wmam
 c
         implicit none
+c
+        real*8, parameter :: RAG=6371.2d0
 c
         integer nub,npm,npt,ncm,nc,nd,llm,ijcov(ncm,*),nt(*)
         real*8 ddat(nd+1,*),cov(*),wgh
@@ -40,7 +44,7 @@ c loop over the degrees & orders
           ddat(1:nd+1,npt)=0.0d0
           ddat(1,npt)=dble(ll)
           ddat(2,npt)=dble(ml)
-          ddat(3,npt)=6371.2d0
+          ddat(3,npt)=RAG
           nt(npt)=nub
 c
           nc=nc+1
@@ -55,7 +59,7 @@ c
             ddat(1:nd+1,npt)=0.0d0
             ddat(1,npt)=dble(ll)
             ddat(2,npt)=dble(ml)
-            ddat(3,npt)=6371.2d0
+            ddat(3,npt)=RAG
             nt(npt)=nub
 c
             nc=nc+1
@@ -69,7 +73,7 @@ c
             ddat(1:nd+1,npt)=0.0d0
             ddat(1,npt)=dble(ll)
             ddat(2,npt)=dble(-ml)
-            ddat(3,npt)=6371.2d0
+            ddat(3,npt)=RAG
             nt(npt)=nub
 c
             nc=nc+1
