@@ -29,14 +29,13 @@ c          jcov           integer arrays describing cov format
 c          cov            Covariance matrix in SLAP column format
 c          ddat           data vector
 c          xyzf           result of forward modelling
-c          fun_std        std function
 c
 c       output:
 c          std            STD value
 c        
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine cptstd_dp(npmax, npts, nlocpts, jcov, cov, ddat,
-     >                       xyzf, fun_std, std)
+     >                       xyzf, std)
 c
         implicit none
 c
@@ -44,8 +43,6 @@ c
 c
         integer :: npmax,npts,nlocpts,jcov(*)
         real*8  :: cov(*),ddat(*),xyzf(*)       
-        real*8 fun_std
-        external fun_std
         real*8 std
 
         integer ierr
@@ -54,7 +51,7 @@ c
 c  All: Now does the work
         call cptstd_d2(npmax, 1, nlocpts, jcov,
      >                 cov, ddat, xyzf,
-     >                 fun_std, std)
+     >                 std)
 c
 c  Compute the standard deviation across all ranks
         std = nlocpts*(std**2)

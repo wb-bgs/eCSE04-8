@@ -26,12 +26,13 @@ c         npmax         number max of data point with correlated errors
 c         nd            space dimension
 c         npts          Total number of points (data + sampling) for all ranks
 c         nlocpts       Total number of points for this rank
+c         nlocdatpts    number of data points assigned to rank
+c         shdeg         max SH degree value
+c         d2a           pre-computed array for mklf_F2()
 c         ppos          data point position in ndD
 c         ddat          data values
 c         nb            Number or base function to use
 c         bc            Estimate of Base function coefficients
-c         fun_std       std function
-c         fun_base      Base function to use
 c         cov(*)        covariance matrix in SLAP Column format
 c         jcov          Integer vector describing cov format
 c         std           STD value for given BC
@@ -45,24 +46,22 @@ c         std           STD value for given BC+stp*DS
 c         xyzf(*)       Forward modelling for given BC+stp*DS
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine gc_step_p(iunit, npmax, nd, 
-     >                       npts, nlocpts, ppos, ddat, nb, bc,
-     >                       fun_std, fun_base, cov, jcov,
+     >                       npts, nlocpts, nlocdatpts,
+     >                       shdeg, d2a, ppos, ddat, nb, bc,
+     >                       cov, jcov,
      >                       std, gj, ghj, ds, stp, xyzf)
 c
         implicit none
 c
         include 'mpif.h'
 c
-        integer iunit,npmax,nd,npts,nlocpts
-        real*8 ppos(*),ddat(*)
-        integer nb
+        integer iunit,npmax,nd,npts,nlocpts,nlocdatpts
+        real*8 d2a(*),ppos(*),ddat(*)
+        integer nb,shdeg
         real*8 bc(*),cov(*)
         integer jcov(*)
         real*8 std,gj(*),ghj(*)
         real*8 ds(*),stp,xyzf(*)
-c
-        real*8 fun_base,fun_std
-        external fun_base,fun_std
 c
         integer i
         integer ierr,rank 
@@ -75,9 +74,9 @@ c
 c All: Calculate  sqrt(w).A.DS 
         allocate(zz(1:nlocpts))
         zz(1:nlocpts)=0.0d0
-        call cpt_dat_vals_p2(nd, nlocpts,
-     >                       ppos, nb, ds,
-     >                       fun_base, zz)
+        call cpt_dat_vals_p2(nd, nlocpts, nlocdatpts,
+     >                       shdeg, d2a, ppos, nb, ds,
+     >                       zz)
 c
         do i=1,nlocpts
           zz(i)=zz(i)/dsqrt(cov(jcov(i)))
@@ -104,12 +103,12 @@ c ALL: Estimate the new set of parameter for a step stp in direction ds
 c
 c ALL: Do the forward modelling
         xyzf(1:nlocpts)=0.0d0
-        call cpt_dat_vals_p2(nd, nlocpts,
-     >                       ppos, nb, bcn,
-     >                       fun_base, xyzf)
+        call cpt_dat_vals_p2(nd, nlocpts, nlocdatpts,
+     >                       shdeg, d2a, ppos, nb, bcn,
+     >                       xyzf)
         call cptstd_dp(npmax, npts, nlocpts,
      >                 jcov, cov, ddat,
-     >                 xyzf, fun_std, std)
+     >                 xyzf, std)
 c
         deallocate(bcn)
 c
