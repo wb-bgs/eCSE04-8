@@ -8,12 +8,12 @@ c
 c       input:
 c          npmax          number max of data points handled together
 c          nlocpts        number of data+sampling points local to rank
+c          nlocdatpts    number of data points assigned to rank
+c          shdeg         max SH degree value
 c          ipg            where to start in data file!
 c          nd             space dimension
 c          ppos           data point position in ndD
 c          nb             Number or base function to use
-c          fun_mf         misfit function (like l2_norm.f)
-c          sub_base       the "Base functions" subroutine to use
 c          bc             Estimation of Base function coefficients
 c          ds             current descent direction
 c          jcov           integer arrays describing cov format
@@ -25,23 +25,21 @@ c       output:
 c          zz             Vector A^t.W.A.ds (nb)
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine cptAtWAds(npmax, nlocpts, ipg, nd,
-     >                       ppos, nb,
-     >                       fun_mf, sub_base, bc, ds,
+        subroutine cptAtWAds(npmax, nlocpts, nlocdatpts, shdeg, ipg,
+     >                       nd, d2a, ppos, nb,
+     >                       bc, ds,
      >                       jcov, cov, ddat,
      >                       xyzf, zz)
 c
         implicit none
 c
         integer ip,nlocpts,np,npmax,nd,nb,jcov(*)
-        integer i,ipg,ipl
-        real*8 ddat(*),xyzf(*),cov(*),ppos(nd+1,*),bc(*),ds(*)
+        integer i,ipg,ipl,nlocdatpts,shdeg
+        real*8 d2a(*),ddat(*),xyzf(*),cov(*),ppos(nd+1,*),bc(*),ds(*)
         real*8 zz(*)
 c       real*8, allocatable :: vmf(:)
         real*8, allocatable :: dwgh(:),ddif(:),aa(:,:)
 c
-        real*8 fun_mf
-        external fun_mf,sub_base
 c
 c  ipg : ip global
 c  ipl : ip local
@@ -56,10 +54,11 @@ c
         do while (ip.le.nlocpts) 
           ipl=ipg+ip-1
           np=min0(nlocpts-ip+1,npmax)
-
 c
 c  calculate the equations of condition
-          call mkArows(np,ipl,nd,nb,ppos(1,ipl),sub_base,bc,aa)
+          call mkArows((ip>nlocdatpts),
+     >                  shdeg, nb, nd, np, npmax,
+     >                  d2a, bc, ppos(1,ip), aa)
 c
 c  calculate the delta data
           do i=1,np
@@ -77,7 +76,7 @@ c           vmf(i)=ddif(i)*dsqrt(dwgh(i))
 c         enddo
 c
 c  update the G matrix and B vector
-          call concoct_ZZ(fun_mf,nb,np,dwgh,aa,ds,zz)
+          call concoct_ZZ(nb,np,dwgh,aa,ds,zz)
 c
           ip=ip+np
         enddo
@@ -87,4 +86,3 @@ c       deallocate(vmf)
 c
         return
         end
-
