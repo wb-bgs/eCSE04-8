@@ -41,6 +41,7 @@ c
 c
 #ifdef OMP_OFFLOAD
 c
+c
 !$OMP TARGET DATA if(firstcall)
 !$omp& map(to: nb, nd, nlocpts, nlocdatpts, shdeg)
 !$omp& map(to: d2a(0:shdeg))
@@ -64,7 +65,9 @@ c
 !$OMP END TARGET TEAMS DISTRIBUTE PARALLEL DO
 !$OMP END TARGET DATA
 c
+c
 #else
+c
 c
 !$OMP PARALLEL DO
 !$omp& default(shared)
@@ -75,6 +78,7 @@ c
      >                       d2a, bc, ppos(1,i))
         enddo
 !$OMP END PARALLEL DO
+c
 c
 #endif
 c

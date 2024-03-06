@@ -5,43 +5,43 @@ function set_compile_options {
   MAKEFILE=$1
   if [[ "${BUILD}" == "release" ]]; then
     if [[ "${PRGENV}" == "cray" ]]; then
-      sed -i "s:FFLAGS =:FFLAGS = -O3 -h omp:g" ${MAKEFILE}
+      sed -i "s:FFLAGS =:FFLAGS = -O3 -cpp -h omp:g" ${MAKEFILE}
     elif [[ "${PRGENV}" == "gnu" ]]; then
-      sed -i "s:FFLAGS =:FFLAGS = -O3 -fopenmp -fallow-argument-mismatch -std=legacy -fdefault-real-8 -fdefault-double-8:g" ${MAKEFILE}
+      sed -i "s:FFLAGS =:FFLAGS = -O3 -cpp -fopenmp -fallow-argument-mismatch -std=legacy -fdefault-real-8 -fdefault-double-8:g" ${MAKEFILE}
     elif [[ "${PRGENV}" == "aocc" ]]; then
-      sed -i "s:FFLAGS =:FFLAGS = -O3 -fopenmp:g" ${MAKEFILE}
+      sed -i "s:FFLAGS =:FFLAGS = -O3 -cpp -fopenmp:g" ${MAKEFILE}
     fi
   elif [[ "${BUILD}" == "debug" ]]; then
     if [[ "${PRGENV}" == "cray" ]]; then
-      sed -i "s:FFLAGS =:FFLAGS = -g -O0 -h omp:g" ${MAKEFILE}
+      sed -i "s:FFLAGS =:FFLAGS = -g -O0 -cpp -h omp:g" ${MAKEFILE}
     elif [[ "${PRGENV}" == "gnu" ]]; then
-      sed -i "s:FFLAGS =:FFLAGS = -g -O0 -fopenmp -fallow-argument-mismatch -std=legacy -fdefault-real-8 -fdefault-double-8 -fcheck=all -ffpe-trap=invalid,zero,overflow -fbacktrace:g" ${MAKEFILE}
+      sed -i "s:FFLAGS =:FFLAGS = -g -O0 -cpp -fopenmp -fallow-argument-mismatch -std=legacy -fdefault-real-8 -fdefault-double-8 -fcheck=all -ffpe-trap=invalid,zero,overflow -fbacktrace:g" ${MAKEFILE}
     elif [[ "${PRGENV}" == "aocc" ]]; then
-      sed -i "s:FFLAGS =:FFLAGS = -g -O0 -fopenmp:g" ${MAKEFILE}
+      sed -i "s:FFLAGS =:FFLAGS = -g -O0 -cpp -fopenmp:g" ${MAKEFILE}
     fi
   elif [[ "${BUILD}" == "craypat" ]]; then
     if [[ "${PRGENV}" == "cray" ]]; then
-      sed -i "s:FFLAGS =:FFLAGS= -g -O3 -h omp -h profile_generate:g" ${MAKEFILE}
+      sed -i "s:FFLAGS =:FFLAGS= -g -O3 -cpp -h omp -h profile_generate:g" ${MAKEFILE}
     elif [[ "${PRGENV}" == "gnu" ]]; then
-      sed -i "s:FFLAGS =:FFLAGS= -g -O3 -fopenmp -fallow-argument-mismatch -std=legacy -fdefault-real-8 -fdefault-double-8 -fcheck=all -ffpe-trap=invalid,zero,overflow -fbacktrace:g" ${MAKEFILE}
+      sed -i "s:FFLAGS =:FFLAGS= -g -O3 -cpp -fopenmp -fallow-argument-mismatch -std=legacy -fdefault-real-8 -fdefault-double-8 -fcheck=all -ffpe-trap=invalid,zero,overflow -fbacktrace:g" ${MAKEFILE}
     elif [[ "${PRGENV}" == "aocc" ]]; then
-      sed -i "s:FFLAGS =:FFLAGS= -g -O3 -fopenmp:g" ${MAKEFILE}
+      sed -i "s:FFLAGS =:FFLAGS= -g -O3 -cpp -fopenmp:g" ${MAKEFILE}
     fi
   elif [[ "${BUILD}" == "armmap" ]]; then
     if [[ "${PRGENV}" == "cray" ]]; then
-      sed -i "s:FFLAGS =:FFLAGS= -G2 -O3 -h omp -h ipa0:g" ${MAKEFILE}
+      sed -i "s:FFLAGS =:FFLAGS= -G2 -O3 -cpp -h omp -h ipa0:g" ${MAKEFILE}
     elif [[ "${PRGENV}" == "gnu" ]]; then
-      sed -i "s:FFLAGS =:FFLAGS= -g1 -O3 -fopenmp -fallow-argument-mismatch -std=legacy -fdefault-real-8 -fdefault-double-8 -fno-inline -fno-optimize-sibling-calls:g" ${MAKEFILE}
+      sed -i "s:FFLAGS =:FFLAGS= -g1 -O3 -cpp -fopenmp -fallow-argument-mismatch -std=legacy -fdefault-real-8 -fdefault-double-8 -fno-inline -fno-optimize-sibling-calls:g" ${MAKEFILE}
     elif [[ "${PRGENV}" == "aocc" ]]; then
-      sed -i "s:FFLAGS =:FFLAGS= -g1 -O3 -fopenmp:g" ${MAKEFILE}
+      sed -i "s:FFLAGS =:FFLAGS= -g1 -O3 -cpp -fopenmp:g" ${MAKEFILE}
     fi
   elif [[ "${BUILD}" == "scorep" ]]; then
     if [[ "${PRGENV}" == "cray" ]]; then
-      sed -i "s:FFLAGS =:FFLAGS= -G2 -O3 -h omp -h ipa0:g" ${MAKEFILE}
+      sed -i "s:FFLAGS =:FFLAGS= -G2 -O3 -cpp -h omp -h ipa0:g" ${MAKEFILE}
     elif [[ "${PRGENV}" == "gnu" ]]; then
-      sed -i "s:FFLAGS =:FFLAGS= -g1 -O3 -fopenmp -fallow-argument-mismatch -std=legacy -fdefault-real-8 -fdefault-double-8 -fno-inline -fno-optimize-sibling-calls:g" ${MAKEFILE}
+      sed -i "s:FFLAGS =:FFLAGS= -g1 -O3 -cpp -fopenmp -fallow-argument-mismatch -std=legacy -fdefault-real-8 -fdefault-double-8 -fno-inline -fno-optimize-sibling-calls:g" ${MAKEFILE}
     elif [[ "${PRGENV}" == "aocc" ]]; then
-      sed -i "s:FFLAGS =:FFLAGS= -g1 -O3 -fopenmp:g" ${MAKEFILE}
+      sed -i "s:FFLAGS =:FFLAGS= -g1 -O3 -cpp -fopenmp:g" ${MAKEFILE}
     fi
   fi
 }

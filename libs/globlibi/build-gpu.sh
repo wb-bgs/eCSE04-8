@@ -4,16 +4,16 @@
 function set_compile_options {
   MAKEFILE=$1
   if [[ "${BUILD}" == "release" ]]; then
-    sed -i "s:FFLAGS =:FFLAGS = -O3 -fopenmp -foffload=nvptx-none -Wno-argument-mismatch -std=legacy -fdefault-real-8 -fdefault-double-8:g" ${MAKEFILE}
+    sed -i "s:FFLAGS =:FFLAGS = -O3 -cpp -fopenmp -foffload=nvptx-none -Wno-argument-mismatch -std=legacy -fdefault-real-8 -fdefault-double-8:g" ${MAKEFILE}
   elif [[ "${BUILD}" == "debug" ]]; then
-    sed -i "s:FFLAGS =:FFLAGS = -g -O0 -fopenmp -foffload=nvptx-none -Wno-argument-mismatch -std=legacy -fdefault-real-8 -fdefault-double-8 -fcheck=all -ffpe-trap=invalid,zero,overflow -fbacktrace:g" ${MAKEFILE}
+    sed -i "s:FFLAGS =:FFLAGS = -g -O0 -cpp -fopenmp -foffload=nvptx-none -Wno-argument-mismatch -std=legacy -fdefault-real-8 -fdefault-double-8 -fcheck=all -ffpe-trap=invalid,zero,overflow -fbacktrace:g" ${MAKEFILE}
   fi
 }
 
 
 BUILD=$1
 VERSION=5.0
-GCC_VERSION=12.3.0
+GCC_VERSION=12.2.0
 ERRMSG="Invalid syntax: build-gnu.sh release|debug"
 
 
@@ -25,7 +25,7 @@ fi
 
 module -s load nvidia/nvhpc-nompi/22.2
 module -s load openmpi/4.1.5-cuda-11.6
-module -s swap -f gcc gcc/${GCC_VERSION}-offload
+module -s swap -f gcc gcc/${GCC_VERSION}-gpu-offload
 
 
 PRFX=${HOME/home/work}

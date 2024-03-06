@@ -4,9 +4,9 @@
 function set_compile_options {
   MAKEFILE=$1
   if [[ "${BUILD}" == "release" ]]; then
-    sed -i "s:FFLAGS =:FFLAGS = -O3 -fopenmp:g" ${MAKEFILE}
+    sed -i "s:FFLAGS =:FFLAGS = -O3 -cpp -fopenmp:g" ${MAKEFILE}
   elif [[ "${BUILD}" == "debug" ]]; then
-    sed -i "s:FFLAGS =:FFLAGS = -g -O0 -fopenmp:g" ${MAKEFILE}
+    sed -i "s:FFLAGS =:FFLAGS = -g -O0 -cpp -fopenmp:g" ${MAKEFILE}
   fi
 }
 

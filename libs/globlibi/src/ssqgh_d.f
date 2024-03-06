@@ -72,6 +72,8 @@ c
 c
 c
 #ifdef OMP_OFFLOAD
+c
+c
 !$OMP TARGET DATA if (firstcall)
 !$omp& map(to: nb, nd, npmax)
 !$omp& map(to: nlocpts, nlocdatpts, shdeg)
@@ -83,7 +85,6 @@ c
         if (firstcall) then
           firstcall = .FALSE.
         endif
-c
 c
 !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO
 !$omp& default(none)
@@ -121,6 +122,40 @@ c  update the G matrix and B vector
 !$OMP END TARGET DATA
 c
 c
+#else
+c
+c
+!$OMP PARALLEL DO
+!$omp& default(shared)
+!$omp& private(ip,ip2,j)
+!$omp& private(dwgh,ddif,aa)
+!$omp& schedule(static)
+!$omp& reduction(+:gj,hj)
+        do i = 1,nchk
+          ip = 1 + (i-1)*npmax
+
+          ip2 = ip
+          do j = 1,npmax
+            ddif(j) = ddat(ip2)-xyzf(ip2)
+            dwgh(j) = 1.d0/cov(jcov(ip2))
+            ip2 = ip2+1
+          enddo
+c        
+c  calculate the equations of condition          
+          call mkArows((ip>nlocdatpts),
+     >                  shdeg, nb, nd, npmax, npmax,
+     >                  d2a, bc, ppos(1,ip), aa)
+c
+c  update the G matrix and B vector
+          call concoct_GJ(nb,npmax,npmax,dwgh,aa,ddif,gj)
+          call concoct_HJ(nb,npmax,npmax,dwgh,aa,hj)
+        enddo
+!$OMP END PARALLEL DO
+c
+c
+#endif
+c
+c
 c  do the last iteration
         ip = 1 + nchk*npmax
         ip2 = ip
@@ -129,8 +164,8 @@ c  do the last iteration
           dwgh(j) = 1.d0/cov(jcov(ip2))
           ip2 = ip2+1
         enddo
-c        
-c  calculate the equations of condition          
+c
+c  calculate the equations of condition
         call mkArows((ip>nlocdatpts),
      >               shdeg, nb, nd, nrem, npmax,
      >               d2a, bc, ppos(1,ip), aa)
@@ -141,51 +176,6 @@ c  update the G matrix and B vector
 c
 c
         deallocate(dwgh,ddif,aa)
-c
-c
-#else
-c
-c
-        np = npmax
-c
-!$OMP PARALLEL
-!$OMP& DEFAULT(NONE)
-!$OMP& SHARED(nchk,nrem,npmax,nd,nb)
-!$OMP& SHARED(ddat,xyzf,cov,jcov,ppos,bc)
-!$OMP& SHARED(gj,hj)
-!$OMP& FIRSTPRIVATE(np)
-!$OMP& PRIVATE(i,ip,ip2,j,dwgh,ddif,aa)
-        allocate(dwgh(npmax),ddif(npmax))
-        allocate(aa(nb,npmax))
-c
-!$OMP DO
-!$OMP& SCHEDULE(STATIC)
-!$OMP& REDUCTION(+:gj(1:nb),hj(1:nb))
-        do i = 1,nchk+1
-          if (i .gt. nchk) then
-            np = nrem
-          endif
-          ip = 1 + (i-1)*npmax
-
-          ip2 = ip
-          do j = 1,np
-            ddif(j) = ddat(ip2)-xyzf(ip2)
-            dwgh(j) = 1.d0/cov(jcov(ip2))
-            ip2 = ip2+1
-          enddo
-c        
-c  calculate the equations of condition          
-          call mkArows(np,ip,nd,nb,ppos(1,ip),sub_base,bc,aa)
-c
-c  update the G matrix and B vector
-          call concoct_GJ(fun_mf,nb,np,dwgh,aa,ddif,gj)
-          call concoct_HJ(fun_mf,nb,np,dwgh,aa,hj)
-        enddo
-!$OMP END DO
-c
-        deallocate(dwgh,ddif,aa)
-!$OMP END PARALLEL
-#endif
 c
 c
         return
