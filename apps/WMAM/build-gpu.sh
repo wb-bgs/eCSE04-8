@@ -15,7 +15,7 @@ BUILD=$1
 VERSION=5.0
 GLOBLIBI_VERSION=5.0
 SLATEC_VERSION=4.1
-GCC_VERSION=12.3.0
+GCC_VERSION=12.2.0
 ERRMSG="Invalid syntax: build-gnu.sh release|debug"
 
 
@@ -27,7 +27,7 @@ fi
 
 module -s load nvidia/nvhpc-nompi/22.2
 module -s load openmpi/4.1.5-cuda-11.6
-module -s swap -f gcc gcc/${GCC_VERSION}-offload
+module -s swap -f gcc gcc/${GCC_VERSION}-gpu-offload
 
 PRFX=${HOME/home/work}
 WMAM_LABEL=WMAM
