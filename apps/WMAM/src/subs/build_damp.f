@@ -26,8 +26,6 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine build_damp(nub,npm,npt,ncm,nc,nd,
      >                        llm,wgh,nt,ijcov,cov,ddat)
 c
-        use sph_wmam
-c
         implicit none
 c
         real*8, parameter :: RAG=6371.2d0

@@ -27,8 +27,6 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >                              nd, ncoeffs, llm, ryg, wgh, bc,
      >                              ijcov, cov, ppos)
 c
-        use sph_wmam
-c
         implicit none
 c
         include 'mpif.h'
