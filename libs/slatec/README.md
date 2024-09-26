@@ -9,10 +9,10 @@ SLATEC is required by the World Magnetic Anomaly Model (WMAM) code
 and by the iterative version of the global model fitting library (GlobLibI).
 
 The SLATEC source is stored in this GitLab repo (alongside WMAM and
-GlobLibI) for convenience. The [build.sh](build.sh) script builds
+GlobLibI) for convenience. The [build-archer2.sh](build-archer2.sh) script builds
 the SLATEC library for [ARCHER2](https://www.archer2.ac.uk/).
 
-Simply run `./build.sh <CPE release> <compiler environment> <build type>` to build the SLATEC library.
+Simply run `./build-archer2.sh <CPE release> <compiler environment> <build type>` to build the SLATEC library.
 
 As of July 2023, the Cray Programming Environment (CPE) release installed on ARCHER2 is `22.12`.
 The available CPE version may change in the future - this can be checked by running `module avail cpe`.

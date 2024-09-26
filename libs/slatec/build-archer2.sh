@@ -50,7 +50,7 @@ function set_compile_options {
 PE_RELEASE=$1
 PRGENV=$2
 BUILD=$3
-ERRMSG="Invalid syntax: build.sh <CPE release> cray|gnu|aocc release|debug|craypat|armmap|scorep"
+ERRMSG="Invalid syntax: build-archer2.sh <CPE release> cray|gnu|aocc release|debug|craypat|armmap|scorep"
 
 
 if [[ "${PRGENV}" != "cray" && "${PRGENV}" != "gnu" && "${PRGENV}" != "aocc" ]]; then
