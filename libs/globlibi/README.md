@@ -5,9 +5,9 @@ This library contains general code for fitting global geomagnetic models;
 it makes use of the [SLATEC library](../slatec/README.md).
 
 The GlobLibI library is required by the World Magnetic Anomaly Model (WMAM) code.
-The [build.sh](build.sh) script builds globlibi for [ARCHER2](https://www.archer2.ac.uk/).
+The [build-archer2.sh](build-archer2.sh) script builds globlibi for [ARCHER2](https://www.archer2.ac.uk/).
 
-Simply run `./build.sh <CPE release> <compiler environment> <build type>` to build the GlobLibI library.
+Simply run `./build-archer2.sh <CPE release> <compiler environment> <build type>` to build the GlobLibI library.
 
 As of July 2023, the Cray Programming Environment (CPE) release installed on ARCHER2 is `22.12`.
 The available CPE release version may change in the future - this can be checked by running `module avail cpe`.

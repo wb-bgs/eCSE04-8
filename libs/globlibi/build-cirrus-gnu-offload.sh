@@ -13,8 +13,9 @@ function set_compile_options {
 
 BUILD=$1
 VERSION=5.0
-GCC_VERSION=12.2.0
-ERRMSG="Invalid syntax: build-gnu.sh release|debug"
+GCC_VERSION=12.3.0
+NVHPC_VERSION=24.5
+ERRMSG="Invalid syntax: build-cirrus-gnu-offload.sh release|debug"
 
 
 if [[ "${BUILD}" != "release" && "${BUILD}" != "debug" ]]; then
@@ -23,9 +24,9 @@ if [[ "${BUILD}" != "release" && "${BUILD}" != "debug" ]]; then
 fi
 
 
-module -s load nvidia/nvhpc-nompi/22.2
-module -s load openmpi/4.1.5-cuda-11.6
-module -s swap -f gcc gcc/${GCC_VERSION}-gpu-offload
+module -s load nvidia/nvhpc-nompi/${NVHPC_VERSION}
+module -s load openmpi/4.1.6-cuda-12.4 
+module -s swap -f gcc gcc/${GCC_VERSION}-offload
 
 
 PRFX=${HOME/home/work}
@@ -36,12 +37,12 @@ GLOBLIB_BUILD_ROOT=${PRFX}/projects/eCSE04-8/libs/${GLOBLIB_LABEL}/src
 GLOBLIB_INSTALL_ROOT=${PRFX}/libs/${GLOBLIB_LABEL}/${GLOBLIB_VERSION}/GNU/${GCC_VERSION}-offload
 GLOBLIB_INSTALL_PATH=${GLOBLIB_INSTALL_ROOT}/${BUILD}/lib
 
-echo -e "\n\nBuilding ${GLOBLIB_LABEL} ${GLOBLIB_VERSION} (${BUILD}) using GNU (GCC ${GCC_VERSION}-offload) programming environment...\n\n"
-  
+echo -e "\n\nBuilding ${GLOBLIB_LABEL} ${GLOBLIB_VERSION} (${BUILD}) using GNU ${GCC_VERSION}-offload...\n\n"
+
 
 cd ${GLOBLIB_BUILD_ROOT}
 
-cp makefile.cirrus.gpu makefile
+cp makefile.cirrus.gnu.offload makefile
 sed -i "s:libdir =:libdir = ${GLOBLIB_INSTALL_PATH}:g" ./makefile
 
 set_compile_options ./makefile

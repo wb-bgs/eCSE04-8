@@ -13,7 +13,7 @@ function set_compile_options {
 
 BUILD=$1
 VERSION=5.0
-ERRMSG="Invalid syntax: build-intel.sh release|debug"
+ERRMSG="Invalid syntax: build-cirrus-intel.sh release|debug"
 
 
 if [[ "${BUILD}" != "release" && "${BUILD}" != "debug" ]]; then
