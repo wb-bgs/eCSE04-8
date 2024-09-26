@@ -1,0 +1,32 @@
+# Makefile for iterative model fitting driver program.  This is based
+# on Vincent Lesur's original makefile.
+######################################################################
+main=mod_wmam_020
+
+# decide which compiler to use the library depending on the architecture
+FC = nvfortran
+FFLAGS =
+LIBS =
+RANLIB = ranlib
+
+VPATH=.:subs:io
+#--------------------------------------
+# rule to make .o from .f and .F files
+.f.o:
+	$(FC) $(FFLAGS) $< -c
+.F.o:
+	$(FC) $(FFLAGS) $< -c
+#--------------------------------------
+OBJ=\
+build_damp.o\
+build_damp_space.o\
+fit_data.o\
+ini_model.o\
+point_data.o\
+ref_model.o\
+#--------------------------------------
+$(main) : $(OBJ) $(LALIB) $(main).o 
+	 $(FC) $(FFLAGS) -o $(main) $(main).o $(OBJ) $(LIBS)
+#	 rm *.o
+#	 rm *.mod
+#--------------------------------------

@@ -15,8 +15,9 @@ BUILD=$1
 VERSION=5.0
 GLOBLIBI_VERSION=5.0
 SLATEC_VERSION=4.1
-GCC_VERSION=12.2.0
-ERRMSG="Invalid syntax: build-gnu.sh release|debug"
+GCC_VERSION=12.3.0
+NVHPC_VERSION=24.5
+ERRMSG="Invalid syntax: build-cirrus-gnu-offload.sh release|debug"
 
 
 if [[ "${BUILD}" != "release" && "${BUILD}" != "debug" ]]; then
@@ -25,9 +26,10 @@ if [[ "${BUILD}" != "release" && "${BUILD}" != "debug" ]]; then
 fi
 
 
-module -s load nvidia/nvhpc-nompi/22.2
-module -s load openmpi/4.1.5-cuda-11.6
-module -s swap -f gcc gcc/${GCC_VERSION}-gpu-offload
+module -s load nvidia/nvhpc-nompi/${NVHPC_VERSION}
+module -s load openmpi/4.1.6-cuda-12.4
+module -s swap -f gcc gcc/${GCC_VERSION}-offload
+
 
 PRFX=${HOME/home/work}
 WMAM_LABEL=WMAM
@@ -37,15 +39,15 @@ WMAM_BUILD_ROOT=${PRFX}/projects/eCSE04-8/apps/${WMAM_LABEL}/src
 WMAM_INSTALL_ROOT=${PRFX}/apps/${WMAM_LABEL}/${WMAM_VERSION}/GNU/${GCC_VERSION}-offload
 WMAM_INSTALL_PATH=${WMAM_INSTALL_ROOT}/${BUILD}
 
-echo -e "\n\nBuilding ${WMAM_LABEL} ${WMAM_VERSION} with globlibi ${GLOBLIBI_VERSION} (${BUILD}) using GNU (GCC ${GCC_VERSION}-offload) programming environment...\n\n"
+echo -e "\n\nBuilding ${WMAM_LABEL} ${WMAM_VERSION} with globlibi ${GLOBLIBI_VERSION} (${BUILD}) using GNU ${GCC_VERSION}-offload...\n\n"
   
 
-SLATEC_ROOT=${PRFX}/libs/slatec/${SLATEC_VERSION}/GNU/${GCC_VERSION}/${BUILD}
-GLOBLIBI_ROOT=${PRFX}/libs/globlibi/${GLOBLIBI_VERSION}/GNU/${GCC_VERSION}/${BUILD}
+SLATEC_ROOT=${PRFX}/libs/slatec/${SLATEC_VERSION}/GNU/${GCC_VERSION}-offload/${BUILD}
+GLOBLIBI_ROOT=${PRFX}/libs/globlibi/${GLOBLIBI_VERSION}/GNU/${GCC_VERSION}-offload/${BUILD}
 
 cd ${WMAM_BUILD_ROOT}
 
-cp makefile.cirrus.gpu makefile
+cp makefile.cirrus.gnu.offload makefile
 set_compile_options ./makefile
 
 LIBS_MAKEFILE_LINE="${GLOBLIBI_ROOT}/lib/libgloblibi.a ${SLATEC_ROOT}/lib/libslatec.a"

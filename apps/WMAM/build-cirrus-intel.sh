@@ -15,7 +15,7 @@ BUILD=$1
 VERSION=5.0
 GLOBLIBI_VERSION=5.0
 SLATEC_VERSION=4.1
-ERRMSG="Invalid syntax: build.sh release|debug"
+ERRMSG="Invalid syntax: build-cirrus-intel.sh release|debug"
 
 
 if [[ "${BUILD}" != "release" && "${BUILD}" != "debug" ]]; then

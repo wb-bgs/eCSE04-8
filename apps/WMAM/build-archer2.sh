@@ -53,7 +53,7 @@ BUILD=$3
 VERSION=5.0
 GLOBLIBI_VERSION=5.0
 SLATEC_VERSION=4.1
-ERRMSG="Invalid syntax: build.sh <CPE release> cray|gnu|aocc release|debug|craypat|armmap|scorep"
+ERRMSG="Invalid syntax: build-archer2.sh <CPE release> cray|gnu|aocc release|debug|craypat|armmap|scorep"
 
 
 if [[ "${PRGENV}" != "cray" && "${PRGENV}" != "gnu" && "${PRGENV}" != "aocc" ]]; then

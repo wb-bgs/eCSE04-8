@@ -9,9 +9,9 @@ in the form of a spherical harmonic model. The code offers a choice of two
 flavours of the conjugate gradient iterative inversion scheme; one that
 that incorporates the Polak-Ribière formula and one that does not.
 
-The [build.sh](build.sh) script builds WMAM for [ARCHER2](https://www.archer2.ac.uk/)
+The [build-archer2.sh](build-archer2.sh) script builds WMAM for [ARCHER2](https://www.archer2.ac.uk/)
 
-Simply run `./build.sh <CPE release> <compiler environment> <build type>` to build the WMAM code.
+Simply run `./build-archer2.sh <CPE release> <compiler environment> <build type>` to build the WMAM code.
 
 As of July 2023, the Cray Programming Environment (CPE) release installed on ARCHER2 is `22.12`.
 The CPE release version may change in the future - this can be checked by running `module avail cpe`.
