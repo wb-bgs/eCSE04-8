@@ -47,36 +47,36 @@ c       original unoptimised version
 c
         implicit none
 c
+        real*8, parameter :: d2r = 4.d0*datan(1.d0)/180.d0
+c
         integer ilg, nd
         real*8 rag
         real*8 d2a(0:ilg), pos(nd+1)
-        real*8 bx(*),by(*),bz(*)
+        real*8 bx(*), by(*), bz(*)
 c
-        integer nu,il,im,ik
-        real*8 rc,rs,dw,d2r
-        real*8 ds,dc,ra_div_pos3
-        real*8 dr,p1,p2,p3
+        integer nu, il, im, ik
+        real*8 rc, rs, dw
+        real*8 ds, dc, ra_div_pos3
+        real*8 dr, p1, p2, p3
 c
         real*8, allocatable :: dlf(:),ddlf(:)
         real*8, allocatable :: dra(:)
 c
 c
-        allocate(dlf(ilg+1),ddlf(ilg+1),dra(ilg))
+        allocate(dlf(ilg+1), ddlf(ilg+1), dra(ilg))
 c
-        d2r=4.d0*datan(1.d0)/180.d0
-c
-        p1=pos(1)
-        p2=pos(2)
-        p3=pos(3)
+        p1 = pos(1)*d2r
+        p2 = pos(2)*d2r
+        p3 = pos(3)
 
-        rc = dcos(p1*d2r)
-        rs = dsin(p1*d2r)
+        rc = dcos(p1)
+        rs = dsin(p1)
 
         ra_div_pos3 = rag / p3
 c
 c   im=0
         im=0
-        call mk_lf_dlf(im,ilg,rs,rc,d2a,dlf,ddlf)
+        call mk_lf_dlf(im, ilg, rs, rc, d2a, dlf, ddlf)
         do il=1,ilg
           dr = ra_div_pos3**(il+2)
           dra(il) = dr
@@ -92,9 +92,9 @@ c
 
 c   im.ne.0
         do im=1,ilg
-          call mk_lf_dlf(im,ilg,rs,rc,d2a,dlf,ddlf)
-          dc = dcos(im*p2*d2r)
-          ds = dsin(im*p2*d2r)
+          call mk_lf_dlf(im, ilg, rs, rc, d2a, dlf, ddlf)
+          dc = dcos(im*p2)
+          ds = dsin(im*p2)
           do il=im,ilg
             nu = (il*il + 2*(im-1)) + 1
             ik = il-im+1
@@ -116,7 +116,7 @@ c   im.ne.0
           enddo
         enddo
 c
-        deallocate(dlf,ddlf,dra)
+        deallocate(dlf, ddlf, dra)
 c
         return
         end
@@ -131,42 +131,46 @@ c       does not store the values of 'be'
 c
         implicit none
 c
+        real*8, parameter :: d2r = 4.d0*datan(1.d0)/180.d0
+c
         integer ilg, nb, nd
         real*8 rag
         real*8 d2a(0:ilg), bc(nb), pos(nd+1)
         real*8 bedotbc
         real*8 bex, bey, bez 
 c
-        integer nu,il,im,ik
-        real*8 rc,rs,dw,d2r
-        real*8 ds,dc,ra_div_pos3
-        real*8 dr,p1,p2,p3
-        real*8 bx,by,bz,bxp1,byp1,bzp1
+        integer nu, il, im, ik
+        real*8 rc, rs, dw
+        real*8 ds, dc, ra_div_pos3
+        real*8 dr, p1, p2, p3
+        real*8 bx, by, bz
+        real*8 bxp1, byp1, bzp1
 c
-        real*8, allocatable :: dlf(:),ddlf(:)
+        real*8, allocatable :: dlf(:), ddlf(:)
         real*8, allocatable :: dra(:)
 c 
+c
 #ifdef OMP_OFFLOAD
 !$omp declare target
 #endif
 c
-        allocate(dlf(ilg+1),ddlf(ilg+1),dra(ilg))
+c
+        allocate(dlf(ilg+1), ddlf(ilg+1), dra(ilg))
 
         bedotbc = 0.0d0 
-        d2r=4.d0*datan(1.d0)/180.d0
+        
+        p1 = pos(1)*d2r
+        p2 = pos(2)*d2r
+        p3 = pos(3)
 
-        p1=pos(1)
-        p2=pos(2)
-        p3=pos(3)
-
-        rc = dcos(p1*d2r)
-        rs = dsin(p1*d2r)
+        rc = dcos(p1)
+        rs = dsin(p1)
 
         ra_div_pos3 = rag / p3
 c
 c   im=0
         im=0
-        call mk_lf_dlf(im,ilg,rs,rc,d2a,dlf,ddlf)
+        call mk_lf_dlf(im, ilg, rs, rc, d2a, dlf, ddlf)
         do il=1,ilg
           dr = ra_div_pos3**(il+2)
           dra(il) = dr
@@ -177,16 +181,15 @@ c
           bx = ddlf(ik) * dr
           by = 0.0d0
           bz = -dlf(ik) * dr
-     >           * dble(ik)
-          bedotbc = bedotbc + (bex*bx+bey*by+bez*bz) *bc(nu) 
-
+     >       * dble(ik)
+          bedotbc = bedotbc + (bex*bx+bey*by+bez*bz) * bc(nu) 
         enddo
 
 c   im.ne.0
         do im=1,ilg
-          call mk_lf_dlf(im,ilg,rs,rc,d2a,dlf,ddlf)
-          dc = dcos(im*p2*d2r)
-          ds = dsin(im*p2*d2r)
+          call mk_lf_dlf(im, ilg, rs, rc, d2a, dlf, ddlf)
+          dc = dcos(im*p2)
+          ds = dsin(im*p2)
           do il=im,ilg
             nu = (il*il + 2*(im-1)) + 1
             ik = il-im+1
@@ -211,7 +214,7 @@ c   im.ne.0
           enddo
         enddo
 c
-        deallocate(dlf,ddlf,dra)
+        deallocate(dlf, ddlf, dra)
 c
         return
         end
@@ -225,40 +228,43 @@ c       computes 'be'
 c
         implicit none
 c
+        real*8, parameter :: d2r = 4.d0*datan(1.d0)/180.d0
+c
         integer ilg, nb, nd
         real*8 rag
         real*8 d2a(0:ilg), be(nb), pos(nd+1)
         real*8 bex, bey, bez 
 c
-        integer nu,il,im,ik
-        real*8 rc,rs,dw,d2r
-        real*8 ds,dc,ra_div_pos3
-        real*8 dr,p1,p2,p3
-        real*8 bx,by,bz,bxp1,byp1,bzp1
+        integer nu, il, im, ik
+        real*8 rc, rs, dw
+        real*8 ds, dc, ra_div_pos3
+        real*8 dr, p1, p2, p3
+        real*8 bx, by, bz
+        real*8 bxp1, byp1, bzp1
 c
-        real*8, allocatable :: dlf(:),ddlf(:)
+        real*8, allocatable :: dlf(:), ddlf(:)
         real*8, allocatable :: dra(:)
 c 
+c
 #ifdef OMP_OFFLOAD
 !$omp declare target
 #endif
 c
-        allocate(dlf(ilg+1),ddlf(ilg+1),dra(ilg))
-
-        d2r=4.d0*datan(1.d0)/180.d0
 c
-        p1=pos(1)
-        p2=pos(2)
-        p3=pos(3)
+        allocate(dlf(ilg+1), ddlf(ilg+1), dra(ilg))
+c
+        p1 = pos(1)*d2r
+        p2 = pos(2)*d2r
+        p3 = pos(3)
 
-        rc = dcos(p1*d2r)
-        rs = dsin(p1*d2r)
+        rc = dcos(p1)
+        rs = dsin(p1)
 
         ra_div_pos3 = rag / p3
 c
 c   im=0
         im=0
-        call mk_lf_dlf(im,ilg,rs,rc,d2a,dlf,ddlf)
+        call mk_lf_dlf(im, ilg, rs, rc, d2a, dlf, ddlf)
         do il=1,ilg
           dr = ra_div_pos3**(il+2)
           dra(il) = dr
@@ -269,16 +275,16 @@ c
           bx = ddlf(ik) * dr
           by = 0.0d0
           bz = -dlf(ik) * dr
-     >           * dble(ik)
-          be(nu) = bex*bx+bey*by+bez*bz 
+     >       * dble(ik)
 
+          be(nu) = bex*bx + bey*by + bez*bz 
         enddo
 
 c   im.ne.0
         do im=1,ilg
-          call mk_lf_dlf(im,ilg,rs,rc,d2a,dlf,ddlf)
-          dc = dcos(im*p2*d2r)
-          ds = dsin(im*p2*d2r)
+          call mk_lf_dlf(im, ilg, rs, rc, d2a, dlf, ddlf)
+          dc = dcos(im*p2)
+          ds = dsin(im*p2)
           do il=im,ilg
             nu = (il*il + 2*(im-1)) + 1
             ik = il-im+1
@@ -298,13 +304,12 @@ c   im.ne.0
             bz   = -dw*dc
             bzp1 = -dw*ds
 
-            be(nu) = bex*bx+bey*by+bez*bz 
-            be(nu+1) = bex*bxp1+bey*byp1+bez*bzp1 
-
+            be(nu) = bex*bx + bey*by + bez*bz 
+            be(nu+1) = bex*bxp1 + bey*byp1 + bez*bzp1 
           enddo
         enddo
 c
-        deallocate(dlf,ddlf,dra)   
+        deallocate(dlf, ddlf, dra)   
 c
         return
         end
@@ -319,44 +324,47 @@ c       it computes dx = bx.bc, dy = by.bc and dz = bz.bc
 c
         implicit none
 c
+        real*8, parameter :: d2r = 4.d0*datan(1.d0)/180.d0
+c
         integer ilg, nb, nd
         real*8 rag
         real*8 d2a(0:ilg), bc(nb), pos(nd+1)
         real*8 dx, dy, dz 
 c
-        integer nu,il,im,ik
-        real*8 rc,rs,dw,d2r
-        real*8 ds,dc,ra_div_pos3
-        real*8 dr,p1,p2,p3
-        real*8 bx,by,bz,bxp1,byp1,bzp1
+        integer nu, il, im, ik
+        real*8 rc, rs, dw
+        real*8 ds, dc, ra_div_pos3
+        real*8 dr, p1, p2, p3
+        real*8 bx, by, bz
+        real*8 bxp1, byp1, bzp1
 c
-        real*8, allocatable :: dlf(:),ddlf(:)
-        real*8, allocatable :: dra(:) 
+        real*8, allocatable :: dlf(:), ddlf(:)
+        real*8, allocatable :: dra(:)
+c        
 c 
 #ifdef OMP_OFFLOAD
 !$omp declare target
 #endif
 c
-        allocate(dlf(ilg+1),ddlf(ilg+1),dra(ilg))
 c
-        d2r=4.d0*datan(1.d0)/180.d0
-
+        allocate(dlf(ilg+1), ddlf(ilg+1), dra(ilg))
+c
         dx = 0.0d0
         dy = 0.0d0 
         dz = 0.0d0 
 
-        p1=pos(1)
-        p2=pos(2)
-        p3=pos(3)
+        p1 = pos(1)*d2r
+        p2 = pos(2)*d2r
+        p3 = pos(3)
 
-        rc = dcos(p1*d2r)
-        rs = dsin(p1*d2r)
+        rc = dcos(p1)
+        rs = dsin(p1)
 
         ra_div_pos3 = rag / p3
 c
 c   im=0
         im=0
-        call mk_lf_dlf(im,ilg,rs,rc,d2a,dlf,ddlf)
+        call mk_lf_dlf(im, ilg, rs, rc, d2a, dlf, ddlf)
         do il=1,ilg
           dr = ra_div_pos3**(il+2)
           dra(il) = dr
@@ -367,7 +375,7 @@ c
           bx = ddlf(ik) * dr
           by = 0.0d0
           bz = -dlf(ik) * dr
-     >           * dble(ik)
+     >       * dble(ik)
 
           dx = dx + bx * bc(nu) 
           dy = dy + by * bc(nu) 
@@ -376,9 +384,9 @@ c
 
 c   im.ne.0
         do im=1,ilg
-          call mk_lf_dlf(im,ilg,rs,rc,d2a,dlf,ddlf)
-          dc = dcos(im*p2*d2r)
-          ds = dsin(im*p2*d2r)
+          call mk_lf_dlf(im, ilg, rs, rc, d2a, dlf, ddlf)
+          dc = dcos(im*p2)
+          ds = dsin(im*p2)
           do il=im,ilg
             nu = (il*il + 2*(im-1)) + 1
             ik = il-im+1
@@ -404,7 +412,7 @@ c   im.ne.0
           enddo
         enddo
 c
-        deallocate(dlf,ddlf,dra)
+        deallocate(dlf, ddlf, dra)
 c
         return
         end
