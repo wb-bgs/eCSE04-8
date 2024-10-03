@@ -56,9 +56,11 @@ c
           np=min0(nlocpts-ip+1,npmax)
 c
 c  calculate the equations of condition
-          call mkArows((ip>nlocdatpts),
-     >                  shdeg, nb, nd, np, npmax,
-     >                  d2a, bc, ppos(1,ip), aa)
+          call mkArows(shdeg, nb, nd, np,
+     >                 ip, nlocdatpts,
+     >                 d2a, bc, ppos(1,ip),
+     >                 aa)
+
 c
 c  calculate the delta data
           do i=1,np

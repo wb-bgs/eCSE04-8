@@ -51,16 +51,17 @@ c
         real*8 cov(nlocpts), ddat(nlocpts)
         real*8 xyzf(nlocpts), gj(nb), hj(nb)
 c
+        integer nchk, nrem
+        integer ip, ip2, i, j
+c
+        real*8, allocatable :: dwgh(:),ddif(:)
+        real*8, allocatable :: aa(:,:)
+c
 #ifdef OMP_OFFLOAD
         logical, save :: firstcall = .TRUE.
 #endif
 c
-        integer nchk, nrem
-        integer ip, ip2, i, j
-        real*8, allocatable :: dwgh(:),ddif(:)
-        real*8, allocatable :: aa(:,:)
-c
-c
+c 
         gj(1:nb)=0.0d0
         hj(1:nb)=0.0d0
 c
@@ -110,9 +111,10 @@ c
           enddo
 c        
 c  calculate the equations of condition          
-          call mkArows((ip>nlocdatpts),
-     >                  shdeg, nb, nd, npmax, npmax,
-     >                  d2a, bc, ppos(1,ip), aa)
+          call mkArows(shdeg, nb, nd, npmax,
+     >                 ip, nlocdatpts,
+     >                 d2a, bc, ppos(1,ip),
+     >                 aa)
 c
 c  update the G matrix and B vector
           call concoct_GJ(nb,npmax,npmax,dwgh,aa,ddif,gj)
@@ -142,9 +144,10 @@ c
           enddo
 c        
 c  calculate the equations of condition          
-          call mkArows((ip>nlocdatpts),
-     >                  shdeg, nb, nd, npmax, npmax,
-     >                  d2a, bc, ppos(1,ip), aa)
+          call mkArows(shdeg, nb, nd, npmax,
+     >                 ip, nlocdatpts,
+     >                 d2a, bc, ppos(1,ip),
+     >                 aa)
 c
 c  update the G matrix and B vector
           call concoct_GJ(nb,npmax,npmax,dwgh,aa,ddif,gj)
@@ -157,22 +160,25 @@ c
 c
 c
 c  do the last iteration
-        ip = 1 + nchk*npmax
-        ip2 = ip
-        do j = 1,nrem
-          ddif(j) = ddat(ip2)-xyzf(ip2)
-          dwgh(j) = 1.d0/cov(jcov(ip2))
-          ip2 = ip2+1
-        enddo
+        if (nrem > 0) then
+          ip = 1 + nchk*npmax
+          ip2 = ip
+          do j = 1,nrem
+            ddif(j) = ddat(ip2)-xyzf(ip2)
+            dwgh(j) = 1.d0/cov(jcov(ip2))
+            ip2 = ip2+1
+          enddo
 c
 c  calculate the equations of condition
-        call mkArows((ip>nlocdatpts),
-     >               shdeg, nb, nd, nrem, npmax,
-     >               d2a, bc, ppos(1,ip), aa)
+          call mkArows(shdeg, nb, nd, nrem,
+     >                 ip, nlocdatpts,
+     >                 d2a, bc, ppos(1,ip),
+     >                 aa)
 c
 c  update the G matrix and B vector
-        call concoct_GJ(nb,nrem,npmax,dwgh,aa,ddif,gj)
-        call concoct_HJ(nb,nrem,npmax,dwgh,aa,hj)
+          call concoct_GJ(nb,nrem,npmax,dwgh,aa,ddif,gj)
+          call concoct_HJ(nb,nrem,npmax,dwgh,aa,hj)
+        end if
 c
 c
         deallocate(dwgh,ddif,aa)
