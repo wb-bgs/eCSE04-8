@@ -44,15 +44,11 @@ c
         real*8, allocatable :: dw2(:,:)
 c
         integer i,j,k
-        real*8 r2,qpi
 c
 c
 c  MPI, determine rank
         integer ierr,rank
         call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
-c
-        r2=RAG**2
-        qpi=16.d0*datan(1.d0)
 c
 c  Define sampling points
         allocate (glw(nlocsampts))
