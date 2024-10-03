@@ -35,6 +35,7 @@ c
         character mpifunc*40 
         real*8, allocatable :: buf(:)
 c
+c  globlibi subroutine
         external dy2mjd
 c
 c
@@ -183,6 +184,7 @@ c
         character mpifunc*40 
         real*8, allocatable :: buf(:)
 c
+c  globlibi subroutine
         external dy2mjd
 c
 c
