@@ -29,15 +29,14 @@ c
         real*8  :: d2a(0:shdeg), ppos(nd+1,nlocpts), bc(nb)
         real*8  :: wmam_fun, xyzf(nlocpts)
 c
+        integer :: i
+c
 #ifdef OMP_OFFLOAD
         logical, save :: firstcall = .TRUE.
 #endif
 c
-        integer :: i
-c
         external wmam_fun
 c 
-c
 c
 #ifdef OMP_OFFLOAD
 c

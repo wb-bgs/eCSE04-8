@@ -23,7 +23,7 @@ c
 c
 	real*8 dx, dy, dz, dd
 c
-	real*8 dxbey, dxbez
+ 	real*8 dxbey, dxbez
 	real*8 dybex, dybez
 	real*8 dzbex, dzbey
 c
@@ -40,16 +40,16 @@ c
 #endif
 c
 c 
-c    if 'fun' is set to .true. then this routine is being called from wmam_fun() 
-c    and returns the dot product of 'be' and 'bc' in 'bedotbc', but 'be' does not
-c    contain valid values
+c  if 'fun' is set to .true. then this routine is being called from wmam_fun() 
+c  and returns the dot product of 'be' and 'bc' in 'bedotbc', but 'be' does not
+c  contain valid values
 c
-c    if 'fun' is set to .false. then this routine is being called from wmam_sub()
-c    and returns the array 'be', and 'bedotbc' does not contain a valid value.   
+c  if 'fun' is set to .false. then this routine is being called from wmam_sub()
+c  and returns the array 'be', and 'bedotbc' does not contain a valid value.   
 c     
-c    calculate internal field component
+c  calculate internal field component
 	if (issampt) then
-c    this is a sampling point
+c  this is a sampling point
           call XYZsph_bi0_sample(shdeg, nb, nd, RAG,
      >                           d2a, bc, bp,
      >                           dx, dy, dz)
@@ -83,7 +83,7 @@ c
 	  bez = bez2
 	
 	else
-c    this is a data point 
+c  this is a data point 
 	
 	  bex = bp(5)
 	  bey = bp(6)
@@ -92,12 +92,12 @@ c    this is a data point
 	endif 
 	
 	if (fun) then 
-c        computes 'bedotbc' as dot product of 'be' and 'bc' 
+c  computes 'bedotbc' as dot product of 'be' and 'bc' 
           call XYZsph_bi0_fun(shdeg, nb, nd, RAG,
      >                        d2a, bc, bp, bedotbc,
      >                        bex, bey, bez)
         else
-c        computes 'be' 
+c  computes 'be' 
           call XYZsph_bi0_sub(shdeg, nb, nd, RAG,
      >                        d2a, be, bp,
      >                        bex, bey, bez)
