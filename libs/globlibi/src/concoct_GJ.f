@@ -31,14 +31,13 @@ c
         integer nl1,nl2,nl3,il,j
         real*8 w2s(nl3),a2(nl1,nl3),bb(nl3),gj(nl1),dw1
 c
-c       real*8 l2_norm
-c       external l2_norm
+c
 #ifdef OMP_OFFLOAD
 !$omp declare target
 #endif
 c
+c
         do j=1,nl2
-c         dw1=2.d0*l2_norm()*w2s(j)*bb(j)
           dw1=2.d0*w2s(j)*bb(j)
           do il=1,nl1
             gj(il)=gj(il)+a2(il,j)*dw1

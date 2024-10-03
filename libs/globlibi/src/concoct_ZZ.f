@@ -25,13 +25,9 @@ c
         integer nl1,nl2,il,j
         real*8 ds(*),w2s(*),a2(nl1,*),zz(*),dw1
 c
-c       real*8 l2_norm
-c       external l2_norm
-c
 c
         do j=1,nl2
           dw1=dot_product(a2(1:nl1,j),ds(1:nl1))
-c         dw1=2.d0*l2_norm()*w2s(j)*dw1
           dw1=2.d0*w2s(j)*dw1
           do il=1,nl1
             zz(il)=zz(il)+dw1*a2(il,j)
