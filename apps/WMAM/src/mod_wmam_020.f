@@ -34,9 +34,7 @@ c
         character(len=*), parameter :: VERSION="5.0.0"
 c
         integer, parameter :: POLAK_RIBIERE=1
-        integer, parameter :: CONJUGATE_GRADIENT=2
         integer, parameter :: ND=7
-        integer, parameter :: NPMAX=3
 c
         character fname*100
         character buf*100
@@ -103,6 +101,10 @@ c  Read in command line arguments
         if (cmdcnt.ge.3) then
           call GET_COMMAND_ARGUMENT(3,argstr)
           read(argstr,*) scheme
+          if (scheme.ne.POLAK_RIBIERE) then
+            write(*,*) 'Error! Scheme must be POLAK RIBIERE (1).'
+            stop
+          endif
         else
           scheme=POLAK_RIBIERE
         endif
@@ -350,23 +352,13 @@ c
         fname='./Results/'
         allocate(gg(1:1,1:1))
         allocate(bb(1:1))
-
 c
-        if (scheme.eq.POLAK_RIBIERE) then
-          call opt_pr_p3(fname, itmax, NPMAX, ND, nparams,
-     >                   npts, nlocpts, nlocdatpts, shdeg,
-     >                   d2a, ppos, bc, dl,
-     >                   cov, ijcov(1,2),
-     >                   stdt, dw, bb, gg)
-        else
-c         CONJUGATE_GRADIENT
-          call opt_ghc_p2(fname, itmax, NPMAX, ND, nparams,
-     >                    npts, nlocpts, nlocdatpts, shdeg,
-     >                    d2a, ppos, bc, dl,
-     >                    cov, ijcov(1,2),
-     >                    stdt, dw, bb, gg)
-        endif
-
+c
+        call opt_pr_p3(fname, itmax, ND, nparams,
+     >                 npts, nlocpts, nlocdatpts, shdeg,
+     >                 d2a, ppos, bc, dl,
+     >                 cov, ijcov(1,2),
+     >                 stdt, dw, bb, gg)
 c
         deallocate(bb)
         deallocate(gg)
