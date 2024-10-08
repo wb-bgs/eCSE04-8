@@ -48,7 +48,6 @@ c
 c     input:
 c         path          path where should be writen outputs
 c         itmax(3)      array for Maximum number of iterations
-c         npmax         number max of data point with correlated errors
 c         nd            space dimension
 c         nb            Number of parameters
 c         npts          Total number of points (data + sampling) for all ranks
@@ -68,7 +67,7 @@ c         stdt          STD value for given BC
 c         xyzf(*)       Forward modelling for given BC
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine opt_pr_p3(path, itmax, npmax, nd, nb,
+        subroutine opt_pr_p3(path, itmax, nd, nb,
      >                       npts, nlocpts, nlocdatpts, shdeg,
      >                       d2a, ppos, bc, dl,
      >                       cov, jcov, stdt, xyzf, bb, gg)
@@ -87,8 +86,9 @@ c
         real*8, optional :: bb(:),gg(:)
         character path*100
 c
-        integer i,ip,it,itm,iunit,ipth,itm_l,itm_r
-        integer ierr,rank
+        integer i,j,k
+        integer ip,it,itm,iunit,ipth,itm_l,itm_r
+        integer ierr,rank, gj_map_len 
         real*8 stdo,stp,std,epss,dd,cond,dm,beta
 c
         type(inversion_status) inv_stat
@@ -104,6 +104,7 @@ c
         real*8, allocatable :: ds(:),dh(:),ddat(:)
         real*8, allocatable :: gj(:),gjo(:)
         real*8, allocatable :: ghj(:),ghjo(:)
+        integer, allocatable :: gj_map(:)
 c
 c
 c All defining parallel enviroment
@@ -134,6 +135,22 @@ c
         allocate (gj(1:nb))
         allocate (ghj(1:nb))
         allocate (ddat(1:nlocpts))
+c
+c  Setup gj/hj map
+        gj_map_len = shdeg + int((nb-shdeg)/2)
+        allocate (gj_map(1:gj_map_len))
+c
+        do i=1,shdeg
+          gj_map(i) = i*i
+        enddo
+c  
+        i = shdeg+1
+        do j=1,shdeg
+          do k=j,shdeg
+            gj_map(i) = (k*k + 2*(j-1)) + 1
+            i = i+1
+          enddo
+        enddo
 c
 c Open file for linear search outputs
         if (rank.eq.0) then
@@ -186,7 +203,7 @@ c               if(rank.eq.0)write(*,*)'opt_pr_p3: 1'
      >                               d2a, ppos, nb, inv_stat%bc,
      >                               xyzf)
 c
-                call cptstd_dp(npmax, npts, nlocpts,
+                call cptstd_dp(npts, nlocpts,
      >                         jcov, cov, ddat, xyzf,
      >                         std)
                 stdo=std
@@ -201,11 +218,12 @@ c All: do their part in finding GJ, DH
 c
                 if (itmax(1).ge.0.or.it.ne.1) then
 c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 2'
-                    call ssqgh_dp(npmax, nd, nlocpts, nlocdatpts,
+                    call ssqgh_dp(nd, nlocpts, nlocdatpts,
      >                            shdeg, d2a, ppos, nb,
      >                            inv_stat%bc,
-     >                            jcov, cov, ddat,
-     >                            xyzf, gj, dh)
+     >                            jcov, cov, ddat, xyzf,
+     >                            gj_map_len, gj_map, 
+     >                            gj, dh)
                 else
                     if (present(bb)) then
                         gj(1:nb)=bb(1:nb)
@@ -293,7 +311,7 @@ c ALL: search minimum in descent direction
      >              inv_stat%yon(5:5) .eq. 'r') then
                     if (itmax(3).ge.0) then
 c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 4'
-                        call gc_step_p(iunit, npmax, nd,
+                        call gc_step_p(iunit, nd,
      >                                 npts, nlocpts, nlocdatpts,
      >                                 shdeg, d2a, ppos, ddat,
      >                                 nb, inv_stat%bc,
@@ -301,7 +319,7 @@ c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 4'
      >                                 gj, ghj, ds, stp, xyzf)
                     else
 c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 5'
-                        call lsearch_p(iunit, itm_l, npmax, nd, 
+                        call lsearch_p(iunit, itm_l, nd, 
      >                                 npts, nlocpts, nlocdatpts,
      >                                 shdeg, d2a, ppos, ddat,
      >                                 nb, inv_stat%bc,
@@ -311,7 +329,7 @@ c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 5'
                     endif
                 else
 c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 6'
-                    call lsearch_p(iunit, itm_l, npmax, nd, 
+                    call lsearch_p(iunit, itm_l, nd, 
      >                             npts, nlocpts, nlocdatpts,
      >                             shdeg, d2a, ppos, ddat,
      >                             nb, inv_stat%bc,
@@ -429,6 +447,7 @@ c
         deallocate (ddat)
         deallocate (ghj)
         deallocate (gj)
+        deallocate (gj_map)
         deallocate (ds)
         if (rank.eq.0) then
             deallocate (ghjo)
