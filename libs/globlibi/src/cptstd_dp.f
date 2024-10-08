@@ -22,10 +22,8 @@ c
 c       Called: cptstd_d2, MPI_ALLGATHER
 c
 c       input:
-c          npmax          number max of data point with correlated errors
 c          npts           Total number of points (data + sampling) for all ranks
 c          nlocpts        Total number of points for this rank
-c          jcov           integer arrays describing cov format
 c          cov            Covariance matrix in SLAP column format
 c          ddat           data vector
 c          xyzf           result of forward modelling
@@ -34,26 +32,39 @@ c       output:
 c          std            STD value
 c        
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine cptstd_dp(npmax, npts, nlocpts, jcov, cov, ddat,
-     >                       xyzf, std)
+        subroutine cptstd_dp(npts, nlocpts, jcov,
+     >                       cov, ddat, xyzf, std)
 c
         implicit none
 c
         include 'mpif.h'
 c
-        integer :: npmax,npts,nlocpts,jcov(*)
-        real*8  :: cov(*),ddat(*),xyzf(*)       
-        real*8 std
+        integer :: npts, nlocpts
+        integer :: jcov(nlocpts+2)
+        real*8  :: cov(nlocpts), ddat(nlocpts), xyzf(nlocpts)       
+        real*8  :: std
+c
+        integer i, ierr
+        real*8 dwgh, ddif
+c
+c
+        std = 0.0d0
+c
+        do i=1,nlocpts
+c
+c  Calculate the inverse covariance matrix
+          dwgh = 1.d0/cov(jcov(i))          
+c
+c  Calculate the delta data
+          ddif = ddat(i)-xyzf(i)
 
-        integer ierr
+c  Calculate STD
+          std = std + dwgh*(ddif**2)
 c
-c
-c  All: Now does the work
-        call cptstd_d2(npmax, 1, nlocpts, jcov,
-     >                 cov, ddat, xyzf,
-     >                 std)
+        enddo
 c
 c  Compute the standard deviation across all ranks
+        std = dsqrt(std/dble(nlocpts))
         std = nlocpts*(std**2)
 c
         call MPI_ALLREDUCE(MPI_IN_PLACE, std, 1,
