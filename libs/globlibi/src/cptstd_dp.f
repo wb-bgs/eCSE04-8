@@ -19,7 +19,7 @@ c       replace common by MPI_Comm_size and MPI_Comm_rank
 c
 c       Parallel interface for cptstd.f
 c
-c       Called: cptstd_d2, MPI_ALLGATHER
+c       Called: MPI_ALLREDUCE
 c
 c       input:
 c          npts           Total number of points (data + sampling) for all ranks
