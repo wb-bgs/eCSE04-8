@@ -22,7 +22,6 @@ c     Parallel version
 c
 c     input:
 c         iunit         integer unit number for I/O
-c         npmax         number max of data point with correlated errors
 c         nd            space dimension
 c         npts          Total number of points (data + sampling) for all ranks
 c         nlocpts       Total number of points for this rank
@@ -45,7 +44,7 @@ c         stp           recommended step in direction ds(*)
 c         std           STD value for given BC+stp*DS
 c         xyzf(*)       Forward modelling for given BC+stp*DS
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine gc_step_p(iunit, npmax, nd, 
+        subroutine gc_step_p(iunit, nd, 
      >                       npts, nlocpts, nlocdatpts,
      >                       shdeg, d2a, ppos, ddat, nb, bc,
      >                       cov, jcov,
@@ -55,7 +54,7 @@ c
 c
         include 'mpif.h'
 c
-        integer iunit,npmax,nd,npts,nlocpts,nlocdatpts
+        integer iunit,nd,npts,nlocpts,nlocdatpts
         real*8 d2a(*),ppos(*),ddat(*)
         integer nb,shdeg
         real*8 bc(*),cov(*)
@@ -106,7 +105,7 @@ c ALL: Do the forward modelling
         call cpt_dat_vals_p2(nd, nlocpts, nlocdatpts,
      >                       shdeg, d2a, ppos, nb, bcn,
      >                       xyzf)
-        call cptstd_dp(npmax, npts, nlocpts,
+        call cptstd_dp(npts, nlocpts,
      >                 jcov, cov, ddat,
      >                 xyzf, std)
 c
