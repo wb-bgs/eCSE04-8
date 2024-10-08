@@ -4,9 +4,9 @@
 function set_compile_options {
   MAKEFILE=$1
   if [[ "${BUILD}" == "release" ]]; then
-    sed -i "s:FFLAGS =:FFLAGS = -O3 -cpp -fopenmp -foffload=nvptx-none -Wno-argument-mismatch -std=legacy -fdefault-real-8 -fdefault-double-8:g" ${MAKEFILE}
+    sed -i "s:FFLAGS =:FFLAGS = -O3 -cpp -fopenmp -DOMP_OFFLOAD -foffload=nvptx-none -Wno-argument-mismatch -std=legacy -fdefault-real-8 -fdefault-double-8:g" ${MAKEFILE}
   elif [[ "${BUILD}" == "debug" ]]; then
-    sed -i "s:FFLAGS =:FFLAGS = -g -O0 -cpp -fopenmp -foffload=nvptx-none -Wno-argument-mismatch -std=legacy -fdefault-real-8 -fdefault-double-8 -fcheck=all -ffpe-trap=invalid,zero,overflow -fbacktrace:g" ${MAKEFILE}
+    sed -i "s:FFLAGS =:FFLAGS = -g -O0 -cpp -fopenmp -DOMP_OFFLOAD -foffload=nvptx-none -Wno-argument-mismatch -std=legacy -fdefault-real-8 -fdefault-double-8 -fcheck=all -ffpe-trap=invalid,zero,overflow -fbacktrace:g" ${MAKEFILE}
   fi
 }
 
