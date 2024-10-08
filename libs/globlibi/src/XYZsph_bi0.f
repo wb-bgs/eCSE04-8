@@ -1,342 +1,52 @@
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c	Subroutine XYZsph_bi0
-c		Vincent Lesur 21/01/2009
-c
-c    modified:
-c       07.01.2010  V.Lesur :
-c         1- reference radius ra as parameter
-c
-c       For a all spherical harmonique between degree 1 and nlie
-c       and a  colatitude, longitude, radius computes for
-c       internal sources: 
-c       X component basis  (X horizontal North)
-c       Y component basis  (Y horizontal East)
-c       Z component basis  (Z Vertical Down) 
-c
-c       These basis is the derivative of a potential 
-c       defined on the sphere of radius "ra"  
-c       (See Foundations of Geomagnetism, Backus 1996 page 110 and 125)
-c      
-c       No time dependence
-c
-c       Spherical harmonics are set by increasing degree "l", for 
-c       a given degree by increasing order "m" (l=0,m=0 excluded)
-c       nu=(l**2+2*(m-1))   FOR cosine terms if m.ne.0
-c       nu=(l**2+2*m-1)     For sine terms or m=0
-c
-c       colat,long,radius given in degree,degree,km
-c
+c	subroutine XYZsph_bi0_sample
+c		
+c       Compute dx = bx.bc, dy = by.bc and dz = bz.bc.
+c       This subroutine is called for sample points only.
+c             
 c       input:
-c         ilg  INTEGER   max SH degree
-c         nd   INTEGER   space dimension 
-c         rag  REAL*8    reference radius
-c         d2a  REAL*8    pre-computed d2a array for mklf_F2()
-c         pos  REAL*8    positions in space and time (colat,long,radius)
+c          shdeg  INTEGER       max SH degree value
+c          nb     INTEGER       number of coefficients
+c          d2a    REAL*8        pre-computed array for mklf_F2()
+c          bc     REAL*8        coefficient array
+c          p1     REAL*8        co-latitude
+c          p2     REAL*8        longitude
+c          ra     REAL*8        radius
 c
 c       output:
-c         bx   REAL*8   X Base funtion value
-c         by   REAL*8   Y Base funtion value
-c         bz   REAL*8   Z Base funtion value
-c       
+c          bex    REAL*8        x component of magnetic field
+c          bey    REAL*8        y component of magnetic field
+c          bez    REAL*8        z component of magnetic field
+c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine XYZsph_bi0(ilg, nd, rag,
-     >                        d2a, pos,
-     >                        bx, by, bz)
-c
-c       original unoptimised version 
-c
-        implicit none
-c
-        real*8, parameter :: d2r = 4.d0*datan(1.d0)/180.d0
-c
-        integer ilg, nd
-        real*8 rag
-        real*8 d2a(0:ilg), pos(nd+1)
-        real*8 bx(*), by(*), bz(*)
-c
-        integer nu, il, im, ik
-        real*8 rc, rs, dw
-        real*8 ds, dc, ra_div_pos3
-        real*8 dr, p1, p2, p3
-c
-        real*8, allocatable :: dlf(:),ddlf(:)
-        real*8, allocatable :: dra(:)
-c
-c
-        allocate(dlf(ilg+1), ddlf(ilg+1), dra(ilg))
-c
-        p1 = pos(1)*d2r
-        p2 = pos(2)*d2r
-        p3 = pos(3)
-
-        rc = dcos(p1)
-        rs = dsin(p1)
-
-        ra_div_pos3 = rag / p3
-c
-c   im=0
-        im=0
-        call mk_lf_dlf(im, ilg, rs, rc, d2a, dlf, ddlf)
-        do il=1,ilg
-          dr = ra_div_pos3**(il+2)
-          dra(il) = dr
-c          
-          nu = il*il
-          ik = il+1
-c          
-          bx(nu) = ddlf(ik) * dr
-          by(nu) = 0.0d0
-          bz(nu) = -dlf(ik) * dr
-     >           * dble(ik)
-        enddo
-
-c   im.ne.0
-        do im=1,ilg
-          call mk_lf_dlf(im, ilg, rs, rc, d2a, dlf, ddlf)
-          dc = dcos(im*p2)
-          ds = dsin(im*p2)
-          do il=im,ilg
-            nu = (il*il + 2*(im-1)) + 1
-            ik = il-im+1
-            dr = dra(il)
-
-            dw = ddlf(ik) * dr
-            bx(nu)   = dw*dc
-            bx(nu+1) = dw*ds
-            
-            dw = (dlf(ik)/rs) * dr
-     >         * dble(im) 
-            by(nu)   =  dw*ds
-            by(nu+1) = -dw*dc
-            
-            dw = dlf(ik) * dr
-     >         * dble(il+1)
-            bz(nu)   = -dw*dc
-            bz(nu+1) = -dw*ds
-          enddo
-        enddo
-c
-        deallocate(dlf, ddlf, dra)
-c
-        return
-        end
-
-        subroutine XYZsph_bi0_fun(ilg, nb, nd, rag,
-     >                            d2a, bc, pos, bedotbc,
-     >                            bex, bey, bez)
-c
-c       this variant takes 'bex', 'bey', and 'bez' as inputs and 
-c       computes 'bedotbc' as the dot product of 'be' and 'bc', but
-c       does not store the values of 'be' 
+        subroutine XYZsph_bi0_sample(shdeg, nb,
+     >                               d2a, bc,
+     >                               p1, p2, ra,
+     >                               bex, bey, bez)
 c
         implicit none
 c
-        real*8, parameter :: d2r = 4.d0*datan(1.d0)/180.d0
-c
-        integer ilg, nb, nd
-        real*8 rag
-        real*8 d2a(0:ilg), bc(nb), pos(nd+1)
-        real*8 bedotbc
+        integer shdeg, nb
+        real*8 d2a(0:shdeg), bc(nb)
+        real*8 p1, p2, ra
         real*8 bex, bey, bez 
 c
         integer nu, il, im, ik
-        real*8 rc, rs, dw
-        real*8 ds, dc, ra_div_pos3
-        real*8 dr, p1, p2, p3
+        real*8 rc, rs
+        real*8 ds, dc, dr, dw
         real*8 bx, by, bz
         real*8 bxp1, byp1, bzp1
 c
-        real*8, allocatable :: dlf(:), ddlf(:)
-        real*8, allocatable :: dra(:)
-c 
+        real*8 dx, dy, dz, dd
+        real*8 dxbey, dxbez
+        real*8 dybex, dybez
+        real*8 dzbex, dzbey
 c
-#ifdef OMP_OFFLOAD
-!$omp declare target
-#endif
+        real*8 xy_c, xz_c
+        real*8 yx_c, yz_c
+        real*8 zx_c, zy_c
 c
-c
-        allocate(dlf(ilg+1), ddlf(ilg+1), dra(ilg))
-
-        bedotbc = 0.0d0 
-        
-        p1 = pos(1)*d2r
-        p2 = pos(2)*d2r
-        p3 = pos(3)
-
-        rc = dcos(p1)
-        rs = dsin(p1)
-
-        ra_div_pos3 = rag / p3
-c
-c   im=0
-        im=0
-        call mk_lf_dlf(im, ilg, rs, rc, d2a, dlf, ddlf)
-        do il=1,ilg
-          dr = ra_div_pos3**(il+2)
-          dra(il) = dr
-c          
-          nu = il*il
-          ik = il+1
-c          
-          bx = ddlf(ik) * dr
-          by = 0.0d0
-          bz = -dlf(ik) * dr
-     >       * dble(ik)
-          bedotbc = bedotbc + (bex*bx+bey*by+bez*bz) * bc(nu) 
-        enddo
-
-c   im.ne.0
-        do im=1,ilg
-          call mk_lf_dlf(im, ilg, rs, rc, d2a, dlf, ddlf)
-          dc = dcos(im*p2)
-          ds = dsin(im*p2)
-          do il=im,ilg
-            nu = (il*il + 2*(im-1)) + 1
-            ik = il-im+1
-            dr = dra(il)
-
-            dw = ddlf(ik) * dr
-            bx   = dw*dc
-            bxp1 = dw*ds
-            
-            dw = (dlf(ik)/rs) * dr
-     >         * dble(im) 
-            by   =  dw*ds
-            byp1 = -dw*dc
-            
-            dw = dlf(ik) * dr
-     >         * dble(il+1)
-            bz   = -dw*dc
-            bzp1 = -dw*ds
-
-            bedotbc = bedotbc + (bex*bx+bey*by+bez*bz) * bc(nu) 
-     >                + (bex*bxp1+bey*byp1+bez*bzp1) * bc(nu+1)  
-          enddo
-        enddo
-c
-        deallocate(dlf, ddlf, dra)
-c
-        return
-        end
-
-        subroutine XYZsph_bi0_sub(ilg, nb, nd, rag,
-     >                            d2a, be, pos,
-     >                            bex, bey, bez)
-c
-c       this variant takes 'bex', 'bey', and 'bez' as inputs and 
-c       computes 'be' 
-c
-        implicit none
-c
-        real*8, parameter :: d2r = 4.d0*datan(1.d0)/180.d0
-c
-        integer ilg, nb, nd
-        real*8 rag
-        real*8 d2a(0:ilg), be(nb), pos(nd+1)
-        real*8 bex, bey, bez 
-c
-        integer nu, il, im, ik
-        real*8 rc, rs, dw
-        real*8 ds, dc, ra_div_pos3
-        real*8 dr, p1, p2, p3
-        real*8 bx, by, bz
-        real*8 bxp1, byp1, bzp1
-c
-        real*8, allocatable :: dlf(:), ddlf(:)
-        real*8, allocatable :: dra(:)
-c 
-c
-#ifdef OMP_OFFLOAD
-!$omp declare target
-#endif
-c
-c
-        allocate(dlf(ilg+1), ddlf(ilg+1), dra(ilg))
-c
-        p1 = pos(1)*d2r
-        p2 = pos(2)*d2r
-        p3 = pos(3)
-
-        rc = dcos(p1)
-        rs = dsin(p1)
-
-        ra_div_pos3 = rag / p3
-c
-c   im=0
-        im=0
-        call mk_lf_dlf(im, ilg, rs, rc, d2a, dlf, ddlf)
-        do il=1,ilg
-          dr = ra_div_pos3**(il+2)
-          dra(il) = dr
-c          
-          nu = il*il
-          ik = il+1
-c          
-          bx = ddlf(ik) * dr
-          by = 0.0d0
-          bz = -dlf(ik) * dr
-     >       * dble(ik)
-
-          be(nu) = bex*bx + bey*by + bez*bz 
-        enddo
-
-c   im.ne.0
-        do im=1,ilg
-          call mk_lf_dlf(im, ilg, rs, rc, d2a, dlf, ddlf)
-          dc = dcos(im*p2)
-          ds = dsin(im*p2)
-          do il=im,ilg
-            nu = (il*il + 2*(im-1)) + 1
-            ik = il-im+1
-            dr = dra(il)
-
-            dw = ddlf(ik) * dr
-            bx   = dw*dc
-            bxp1 = dw*ds
-            
-            dw = (dlf(ik)/rs) * dr
-     >         * dble(im) 
-            by   =  dw*ds
-            byp1 = -dw*dc
-            
-            dw = dlf(ik) * dr
-     >         * dble(il+1)
-            bz   = -dw*dc
-            bzp1 = -dw*ds
-
-            be(nu) = bex*bx + bey*by + bez*bz 
-            be(nu+1) = bex*bxp1 + bey*byp1 + bez*bzp1 
-          enddo
-        enddo
-c
-        deallocate(dlf, ddlf, dra)   
-c
-        return
-        end
-
-        subroutine XYZsph_bi0_sample(ilg, nb, nd, rag,
-     >                               d2a, bc, pos,
-     >                               dx, dy, dz)
-c
-c       this variant is only called for sample points 
-c       before calling XYZsph_bi0_fun or XYZsph_bi0_sub 
-c       it computes dx = bx.bc, dy = by.bc and dz = bz.bc 
-c
-        implicit none
-c
-        real*8, parameter :: d2r = 4.d0*datan(1.d0)/180.d0
-c
-        integer ilg, nb, nd
-        real*8 rag
-        real*8 d2a(0:ilg), bc(nb), pos(nd+1)
-        real*8 dx, dy, dz 
-c
-        integer nu, il, im, ik
-        real*8 rc, rs, dw
-        real*8 ds, dc, ra_div_pos3
-        real*8 dr, p1, p2, p3
-        real*8 bx, by, bz
-        real*8 bxp1, byp1, bzp1
+        real*8 bex2, bey2, bez2
 c
         real*8, allocatable :: dlf(:), ddlf(:)
         real*8, allocatable :: dra(:)
@@ -347,26 +57,19 @@ c
 #endif
 c
 c
-        allocate(dlf(ilg+1), ddlf(ilg+1), dra(ilg))
+        allocate(dlf(shdeg+1), ddlf(shdeg+1), dra(shdeg))
 c
         dx = 0.0d0
         dy = 0.0d0 
         dz = 0.0d0 
-
-        p1 = pos(1)*d2r
-        p2 = pos(2)*d2r
-        p3 = pos(3)
-
+c
         rc = dcos(p1)
         rs = dsin(p1)
-
-        ra_div_pos3 = rag / p3
 c
-c   im=0
         im=0
-        call mk_lf_dlf(im, ilg, rs, rc, d2a, dlf, ddlf)
-        do il=1,ilg
-          dr = ra_div_pos3**(il+2)
+        call mk_lf_dlf(im, shdeg, rs, rc, d2a, dlf, ddlf)
+        do il=1,shdeg
+          dr = ra**(il+2)
           dra(il) = dr
 c          
           nu = il*il
@@ -376,18 +79,18 @@ c
           by = 0.0d0
           bz = -dlf(ik) * dr
      >       * dble(ik)
-
+c
           dx = dx + bx * bc(nu) 
           dy = dy + by * bc(nu) 
           dz = dz + bz * bc(nu) 
         enddo
-
-c   im.ne.0
-        do im=1,ilg
-          call mk_lf_dlf(im, ilg, rs, rc, d2a, dlf, ddlf)
+c
+c
+        do im=1,shdeg
+          call mk_lf_dlf(im, shdeg, rs, rc, d2a, dlf, ddlf)
           dc = dcos(im*p2)
           ds = dsin(im*p2)
-          do il=im,ilg
+          do il=im,shdeg
             nu = (il*il + 2*(im-1)) + 1
             ik = il-im+1
             dr = dra(il)
@@ -414,5 +117,262 @@ c   im.ne.0
 c
         deallocate(dlf, ddlf, dra)
 c
+        dxbey = dx*bey
+        dxbez = dx*bez
+        dybex = dy*bex
+        dybez = dy*bez
+        dzbex = dz*bex
+        dzbey = dz*bey
+c
+        xy_c = dxbey - dybex
+        xz_c = dxbez - dzbex
+        yx_c = -xy_c
+        yz_c = dybez - dzbey
+        zx_c = -xz_c
+        zy_c = -yz_c
+c
+        dd = dsqrt(yz_c**2 + xz_c**2 + xy_c**2)
+c
+        bex2 = (xz_c*bez + xy_c*bey) / dd
+        bey2 = (yz_c*bez + yx_c*bex) / dd
+        bez2 = (zy_c*bey + zx_c*bex) / dd
+c	
+        bex = bex2
+        bey = bey2
+        bez = bez2
+c
         return
-        end
+        end subroutine XYZsph_bi0_sample
+
+      
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c	function XYZsph_bi0_fun
+c		
+c       Computes the dot product of 'be' and 'bc', avoiding the need
+c       to store the entire contents of the 'be' coefficient array.
+c             
+c       input:
+c          shdeg  INTEGER     max SH degree value
+c          nb     INTEGER     number of coefficients
+c          d2a    REAL*8      pre-computed array for mklf_F2()
+c          bc     REAL*8      coefficient array
+c          p1     REAL*8      co-latitude
+c          p2     REAL*8      longitude
+c          ra     REAL*8      radius
+c
+c       output:
+c          YZsph_bi0_fun  REAL*8
+c
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+        real*8 function XYZsph_bi0_fun(shdeg, nb,
+     >                                 d2a, bc,
+     >                                 p1, p2, ra,
+     >                                 bex, bey, bez)
+c
+        implicit none
+c
+        integer shdeg, nb
+        real*8 d2a(0:shdeg), bc(nb)
+        real*8 p1, p2, ra
+        real*8 bex, bey, bez 
+c
+        integer nu, il, im, ik
+        real*8 rc, rs
+        real*8 ds, dc, dr, dw
+        real*8 bx, by, bz
+        real*8 bxp1, byp1, bzp1
+c
+        real*8, allocatable :: dlf(:), ddlf(:)
+        real*8, allocatable :: dra(:)
+c 
+c
+#ifdef OMP_OFFLOAD
+!$omp declare target
+#endif
+c
+c
+        allocate(dlf(shdeg+1), ddlf(shdeg+1), dra(shdeg))
+
+        XYZsph_bi0_fun = 0.0d0 
+        
+        rc = dcos(p1)
+        rs = dsin(p1)
+c
+        im=0
+        call mk_lf_dlf(im, shdeg, rs, rc, d2a, dlf, ddlf)
+        do il=1,shdeg
+          dr = ra**(il+2)
+          dra(il) = dr
+c          
+          nu = il*il
+          ik = il+1
+c          
+          bx = ddlf(ik) * dr
+          by = 0.0d0
+          bz = -dlf(ik) * dr
+     >       * dble(ik)
+c
+          XYZsph_bi0_fun = XYZsph_bi0_fun
+     >                   + (bex*bx+bey*by+bez*bz) * bc(nu) 
+        enddo
+c
+c
+        do im=1,shdeg
+          call mk_lf_dlf(im, shdeg, rs, rc, d2a, dlf, ddlf)
+          dc = dcos(im*p2)
+          ds = dsin(im*p2)
+          do il=im,shdeg
+            nu = (il*il + 2*(im-1)) + 1
+            ik = il-im+1
+            dr = dra(il)
+c
+            dw = ddlf(ik) * dr
+            bx   = dw*dc
+            bxp1 = dw*ds
+c            
+            dw = (dlf(ik)/rs) * dr
+     >         * dble(im) 
+            by   =  dw*ds
+            byp1 = -dw*dc
+c            
+            dw = dlf(ik) * dr
+     >         * dble(il+1)
+            bz   = -dw*dc
+            bzp1 = -dw*ds
+c
+            XYZsph_bi0_fun = XYZsph_bi0_fun
+     >                     + (bex*bx+bey*by+bez*bz) * bc(nu) 
+     >                     + (bex*bxp1+bey*byp1+bez*bzp1) * bc(nu+1)  
+          enddo
+        enddo
+c
+        deallocate(dlf, ddlf, dra)
+c
+        return
+        end function XYZsph_bi0_fun
+
+
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c	subroutine XYZsph_bi0_sub
+c		
+c       Computes the gradient of the weighted sum of squares (gj) and
+c       the diagonal of the Hessian (hj). 
+c
+c       input:
+c          shdeg    INTEGER     max SH degree value
+c          nb       INTEGER     number of coefficients
+c          d2a      REAL*8      pre-computed array for mklf_F2()
+c          p1       REAL*8      co-latitude
+c          p2       REAL*8      longitude
+c          ra       REAL*8      radius
+c          dw_gj    REAL*8      multiplier for gj terms
+c          dw_hj    REAL*8      multiplier for hj terms
+c
+c       output:
+c          gj       REAL*8      gradient of the weighted sum of squares (nb)
+c          hj       REAL*8      diagonal of the Hessian (nb)
+c
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+        subroutine XYZsph_bi0_sub(shdeg, nb, d2a,
+     >                            p1, p2, ra,
+     >                            bex, bey, bez,
+     >                            dw_gj, dw_hj,
+     >                            gj, hj)
+c
+        implicit none
+c
+        integer shdeg, nb
+        real*8 d2a(0:shdeg)
+        real*8 p1, p2, ra
+        real*8 bex, bey, bez 
+        real*8 dw_gj, dw_hj
+        real*8 gj(nb), hj(nb) 
+c
+        integer nu, il, im, ik
+        real*8 rc, rs
+        real*8 ds, dc, dr, dw
+        real*8 bx, by, bz
+        real*8 bxp1, byp1, bzp1
+        real*8 be, bep1
+c
+        real*8, allocatable :: dlf(:), ddlf(:)
+        real*8, allocatable :: dra(:)
+c 
+c
+#ifdef OMP_OFFLOAD
+!$omp declare target
+#endif
+c
+c
+        allocate(dlf(shdeg+1), ddlf(shdeg+1), dra(shdeg))
+c
+        rc = dcos(p1)
+        rs = dsin(p1)
+c
+        im=0
+        nu=1
+        call mk_lf_dlf(im, shdeg, rs, rc, d2a, dlf, ddlf)
+        do il=1,shdeg
+          dr = ra**(il+2)
+          dra(il) = dr
+c          
+          ik = il+1
+c          
+          bx = ddlf(ik) * dr
+          by = 0.0d0
+          bz = -dlf(ik) * dr
+     >       * dble(ik)
+c
+          be = (bex*bx + bey*by + bez*bz)
+c
+!$OMP ATOMIC
+          gj(nu) = gj(nu) + dw_gj*be
+!$OMP ATOMIC
+          hj(nu) = hj(nu) + dw_hj*be*be
+c
+          nu = nu+1
+        enddo
+c
+c
+        do im=1,shdeg
+          call mk_lf_dlf(im, shdeg, rs, rc, d2a, dlf, ddlf)
+          dc = dcos(im*p2)
+          ds = dsin(im*p2)
+          do il=im,shdeg
+            ik = il-im+1
+            dr = dra(il)
+c
+            dw = ddlf(ik) * dr
+            bx   = dw*dc
+            bxp1 = dw*ds
+c            
+            dw = (dlf(ik)/rs) * dr
+     >         * dble(im) 
+            by   =  dw*ds
+            byp1 = -dw*dc
+c            
+            dw = dlf(ik) * dr
+     >         * dble(il+1)
+            bz   = -dw*dc
+            bzp1 = -dw*ds
+c
+            be = bex*bx + bey*by + bez*bz
+            bep1 = bex*bxp1 + bey*byp1 + bez*bzp1 
+c
+!$OMP ATOMIC
+            gj(nu) = gj(nu) + dw_gj*be
+!$OMP ATOMIC
+            gj(nu+1) = gj(nu+1) + dw_gj*bep1
+!$OMP ATOMIC
+            hj(nu) = hj(nu) + dw_hj*be*be
+!$OMP ATOMIC
+            hj(nu+1) = hj(nu+1) + dw_hj*bep1*bep1
+c
+            nu = nu+2
+          enddo
+        enddo
+c
+        deallocate(dlf, ddlf, dra)   
+c
+        return
+        end subroutine XYZsph_bi0_sub

@@ -25,22 +25,26 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
         implicit none
 c
+        real*8, parameter :: RAG = 6371.2d0
+        real*8, parameter :: D2R = 4.d0*datan(1.d0)/180.d0
+c
         integer :: nd, nb, nlocpts, nlocdatpts, shdeg
         real*8  :: d2a(0:shdeg), ppos(nd+1,nlocpts), bc(nb)
-        real*8  :: wmam_fun, xyzf(nlocpts)
+        real*8  :: xyzf(nlocpts)
 c
-        integer :: i
+        integer i
+        real*8 p1, p2, ra
+        real*8 bex, bey, bez
+c
+        real*8 XYZsph_bi0_fun
+        external XYZsph_bi0_fun
 c
 #ifdef OMP_OFFLOAD
         logical, save :: firstcall = .TRUE.
 #endif
-c
-        external wmam_fun
 c 
 c
 #ifdef OMP_OFFLOAD
-c
-c
 !$OMP TARGET DATA if(firstcall)
 !$omp& map(to: nb, nd, nlocpts, nlocdatpts, shdeg)
 !$omp& map(to: d2a(0:shdeg))
@@ -48,37 +52,79 @@ c
         if (firstcall) then
           firstcall = .FALSE.
         endif
+#endif
 c
+c
+#ifdef OMP_OFFLOAD
 !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO
-!$omp& default(none)
-!$omp& shared(nb, nd, nlocpts, nlocdatpts, shdeg)
-!$omp& shared(d2a, ppos, bc, xyzf)
 !$omp& map(to: bc(1:nb))
 !$omp& map(from: xyzf(1:nlocpts))
+#else
+!$OMP PARALLEL DO
+#endif
+!$omp& default(shared)
+!$omp& private(p1, p2, ra)
+!$omp& private(bex, bey, bez)
 !$omp& schedule(static)
-        do i=1,nlocpts
-          xyzf(i) = wmam_fun((i>nlocdatpts),
-     >                       shdeg, nb, nd,
-     >                       d2a, bc, ppos(1,i))
+        do i=1,nlocdatpts
+c
+          p1 = ppos(1,i)*D2R
+          p2 = ppos(2,i)*D2R
+          ra = RAG / ppos(3,i)
+c
+          bex = ppos(5,i)
+          bey = ppos(6,i)
+          bez = ppos(7,i)
+c
+          xyzf(i) = XYZsph_bi0_fun(shdeg, nb,
+     >                             d2a, bc,
+     >                             p1, p2, ra,
+     >                             bex, bey, bez)
+c
         enddo
+#ifdef OMP_OFFLOAD
+!$OMP END TARGET TEAMS DISTRIBUTE PARALLEL DO
+#else
+!$OMP END PARALLEL DO
+#endif
+c
+c
+#ifdef OMP_OFFLOAD
+!$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO
+!$omp& map(to: bc(1:nb))
+!$omp& map(from: xyzf(1:nlocpts))
+#else
+!$OMP PARALLEL DO
+#endif
+!$omp& default(shared)
+!$omp& private(p1, p2, ra)
+!$omp& private(bex, bey, bez)
+!$omp& schedule(static)
+        do i=nlocdatpts+1,nlocpts
+c
+          p1 = ppos(1,i)*D2R
+          p2 = ppos(2,i)*D2R
+          ra = RAG / ppos(3,i)
+c
+          bex = ppos(5,i)
+          bey = ppos(6,i)
+          bez = ppos(7,i)
+c
+          call XYZsph_bi0_sample(shdeg, nb,
+     >                           d2a, bc,
+     >                           p1, p2, ra, 
+     >                           bex, bey, bez)
+c
+          xyzf(i) = XYZsph_bi0_fun(shdeg, nb,
+     >                             d2a, bc,
+     >                             p1, p2, ra,
+     >                             bex, bey, bez)
+        enddo
+#ifdef OMP_OFFLOAD
 !$OMP END TARGET TEAMS DISTRIBUTE PARALLEL DO
 !$OMP END TARGET DATA
-c
-c
 #else
-c
-c
-!$OMP PARALLEL DO
-!$omp& default(shared)
-!$omp& schedule(static)
-        do i=1,nlocpts
-          xyzf(i) = wmam_fun((i>nlocdatpts),
-     >                       shdeg, nb, nd,
-     >                       d2a, bc, ppos(1,i))
-        enddo
 !$OMP END PARALLEL DO
-c
-c
 #endif
 c
 c
