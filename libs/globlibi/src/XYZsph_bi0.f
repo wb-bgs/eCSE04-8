@@ -7,7 +7,7 @@ c
 c       input:
 c          shdeg  INTEGER       max SH degree value
 c          nb     INTEGER       number of coefficients
-c          d2a    REAL*8        pre-computed array for mklf_F2()
+c          d2a    REAL*8        pre-computed array for mk_lf_dlf()
 c          bc     REAL*8        coefficient array
 c          p1     REAL*8        co-latitude
 c          p2     REAL*8        longitude
@@ -48,8 +48,8 @@ c
 c
         real*8 bex2, bey2, bez2
 c
-        real*8, allocatable :: dlf(:), ddlf(:)
-        real*8, allocatable :: dra(:)
+        real*8, allocatable :: dalpha(:), dbeta(:)
+        real*8, allocatable :: dra(:), dlf(:), ddlf(:)
 c        
 c 
 #ifdef OMP_OFFLOAD
@@ -57,7 +57,8 @@ c
 #endif
 c
 c
-        allocate(dlf(shdeg+1), ddlf(shdeg+1), dra(shdeg))
+        allocate(dalpha(2:shdeg-1), dbeta(2:shdeg-1))
+        allocate(dra(shdeg), dlf(shdeg+1), ddlf(shdeg+1))
 c
         dx = 0.0d0
         dy = 0.0d0 
@@ -67,7 +68,9 @@ c
         rs = dsin(p1)
 c
         im=0
-        call mk_lf_dlf(im, shdeg, rs, rc, d2a, dlf, ddlf)
+        call mk_lf_dlf(im, shdeg, rs, rc,
+     >                 d2a, dalpha, dbeta,
+     >                 dlf, ddlf)
         do il=1,shdeg
           dr = ra**(il+2)
           dra(il) = dr
@@ -87,7 +90,9 @@ c
 c
 c
         do im=1,shdeg
-          call mk_lf_dlf(im, shdeg, rs, rc, d2a, dlf, ddlf)
+          call mk_lf_dlf(im, shdeg, rs, rc,
+     >                   d2a, dalpha, dbeta,
+     >                   dlf, ddlf)
           dc = dcos(im*p2)
           ds = dsin(im*p2)
           do il=im,shdeg
@@ -115,7 +120,8 @@ c
           enddo
         enddo
 c
-        deallocate(dlf, ddlf, dra)
+        deallocate(dalpha, dbeta)
+        deallocate(dra, dlf, ddlf)
 c
         dxbey = dx*bey
         dxbez = dx*bez
@@ -154,7 +160,7 @@ c
 c       input:
 c          shdeg  INTEGER     max SH degree value
 c          nb     INTEGER     number of coefficients
-c          d2a    REAL*8      pre-computed array for mklf_F2()
+c          d2a    REAL*8      pre-computed array for mk_lf_dlf()
 c          bc     REAL*8      coefficient array
 c          p1     REAL*8      co-latitude
 c          p2     REAL*8      longitude
@@ -182,8 +188,8 @@ c
         real*8 bx, by, bz
         real*8 bxp1, byp1, bzp1
 c
-        real*8, allocatable :: dlf(:), ddlf(:)
-        real*8, allocatable :: dra(:)
+        real*8, allocatable :: dalpha(:), dbeta(:)
+        real*8, allocatable :: dra(:), dlf(:), ddlf(:)
 c 
 c
 #ifdef OMP_OFFLOAD
@@ -191,15 +197,18 @@ c
 #endif
 c
 c
-        allocate(dlf(shdeg+1), ddlf(shdeg+1), dra(shdeg))
-
+        allocate(dalpha(2:shdeg-1), dbeta(2:shdeg-1))
+        allocate(dra(shdeg), dlf(shdeg+1), ddlf(shdeg+1)) 
+c
         XYZsph_bi0_fun = 0.0d0 
-        
+c        
         rc = dcos(p1)
         rs = dsin(p1)
 c
         im=0
-        call mk_lf_dlf(im, shdeg, rs, rc, d2a, dlf, ddlf)
+        call mk_lf_dlf(im, shdeg, rs, rc,
+     >                 d2a, dalpha, dbeta,
+     >                 dlf, ddlf)
         do il=1,shdeg
           dr = ra**(il+2)
           dra(il) = dr
@@ -218,7 +227,9 @@ c
 c
 c
         do im=1,shdeg
-          call mk_lf_dlf(im, shdeg, rs, rc, d2a, dlf, ddlf)
+          call mk_lf_dlf(im, shdeg, rs, rc,
+     >                   d2a, dalpha, dbeta,
+     >                   dlf, ddlf)
           dc = dcos(im*p2)
           ds = dsin(im*p2)
           do il=im,shdeg
@@ -246,7 +257,8 @@ c
           enddo
         enddo
 c
-        deallocate(dlf, ddlf, dra)
+        deallocate(dalpha, dbeta)
+        deallocate(dra, dlf, ddlf)
 c
         return
         end function XYZsph_bi0_fun
@@ -261,7 +273,7 @@ c
 c       input:
 c          shdeg    INTEGER     max SH degree value
 c          nb       INTEGER     number of coefficients
-c          d2a      REAL*8      pre-computed array for mklf_F2()
+c          d2a      REAL*8      pre-computed array for mk_lf_dlf()
 c          p1       REAL*8      co-latitude
 c          p2       REAL*8      longitude
 c          ra       REAL*8      radius
@@ -295,8 +307,8 @@ c
         real*8 bxp1, byp1, bzp1
         real*8 be, bep1
 c
-        real*8, allocatable :: dlf(:), ddlf(:)
-        real*8, allocatable :: dra(:)
+        real*8, allocatable :: dalpha(:), dbeta(:)
+        real*8, allocatable :: dra(:), dlf(:), ddlf(:)
 c 
 c
 #ifdef OMP_OFFLOAD
@@ -304,14 +316,17 @@ c
 #endif
 c
 c
-        allocate(dlf(shdeg+1), ddlf(shdeg+1), dra(shdeg))
+        allocate(dalpha(2:shdeg-1), dbeta(2:shdeg-1))
+        allocate(dra(shdeg), dlf(shdeg+1), ddlf(shdeg+1))
 c
         rc = dcos(p1)
         rs = dsin(p1)
 c
         im=0
         nu=1
-        call mk_lf_dlf(im, shdeg, rs, rc, d2a, dlf, ddlf)
+        call mk_lf_dlf(im, shdeg, rs, rc,
+     >                 d2a, dalpha, dbeta,
+     >                 dlf, ddlf)
         do il=1,shdeg
           dr = ra**(il+2)
           dra(il) = dr
@@ -335,7 +350,9 @@ c
 c
 c
         do im=1,shdeg
-          call mk_lf_dlf(im, shdeg, rs, rc, d2a, dlf, ddlf)
+          call mk_lf_dlf(im, shdeg, rs, rc,
+     >                   d2a, dalpha, dbeta,
+     >                   dlf, ddlf)
           dc = dcos(im*p2)
           ds = dsin(im*p2)
           do il=im,shdeg
@@ -372,7 +389,8 @@ c
           enddo
         enddo
 c
-        deallocate(dlf, ddlf, dra)   
+        deallocate(dalpha, dbeta)
+        deallocate(dra, dlf, ddlf)
 c
         return
         end subroutine XYZsph_bi0_sub

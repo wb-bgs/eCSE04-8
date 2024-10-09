@@ -26,7 +26,7 @@ c         npts          Total number of points (data + sampling) for all ranks
 c         nlocpts       Total number of points for this rank
 c         nlocdatpts    number of data points assigned to rank
 c         shdeg         max SH degree value
-c         d2a           pre-computed array for mklf_F2()
+c         d2a           pre-computed array for mk_lf_dlf()
 c         ppos          data point position in ndD
 c         ddat          data values
 c         nb            Number or base function to use

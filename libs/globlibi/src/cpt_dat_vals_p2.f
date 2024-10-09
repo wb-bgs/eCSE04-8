@@ -11,7 +11,7 @@ c         nd            Space dimension
 c         nlocpts       number of data+sampling points local to rank
 c         nlocdatpts    number of data points local to rank
 c         shdeg         max SH degree value
-c         d2a           pre-computed array for mklf_F2()
+c         d2a           pre-computed array for mk_lf_dlf()
 c         ppos(nd+1,*)  point position in ndD
 c         nb            Number of base functions
 c         bc            base coefficients
