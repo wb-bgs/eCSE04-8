@@ -5,7 +5,6 @@ c
 c      18.08.2011 Triple-checked against DGC.F slatec subroutine
 c        1- added the weight matrix W in calculation of zz(*) 
 c        2- divide step by 2 because GJ=2*A'.W.R.W.[B-A.M] 
-c     Note: Valid only for L2_NORM FM function
 c
 c      15.07.2011 (v.Lesur) update input list of cptstd
 c      Modified:  10.3.2011 V.Lesur
