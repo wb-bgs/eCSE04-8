@@ -37,7 +37,6 @@ c
         real*8 bex, bey, bez
 c
         real*8 XYZsph_bi0_fun
-        external XYZsph_bi0_fun
 c
 #ifdef OMP_OFFLOAD
         logical, save :: firstcall = .TRUE.

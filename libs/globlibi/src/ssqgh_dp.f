@@ -57,8 +57,6 @@ c
         real*8 dw_hj, dw_gj
         real*8, allocatable :: gj2(:), hj2(:)
 c 
-        external XYZsph_bi0_sub
-c
 #ifdef OMP_OFFLOAD
         logical, save :: firstcall = .TRUE.
 #endif
