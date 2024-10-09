@@ -18,7 +18,6 @@ VPATH=.:subs:io
 	$(FC) $(FFLAGS) $< -c
 #--------------------------------------
 OBJ=\
-build_damp.o\
 build_damp_space.o\
 fit_data.o\
 ini_model.o\
