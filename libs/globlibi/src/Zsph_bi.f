@@ -35,17 +35,24 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
         implicit none
 c
+        real*8, parameter :: D2R = 4.d0*datan(1.d0)/180.d0
+c
         integer nu,nti,il,im,nlis,nlie,nus,it
         real*8 ry,pos(*),be(*),rc,rs,ra,dw
-        real*8 dc,ds,dt,dcosd,dsind
+        real*8 dc,ds,dt,p1,p2,p4
         real*8, allocatable :: dlf(:)
 c
         allocate(dlf(1:nlie+1))
 c
         ra=6371.2d0
-        dt=(pos(4)-ry)/365.25d0
-        rc=dcosd(pos(1))
-        rs=dsind(pos(1))
+c
+        p1=pos(1)*D2R
+        p2=pos(2)*D2R
+        p4=pos(4)
+
+        dt=(p4-ry)/365.25d0
+        rc=dcos(p1)
+        rs=dsin(p1)
         nus=(nlis*nlis-1)*nti
 c
 c Internal
@@ -62,8 +69,8 @@ c   im=0
 c   im.ne.0
         do im=1,nlie
           call mklf_F(im,nlie,rs,rc,dlf)
-          dc=dcosd(im*pos(2))
-          ds=dsind(im*pos(2))
+          dc=dcos(im*p2)
+          ds=dsin(im*p2)
           do il=max0(im,nlis),nlie
             dw=dlf(il-im+1)*(il+1)*(ra/pos(3))**(il+2)
             nu=(il*il+2*(im-1))*nti-nus

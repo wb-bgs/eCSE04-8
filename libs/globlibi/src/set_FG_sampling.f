@@ -20,6 +20,8 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
         implicit none
 c
+        real*8, parameter :: D2R = 4.d0*datan(1.d0)/180.d0
+c
         real*8 vrt(2,*),wght(*)
         integer lmax, imin_locsampts, imax_locsampts
 c
@@ -27,8 +29,6 @@ c
         integer nn,ilo,ila,j,np
         real*8, allocatable :: xx(:),ww(:)
 c
-        real*8 dacosd
-        external dacosd
 c
         nn=lmax+1
         dw1=-1.0d0
@@ -48,7 +48,7 @@ c  Define the grid
           do ilo=1,2*nn-1
             if (np .ge. imin_locsampts .and.
      >          np .le. imax_locsampts) then
-              vrt(1,j)=dacosd(xx(ila))
+              vrt(1,j)=dacos(xx(ila))/D2R
               vrt(2,j)=dble(ilo-1)*dw2
               wght(j)=ww(ila)
               j=j+1

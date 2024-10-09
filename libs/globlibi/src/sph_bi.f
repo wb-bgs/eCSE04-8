@@ -32,13 +32,17 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
         implicit none
 c
+        real*8, parameter :: D2R = 4.d0*datan(1.d0)/180.d0
+c
         character iof
         integer nub,nb,nli,nti,i
         real*8 bp(*),be(*),bc(*),ry,df(3),dnm
         real*8, allocatable :: dw1(:)
 c
-        real*8 dcosd,dsind
+        real*8 p1
 c
+c
+        p1 = bp(1)*D2R
 c
         nli=int(sqrt(float(nb+1))+0.4)-1
         nti=1
@@ -70,8 +74,8 @@ c
             call Xsph_bi(ry,1,nli,nti,bp,dw1)
             call Zsph_bi(ry,1,nli,nti,bp,be)
             do i=1,nb
-              be(i)=be(i)*dcosd(bp(1))
-              be(i)=dw1(i)*dsind(bp(1))-be(i)
+              be(i)=be(i)*dcos(p1)
+              be(i)=dw1(i)*dsin(p1)-be(i)
             enddo
           deallocate(dw1)
         elseif(nub.eq.100)then

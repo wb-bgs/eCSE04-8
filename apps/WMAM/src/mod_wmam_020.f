@@ -36,6 +36,8 @@ c
         integer, parameter :: POLAK_RIBIERE=1
         integer, parameter :: ND=7
 c
+        real*8, parameter :: D2R = 4.d0*datan(1.d0)/180.d0
+c
         character fname*100
         character buf*100
         integer fhandle
@@ -68,10 +70,6 @@ c  variables for populating d2a array
         integer nm
         real*8  dnm, d1, d2
         real*8, allocatable :: d2a(:)
-c
-c  globlibi functions
-        real*8 dsind
-        external dsind
 c
 c  slatec subroutine
         real*8 dgamln
@@ -293,7 +291,7 @@ c  Define covariance matrix: sin(colat) weight
         endif
         j=imin_locpts
         do i=1,nlocdatpts
-          cov(i)=dsind(ppos(1,i))
+          cov(i)=dsin(ppos(1,i)*D2R)
           cov(i)=1.d0/cov(i)
           ijcov(i,1)=j
           ijcov(i,2)=j
