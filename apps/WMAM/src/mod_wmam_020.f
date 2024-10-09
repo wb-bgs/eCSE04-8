@@ -201,7 +201,7 @@ c
           d1 = dgamln(2*dnm+1.0d0,ierr)     ! d1=log(fact(2dnm))
           d2 = dgamln(dnm+1.0d0,ierr)       ! d2=log(fact(dnm))
           if (ierr.ne.0) then
-            write(*,*) 'mklf_F: Cannot computes normalisation cst !'
+            write(*,*) 'd2a: Cannot computes normalisation cst !'
             stop
           endif
 c
