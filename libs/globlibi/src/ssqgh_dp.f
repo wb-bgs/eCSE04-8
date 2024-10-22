@@ -72,10 +72,12 @@ c
 c       
 #if defined(OMP_OFFLOAD_SSQGH)
 !$OMP TARGET DATA if (firstcall)
+#if !defined(OMP_OFFLOAD_CPTP)
 !$omp& map(to: nb, nd)
 !$omp& map(to: nlocpts, nlocdatpts, shdeg)
 !$omp& map(to: d2a(0:shdeg))
 !$omp& map(to: ppos(1:nd+1,1:nlocpts))
+#endif
 !$omp& map(to: cov(1:nlocpts), jcov(1:nlocpts+2))
         if (firstcall) then
           firstcall = .FALSE.
