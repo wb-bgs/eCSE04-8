@@ -183,13 +183,8 @@ c All define data set
         enddo
 c
 c
-#ifdef OMP_OFFLOAD
+#if defined(OMP_OFFLOAD)
         call omp_set_default_device(MOD(rank,4))
-c       call omp_set_num_teams(80)
-c       call omp_set_teams_thread_limit(32)
-c       omp_get_num_devices()
-c       omp_get_max_teams()
-c       omp_get_teams_thread_limit()
 #endif
 c
 c
