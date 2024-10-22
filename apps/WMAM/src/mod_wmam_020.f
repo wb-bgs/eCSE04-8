@@ -62,7 +62,6 @@ c
         integer, allocatable :: ijcov(:,:)
         real*8, allocatable :: ppos(:,:), bc(:), cov(:)
         real*8, allocatable :: dw(:), cm(:)
-        real*8, allocatable :: gg(:,:), bb(:)
         real*8, allocatable :: err(:)
         real*8 diff(4)
         real*8 ryg
@@ -334,19 +333,15 @@ c
           write(*,*) ''
          endif
 c
-        fname = './Results/'
-        allocate(gg(1:1,1:1))
-        allocate(bb(1:1))
 c
+        fname = './Results/'
 c
         call opt_pr_p3(fname, itmax, ND, nparams,
      >                 npts, nlocpts, nlocdatpts, shdeg,
      >                 d2a, ppos, bc, dl,
      >                 cov, ijcov(1,2),
-     >                 stdt, dw, bb, gg)
+     >                 stdt, dw)
 c
-        deallocate(bb)
-        deallocate(gg)
 c
         if (rank .eq. 0) then
           write(*,'(A)')' '

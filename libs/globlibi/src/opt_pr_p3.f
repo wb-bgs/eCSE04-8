@@ -17,9 +17,7 @@ c         modified 02.12.2011 V.Lesur
 c          1- to give the possibility to overwrite the first descent direction
 c         modified 14.07.2011 V.Lesur
 c          1- nb defined as an array for compatibility woth opt_drw_p*
-c          2- gg & bb added as defined optional for compatibility with
-c             opt_drw_p*
-c          3- call to lsearch_p modified
+c          2- call to lsearch_p modified
 c         modified 01.06.2011 V.Lesur
 c          1- no out conditions fo stp too small
 c          2- counter for rejected gradient directions
@@ -42,7 +40,6 @@ c
 c       itmax(1)        overall number of iteration
 c       itmax(2)        number of iteration in linear search
 c       itmax(3)        number of iteration before restart
-c    if itmax(1) < 0 the first descent direction is given by BB
 c    if itmax(3) < 0 never choose GC step, uses linear search
 c
 c     input:
@@ -70,7 +67,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine opt_pr_p3(path, itmax, nd, nb,
      >                       npts, nlocpts, nlocdatpts, shdeg,
      >                       d2a, ppos, bc, dl,
-     >                       cov, jcov, stdt, xyzf, bb, gg)
+     >                       cov, jcov, stdt, xyzf)
 c
 #if defined(OMP_OFFLOAD)
         use omp_lib
@@ -85,7 +82,6 @@ c
         real*8 d2a(*),ppos(nd+1,*),bc(*),dl(*),cov(*)
         integer jcov(*)
         real*8 stdt,xyzf(*)
-        real*8, optional :: bb(:),gg(:)
         character path*100
 c
         integer i,j,k
@@ -226,15 +222,11 @@ c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 2'
      >                            gj_map_len, gj_map, 
      >                            gj, dh)
                 else
-                    if (present(bb)) then
-                        gj(1:nb) = bb(1:nb)
-                        dh(1:nb) = 1.d0
-                    else
-                        if (rank .eq. 0)
-     >                      write(*,*)
-     >                          'ERROR: bb required for itmax(1)<0'
-                        stop
+                    if (rank .eq. 0) then
+                        write(*,*)
+     >                      'ERROR: bb required for itmax(1)<0'
                     endif
+                    stop
                 endif
 
 c All: check ZEROgradiant
