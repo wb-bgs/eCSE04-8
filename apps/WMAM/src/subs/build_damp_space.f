@@ -7,10 +7,12 @@ c
 c       input:
 c       nlocdatpts      integer    number of data points local to rank
 c       nlocsampts      integer    number of sampling points local to rank
+c       nlocpts         integer    nlocdatpts + nlocsampts
 c       imin_locpts     integer    local rank's global index for data+sampling points
 c       imin_locsampts  integer    local rank's global index for sampling points
 c       nd              integer    such that nd+1 is the lead dim of ppos
-c       ncoeffs         integer    number of coefficients   
+c       ncoeffs         integer    number of coefficients from ref model
+c       nparams         integer    number of coefficients based on max spherical deg 
 c       llm             integer    maxium degree for lithospheric field
 c       ryg             real*8     reference year for the model
 c       wgh             real*8     weight for damping
@@ -22,9 +24,10 @@ c       cov(*)          real*8     array of cov matrix
 c       ppos(*)         real*8     array of data values
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine build_damp_space(nlocdatpts, nlocsampts,
+        subroutine build_damp_space(nlocdatpts, nlocsampts, nlocpts,
      >                              imin_locpts, imin_locsampts,
-     >                              nd, ncoeffs, llm, ryg, wgh, bc,
+     >                              nd, ncoeffs, nparams,
+     >                              llm, ryg, wgh, bc,
      >                              ijcov, cov, ppos)
 c
         implicit none
@@ -33,10 +36,12 @@ c
 c
         real*8, parameter :: RAG = 6371.2d0
 c
-        integer nlocdatpts, nlocsampts
+        integer nlocdatpts, nlocsampts, nlocpts
         integer imin_locpts, imin_locsampts
-        integer nd, ncoeffs, llm, ijcov(nlocdatpts+nlocsampts+2,*)
-        real*8 bc(*), ppos(nd+1,*), cov(*), ryg, wgh
+        integer nd, ncoeffs, nparams
+        integer llm, ijcov(nlocpts+2,2)
+        real*8 bc(nparams), ppos(nd+1,nlocpts)
+        real*8 cov(nlocpts), ryg, wgh
 c
         real*8, allocatable :: vrt(:,:)
         real*8, allocatable :: glw(:)
@@ -53,7 +58,8 @@ c  Define sampling points
         allocate(glw(nlocsampts))
         allocate(vrt(nd+1,nlocsampts))
         allocate(dw(2,nlocsampts))
-        call set_FG_sampling(llm, imin_locsampts, 
+        call set_FG_sampling(llm, nlocsampts,
+     >                       imin_locsampts, 
      >                       imin_locsampts+nlocsampts-1,
      >                       dw, glw)
         do i = 1,nlocsampts
@@ -71,7 +77,8 @@ c  Calculate CM4 components
           j = 4+i
           cm = 0.0d0 
           do k = 1,nlocsampts
-            call sph_bi('f', i, ncoeffs, bc, vrt(1,k), cm)
+            call sph_bi('f', i, nd, ncoeffs, nparams,
+     >                  bc, vrt(1,k), cm)
             vrt(j,k) = cm(1)
           enddo
         enddo

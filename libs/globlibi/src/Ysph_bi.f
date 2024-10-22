@@ -21,65 +21,70 @@ c
 c       colat,long,radius given in degree,degree,km
 c
 c       input:
-c         ry            reference year
-c         nlis          start of degree internal
+c         nd            space dimension
+c         nb            number of base element 
 c         nlie          end of degree internal
-c         nti           number of time dependent parameters internal
 c         pos           positions in space and time (colat,long,radius,jd,refjd)
 c
 c       output:
 c         be		Base funtion value
 c       
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-	subroutine Ysph_bi(ry,nlis,nlie,nti,pos,be)
+	subroutine Ysph_bi(nd, nb, nlie, pos, be)
 c
         implicit none
 c
+        real*8, parameter :: RAG = 6371.2d0
         real*8, parameter :: D2R = 4.d0*datan(1.d0)/180.d0
 c
-        integer nu,nti,il,im,nlis,nlie,nus,it
-        real*8 ry,pos(*),be(*),rc,rs,ra,dw
-        real*8 ds,dc,dt,p1,p2,p4
+        integer nd, nb, nlie
+        real*8 pos(nd), be(nb)
+c
+        integer nlis, nti
+        integer nu, il, im, nus, it
+        real*8 rc, rs, dw
+        real*8 ds, dc, dt
+        real*8 p1, p2, p3
         real*8, allocatable :: dlf(:)
 c
-        allocate(dlf(1:nlie+1))
 c
-        ra=6371.2d0
+        nlis = 1
+        nti = 1
+        allocate(dlf(nlie+1))
 c
-        p1=pos(1)*D2R
-        p2=pos(2)*D2R
-        p4=pos(4)
+        p1 = pos(1)*D2R
+        p2 = pos(2)*D2R
+        p3 = RAG/pos(3)
 c
-        dt=(p4-ry)/365.25d0
-        rc=dcos(p1)
-        rs=dsin(p1)
-        nus=(nlis*nlis-1)*nti
+        dt = pos(4)/365.25d0
+        rc = dcos(p1)
+        rs = dsin(p1)
+        nus = (nlis*nlis - 1)*nti
 c
-c   im=0
-        im=0
-        do il=nlis,nlie
-          nu=(il*il-1)*nti-nus
-          do it=1,nti
-            be(nu+it)=0.d0
-          enddo
-        enddo
-c   im.ne.0
-        do im=1,nlie
-          call mklf_F(im,nlie,rs,rc,dlf)
-          dc=-im*dsin(im*p2)
-          ds=im*dcos(im*p2)
-          do il=max0(im,nlis),nlie
-            dw=dlf(il-im+1)/rs
-            dw=dw*(ra/pos(3))**(il+2)
-            nu=(il*il+2*(im-1))*nti-nus
-            be(nu+1)=-dw*dc
-            be(nu+nti+1)=-dw*ds
-            do it=2,nti
-              dw=dt**(it-1)
-              be(nu+it)=be(nu+1)*dw
-              be(nu+nti+it)=be(nu+nti+1)*dw
+        im = 0
+        do il = nlis,nlie
+            nu = (il*il - 1)*nti - nus
+            do it = 1,nti
+                be(nu+it) = 0.d0
             enddo
-          enddo
+        enddo
+c
+        do im = 1,nlie
+            call mklf_F(im, nlie, rs, rc, dlf)
+            dc = -im*dsin(im*p2)
+            ds = im*dcos(im*p2)
+            do il = max0(im,nlis),nlie
+                dw = dlf(il-im+1)/rs
+                dw = dw*(p3**(il+2))
+                nu = (il*il + 2*(im-1))*nti - nus
+                be(nu+1) = -dw*dc
+                be(nu+nti+1) = -dw*ds
+                do it = 2,nti
+                    dw = dt**(it-1)
+                    be(nu+it) = be(nu+1)*dw
+                    be(nu+nti+it) = be(nu+nti+1)*dw
+                enddo
+            enddo
         enddo
 c
         deallocate(dlf)

@@ -22,7 +22,7 @@ c
         implicit none
 c
         integer nm, ilg
-        real*8 ds, dc, dlf(*)
+        real*8 ds, dc, dlf(ilg+1)
 c
         integer ierr, il, d0
         real*8 dnm, d1, d2, dbeta, dalpha
@@ -37,7 +37,7 @@ c
         dnm = dble(nm)                    ! dble real for nm
         d1 = dgamln(2*dnm+1.0d0,ierr)     ! d1=log(fact(2dnm))
         d2 = dgamln(dnm+1.0d0,ierr)       ! d2=log(fact(dnm))
-        if (ierr.ne.0) then
+        if (ierr .ne. 0) then
           write(*,*)'mklf_F: Cannot computes normalisation cst !'
           stop
         endif
@@ -45,13 +45,15 @@ c
         d2 = 0.5d0*d1 - d2                ! d2=sqrt(fact(2dnm))/fact(dnm)
         d2 = d2 - nm*dlog(2.0d0)          !
         d2 = dexp(d2)                     ! normalisation cst.
-        if (nm.ne.0) d2 = d2*dsqrt(2.0d0) ! special case  m=0
+        if (nm .ne. 0) then
+            d2 = d2*dsqrt(2.0d0) ! special case  m=0
+        endif
 c
         d1 = ds
-        if (d1.ne.0.0d0) then
+        if (d1 .ne. 0.0d0) then
           d1 = d1**nm
         else
-          if (nm.eq.0) d1 = 1.d0
+          if (nm .eq. 0) d1 = 1.d0
         endif
 c
         dlf(1) = d1*d2                              ! leg. func. (m,m)
@@ -59,7 +61,7 @@ c
 c
 c     l=nm+2....lm
 c
-        do il=2,ilg-nm                        ! l=nm+il-1
+        do il = 2,ilg-nm                        ! l=nm+il-1
 c
           d0 = il+2*nm
           d1 = dble((il-1) * (d0-1))         ! (l-m)*(l+m)
@@ -70,7 +72,7 @@ c
 c
           ! leg. func. (nm+il-1,nm) 
           dlf(il+1) = dalpha*dlf(il)*dc - dbeta*dlf(il-1)
-
+c
         enddo
 c
         return

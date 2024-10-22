@@ -78,16 +78,20 @@ c
         include 'mpif.h'
         include 'mpi_status_types.h'
 c
-        integer itmax(*),npmax,nd,nb,npts,nlocpts,nlocdatpts,shdeg
-        real*8 d2a(*),ppos(nd+1,*),bc(*),dl(*),cov(*)
-        integer jcov(*)
-        real*8 stdt,xyzf(*)
-        character path*100
+        character path*100 
+        integer itmax(3), nd, nb
+        integer npts, nlocpts, nlocdatpts, shdeg
+        real*8 d2a(0:shdeg), ppos(nd+1,nlocpts)
+        real*8 bc(nb), dl(3), cov(nlocpts)
+        integer jcov(nlocpts+2)
+        real*8 stdt, xyzf(nlocpts)
 c
-        integer i,j,k
-        integer ip,it,itm,iunit,ipth,itm_l,itm_r
-        integer ierr,rank, gj_map_len 
-        real*8 stdo,stp,std,epss,dd,cond,dm,beta
+        integer i, j, k
+        integer ip, it, itm, iunit
+        integer ipth, itm_l, itm_r
+        integer ierr, rank, gj_map_len 
+        real*8 stdo, stp, std
+        real*8 epss, dd, cond, dm, beta
 c
         type(inversion_status) inv_stat
         type(search_status) src_stat
@@ -99,9 +103,9 @@ c       inv_stat%yon(3:3) => yon_dwn
 c       inv_stat%yon(4:4) => yon_upg
 c       inv_stat%yon(5:5) => yon_ds: g=GC, p=PR, r=restart, n=restart with stop option
 c
-        real*8, allocatable :: ds(:),dh(:),ddat(:)
-        real*8, allocatable :: gj(:),gjo(:)
-        real*8, allocatable :: ghj(:),ghjo(:)
+        real*8, allocatable :: ds(:), dh(:), ddat(:)
+        real*8, allocatable :: gj(:), gjo(:)
+        real*8, allocatable :: ghj(:), ghjo(:)
         integer, allocatable :: gj_map(:)
 c
 c
@@ -304,28 +308,28 @@ c ALL: search minimum in descent direction
      >              inv_stat%yon(5:5) .eq. 'r') then
                     if (itmax(3) .ge. 0) then
 c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 4'
-                        call gc_step_p(iunit, nd,
+                        call gc_step_p(iunit, nd, nb,
      >                                 npts, nlocpts, nlocdatpts,
      >                                 shdeg, d2a, ppos, ddat,
-     >                                 nb, inv_stat%bc,
+     >                                 inv_stat%bc,
      >                                 cov, jcov, std,
      >                                 gj, ghj, ds, stp, xyzf)
                     else
 c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 5'
-                        call lsearch_p(iunit, itm_l, nd, 
+                        call lsearch_p(iunit, itm_l, nd, nb, 
      >                                 npts, nlocpts, nlocdatpts,
      >                                 shdeg, d2a, ppos, ddat,
-     >                                 nb, inv_stat%bc,
+     >                                 inv_stat%bc,
      >                                 src_stat, MPI_SEARCH_STATUS,
      >                                 dl, cov, jcov,
      >                                 std, ds, stp, xyzf)
                     endif
                 else
 c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 6'
-                    call lsearch_p(iunit, itm_l, nd, 
+                    call lsearch_p(iunit, itm_l, nd, nb,
      >                             npts, nlocpts, nlocdatpts,
      >                             shdeg, d2a, ppos, ddat,
-     >                             nb, inv_stat%bc,
+     >                             inv_stat%bc,
      >                             src_stat, MPI_SEARCH_STATUS,
      >                             dl, cov, jcov,
      >                             std, ds, stp, xyzf)

@@ -22,17 +22,17 @@ c
 c     input:
 c         iunit         integer unit number for I/O
 c         nd            space dimension
+c         nb            Number or base function to use
 c         npts          Total number of points (data + sampling) for all ranks
 c         nlocpts       Total number of points for this rank
 c         nlocdatpts    number of data points assigned to rank
 c         shdeg         max SH degree value
-c         d2a           pre-computed array for mk_lf_dlf()
-c         ppos          data point position in ndD
-c         ddat          data values
-c         nb            Number or base function to use
-c         bc            Estimate of Base function coefficients
+c         d2a(*)        pre-computed array for mk_lf_dlf()
+c         ppos(*,*)     data point position in ndD
+c         ddat(*)       data values
+c         bc(*)         Estimate of Base function coefficients
 c         cov(*)        covariance matrix in SLAP Column format
-c         jcov          Integer vector describing cov format
+c         jcov(*)       Integer vector describing cov format
 c         std           STD value for given BC
 c         gj(*)         gradient direction
 c         ghj(*)        preconditioned gradient direction
@@ -43,64 +43,69 @@ c         stp           recommended step in direction ds(*)
 c         std           STD value for given BC+stp*DS
 c         xyzf(*)       Forward modelling for given BC+stp*DS
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine gc_step_p(iunit, nd, 
-     >                       npts, nlocpts, nlocdatpts,
-     >                       shdeg, d2a, ppos, ddat, nb, bc,
+        subroutine gc_step_p(iunit, nd, nb, npts,
+     >                       nlocpts, nlocdatpts, shdeg,
+     >                       d2a, ppos, ddat, bc,
      >                       cov, jcov,
-     >                       std, gj, ghj, ds, stp, xyzf)
+     >                       std, gj, ghj,
+     >                       ds, stp, xyzf)
 c
         implicit none
 c
         include 'mpif.h'
 c
-        integer iunit,nd,npts,nlocpts,nlocdatpts
-        real*8 d2a(*),ppos(*),ddat(*)
-        integer nb,shdeg
-        real*8 bc(*),cov(*)
-        integer jcov(*)
-        real*8 std,gj(*),ghj(*)
-        real*8 ds(*),stp,xyzf(*)
+        integer iunit, nd, nb
+        integer npts, nlocpts, nlocdatpts
+        integer shdeg
+        real*8 d2a(0:shdeg), ppos(nd+1,nlocpts)
+        real*8 ddat(nlocpts)
+        real*8 bc(nb), cov(nlocpts)
+        integer jcov(nlocpts+2)
+        real*8 std, gj(nb), ghj(nb)
+        real*8 ds(nb), stp, xyzf(nlocpts)
 c
         integer i
-        integer ierr,rank 
-        real*8, allocatable :: bcn(:),zz(:)
+        integer ierr, rank 
+        real*8, allocatable :: bcn(:), zz(:)
         real*8 zzs        
 c
 c All: Defining parallel enviroment
         call MPI_Comm_rank(MPI_COMM_WORLD,rank,ierr)
 c
 c All: Calculate  sqrt(w).A.DS 
-        allocate(zz(1:nlocpts))
-        zz(1:nlocpts)=0.0d0
+        allocate(zz(nlocpts))
+        zz(1:nlocpts) = 0.0d0
         call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
      >                      shdeg, d2a, ppos, nb, ds,
      >                      zz)
 c
-        do i=1,nlocpts
-          zz(i)=zz(i)/dsqrt(cov(jcov(i)))
-          zz(i)=zz(i)**2
+        do i = 1,nlocpts
+          zz(i) = zz(i)/dsqrt(cov(jcov(i)))
+          zz(i) = zz(i)**2
         enddo
         zzs = SUM(zz)
 c
 c  All: calculate step
-        stp=dot_product(gj(1:nb),ghj(1:nb))
+        stp = dot_product(gj(1:nb), ghj(1:nb))
 
         call MPI_ALLREDUCE(MPI_IN_PLACE, zzs, 1,
      >                     MPI_DOUBLE_PRECISION,
      >                     MPI_SUM, MPI_COMM_WORLD, ierr)
 
-        stp=stp/zzs
-        stp=stp/2.d0
+        stp = stp/zzs
+        stp = stp/2.d0
         deallocate(zz)
 c
-        if (rank.eq.0) write(iunit,*) 'GC_STEP :',stp
+        if (rank.eq.0) then
+            write(iunit,*) 'GC_STEP :',stp
+        endif
 c
 c ALL: Estimate the new set of parameter for a step stp in direction ds
-        allocate(bcn(1:nb))
-        bcn(1:nb)=bc(1:nb)+stp*ds(1:nb)
+        allocate(bcn(nb))
+        bcn(1:nb) = bc(1:nb) + stp*ds(1:nb)
 c
 c ALL: Do the forward modelling
-        xyzf(1:nlocpts)=0.0d0
+        xyzf(1:nlocpts) = 0.0d0
         call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
      >                      shdeg, d2a, ppos, nb, bcn,
      >                      xyzf)

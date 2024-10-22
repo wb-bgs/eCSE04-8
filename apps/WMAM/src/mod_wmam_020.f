@@ -262,7 +262,8 @@ c  Calculate CM4 components
         do i = 1,3
           j = 4+i 
           do k = 1,nlocdatpts
-            call sph_bi('f', i, ncoeffs, bc, ppos(1,k), cm)
+            call sph_bi('f', i, nd, ncoeffs, nparams,
+     >                  bc, ppos(1,k), cm)
             ppos(j,k) = cm(1)
           enddo
         enddo
@@ -287,10 +288,11 @@ c  Define covariance matrix: sin(colat) weight
 c
 c  Add smoothing equations
         if (rank .eq. 0) write(*,*) 'Define regularisation'
-        call build_damp_space(nlocdatpts, nlocsampts,
+        call build_damp_space(nlocdatpts, nlocsampts, nlocpts,
      >                        imin_locpts, imin_locsampts,
-     >                        ND, ncoeffs, shdeg, ryg,
-     >                        dampfac, bc, ijcov, cov, ppos)
+     >                        ND, ncoeffs, nparams,
+     >                        shdeg, ryg, dampfac, bc,
+     >                        ijcov, cov, ppos)
 
 c
 c  Prepare the CM4 components for use within XYZsph_bi0 source

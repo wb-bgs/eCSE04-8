@@ -22,6 +22,7 @@ c     input:
 c         iunit         unit to write outputs
 c         itm           Maximum number of iterations
 c         nd            space dimension
+c         nb            Number or base function to use
 c         npts          Total number of points (data + sampling) for all ranks
 c         nlocpts       Total number of points for this rank
 c         nlocdatpts    number of data points assigned to rank
@@ -29,7 +30,6 @@ c         shdeg         max SH degree value
 c         d2a           pre-computed array for mk_lf_dlf()
 c         ppos          data point position in ndD
 c         ddat          data values
-c         nb            Number or base function to use
 c         bc            Estimate of Base function coefficients
 c         src_stat      MPI gradient search status
 c         dl(3)         control lsearch process & damping
@@ -43,10 +43,10 @@ c         stp           recommended step in direction ds(*)
 c         std           STD value for given BC+stp*DS
 c         xyzf(*)       Forward modelling for given BC+stp*DS
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine lsearch_p(iunit, itm, nd, 
+        subroutine lsearch_p(iunit, itm, nd, nb,
      >                       npts, nlocpts, nlocdatpts, shdeg,
      >                       d2a, ppos, ddat,
-     >                       nb, bc, src_stat, MPI_SEARCH_STATUS,
+     >                       bc, src_stat, MPI_SEARCH_STATUS,
      >                       dl, cov, jcov,
      >                       std, ds, stp, xyzf)
 c
@@ -55,22 +55,24 @@ c
         include 'mpif.h'
         include 'mpi_status_types.h'
 c
-        integer iunit,itm,nd,npts,nlocpts,nlocdatpts
-        real*8 d2a(*),ppos(*),ddat(*)
-        integer nb,shdeg
-        real*8 bc(*)
+        integer iunit, itm, nd, nb
+        integer npts, nlocpts, nlocdatpts, shdeg
+        real*8 d2a(0:shdeg), ppos(nd+1,nlocpts)
+        real*8 ddat(nlocpts), bc(nb)
         type(search_status) src_stat
         integer MPI_SEARCH_STATUS
-        real*8 dl(*),cov(*)
-        integer jcov(*)
-        real*8 std,ds(*),stp,xyzf(*)
+        real*8 dl(3), cov(nlocpts)
+        integer jcov(nlocpts+2)
+        real*8 std, ds(nb), stp, xyzf(nlocpts)
 c
-        integer i,im1,im2,it
-        integer ierr,rank
-        real*8 dj(3),st(3),fct,fctt,fctl,fcts,dd,rt
-        real*8 epss,stp1,stp2,gr,gl,numer,denom
+        integer i, im1, im2, it
+        integer ierr, rank
+        real*8 dj(3), st(3)
+        real*8 fct, fctt, fctl, fcts, dd, rt
+        real*8 epss, stp1, stp2, gr, gl, numer, denom
         real*8, allocatable :: bcn(:)
         character yon_rf
+c
 c
 c  All defining parallel enviroment
         call MPI_Comm_rank(MPI_COMM_WORLD,rank,ierr)
@@ -80,121 +82,132 @@ c
         allocate(bcn(1:nb))
 c
 c MP: does the all lot
-        if (rank.eq.0) then
+        if (rank .eq. 0) then
 c
 c MP0-Initial
-            src_stat%yon_ct='y'
-            epss=dl(1)
-            fctl=5.d0
-            fcts=1.d0/fctl
-            rt=4.d0
+            src_stat%yon_ct = 'y'
+            epss = dl(1)
+            fctl = 5.d0
+            fcts = 1.d0/fctl
+            rt = 4.d0
 c
-            fct=2.d0
-            if (src_stat%stp.eq.0.0d0) src_stat%stp=1.d0
-            src_stat%stp=src_stat%stp/fct
+            fct = 2.d0
+            if (src_stat%stp .eq. 0.0d0) src_stat%stp = 1.d0
+            src_stat%stp = src_stat%stp/fct
 c
 c MP1-Find the large steps
 c
 c MP 11- initial (given in input: �std� no need to compute)
-            dj(1)=std
-            st(1)=0.0d0
-            dj(2)=std
-            st(2)=0.0d0
+            dj(1) = std
+            st(1) = 0.0d0
+            dj(2) = std
+            st(2) = 0.0d0
 c
 c MP 12- find st(3) such that dj(3) significantly different from dj(1)
-            dd=0.d0
-            it=1
-            do while (dd.le.epss.and.it.le.itm)
-                src_stat%stp=src_stat%stp*fct
+            dd = 0.d0
+            it = 1
+            do while (dd .le. epss .and. it .le. itm)
+                src_stat%stp = src_stat%stp*fct
 c               write(*,*)'lsearch_p: 1'
                 call MPI_BCAST(src_stat, 1, MPI_SEARCH_STATUS,
      >                         0, MPI_COMM_WORLD, ierr)
-                bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
+c
+                bcn(1:nb) = bc(1:nb)+src_stat%stp*ds(1:nb)
+c
                 call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
      >                              shdeg, d2a, ppos, nb, bcn,
      >                              xyzf)
                 call cptstd_dp(npts, nlocpts,
      >                         jcov, cov, ddat,
      >                         xyzf, std)
-                dj(3)=std
-                dd=dabs(dj(3)-dj(1))/dj(1)
-                it=it+1
+c
+                dj(3) = std
+                dd = dabs(dj(3)-dj(1))/dj(1)
+                it = it+1
             enddo
 
-            if (it.gt.itm) then
-                write(iunit,*)'Lsearch: cannot find minimum step'
-                src_stat%yon_ct='n'
-                im1=1
+            if (it .gt. itm) then
+                write(iunit,*) 'Lsearch: cannot find minimum step'
+                src_stat%yon_ct = 'n'
+                im1 = 1
             endif
-            st(3)=src_stat%stp
+            st(3) = src_stat%stp
 c
 c MP 13- Find st(i),st(im1),st(im2)such that dj(im1)<dj(i) & dj(im1)<dj(im2) 
-            if (src_stat%yon_ct.eq.'y') then
-                it=1
-                if (dj(3).lt.dj(1)) then
-                    im1=2
-                    i=3
-                    fctt=fct
-                    do while (dj(i).lt.dj(im1).and.it.le.itm)
-                        im1=i
-                        i=mod(im1,3)+1
-                        src_stat%stp=src_stat%stp*fctt
-                        fctt=fctt*fct
+            if (src_stat%yon_ct .eq. 'y') then
+                it = 1
+                if (dj(3) .lt. dj(1)) then
+                    im1 = 2
+                    i = 3
+                    fctt = fct
+                    do while (dj(i) .lt. dj(im1) .and. it .le. itm)
+                        im1 = i
+                        i = mod(im1,3)+1
+                        src_stat%stp = src_stat%stp*fctt
+                        fctt = fctt*fct
 c                       write(*,*)'lsearch_p: 2'
                         call MPI_BCAST(src_stat, 1, MPI_SEARCH_STATUS,
      >                                 0, MPI_COMM_WORLD, ierr)
-                        bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
+c
+                        bcn(1:nb) = bc(1:nb)+src_stat%stp*ds(1:nb)
+c
                         call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
      >                                      shdeg, d2a, ppos, nb, bcn,
      >                                      xyzf)
+c
                         call cptstd_dp(npts, nlocpts,
      >                                 jcov, cov, ddat,
      >                                 xyzf, std)
-                        dj(i)=std
-                        st(i)=src_stat%stp
-                        it=it+1
+c
+                        dj(i) = std
+                        st(i) = src_stat%stp
+                        it = it+1
                     enddo
 
-                    im2=6-(i+im1)
-                    if (it.gt.itm) then
+                    im2 = 6-(i+im1)
+                    if (it .gt. itm) then
                         write(iunit,*) 
      >                      'Lsearch: cannot increase functional value'
-                        src_stat%yon_ct='n'
+                        src_stat%yon_ct = 'n'
                     endif
 c end of <if (dj(3).lt.dj(1))> clause
                 else
-                    im1=3
-                    im2=1
-                    fctt=fct
-                    src_stat%stp=-src_stat%stp/fctt
-                    do while (dj(im2).lt.dj(im1).and.it.le.itm)
-                        im1=im2
-                        im2=mod(im1,3)+1
-                        src_stat%stp=src_stat%stp*fctt
-                        fctt=fctt*fct
+                    im1 = 3
+                    im2 = 1
+                    fctt = fct
+                    src_stat%stp = -src_stat%stp/fctt
+                    do while (dj(im2) .lt. dj(im1) .and. it .le. itm)
+                        im1 = im2
+                        im2 = mod(im1,3)+1
+                        src_stat%stp = src_stat%stp*fctt
+                        fctt = fctt*fct
 c                       write(*,*)'lsearch_p: 3'
                         call MPI_BCAST(src_stat, 1, MPI_SEARCH_STATUS,
      >                                 0, MPI_COMM_WORLD, ierr)
-                        bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
+c
+                        bcn(1:nb) = bc(1:nb)+src_stat%stp*ds(1:nb)
+c
                         call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
      >                                      shdeg, d2a, ppos, nb, bcn,
      >                                      xyzf)
+c
                         call cptstd_dp(npts, nlocpts,
      >                                 jcov, cov, ddat,
      >                                 xyzf, std)
-                        dj(im2)=std
-                        st(im2)=src_stat%stp
-                        it=it+1
+c
+                        dj(im2) = std
+                        st(im2) = src_stat%stp
+                        it = it+1
                     enddo
 
-                    i=6-(im2+im1)
-                    if (it.gt.itm) then
+                    i = 6-(im2+im1)
+                    if (it .gt. itm) then
                         write(iunit,*)
      >                      'Lsearch: cannot increase functional value'
-                        src_stat%yon_ct='n'
+                        src_stat%yon_ct = 'n'
                     endif
 
-c end of <if (dj(3).ge.dj(1))> clause
+c end of <if (dj(3) .ge. dj(1))> clause
                 endif
 
                 write(iunit,*)'lsearch start',it
@@ -207,47 +220,47 @@ c end of <if (src_stat%yon_ct.eq.'y')> clause
             endif
 c
 c MP2-Find the zero gradient
-            it=1
+            it = 1
             do while (src_stat%yon_ct .eq. 'y')
-                it=it+1
-                stp1=st(i)-st(im1)  
-                stp2=st(im1)-st(im2)
+                it = it+1
+                stp1 = st(i)-st(im1)  
+                stp2 = st(im1)-st(im2)
 c
 c MP 20- check for step size
-                yon_rf='y'
-                if(dabs(st(im1)).gt.epss)then
-                    dd=dabs((stp1+stp2)/st(im1))
+                yon_rf = 'y'
+                if(dabs(st(im1)) .gt. epss)then
+                    dd = dabs((stp1+stp2)/st(im1))
                 else
-                    dd=dabs(stp1+stp2)
+                    dd = dabs(stp1+stp2)
                 endif
-                if (dd.lt.epss) yon_rf='n'
+                if (dd.lt.epss) yon_rf = 'n'
 c
 c MP 21- If step size large enough: Find the next step try
-                if (yon_rf.eq.'y') then
+                if (yon_rf .eq. 'y') then
 c MP  211- check for step interval relative sizes and set default values if needed 
-                    fct=dabs(stp1/stp2)
-                    if (fct.lt.fcts) then
-                        src_stat%stp=st(im1)-(st(im1)-st(im2))/rt
-                    elseif (fct.gt.fctl) then
-                        src_stat%stp=st(im1)+(st(i)-st(im1))/rt
+                    fct = dabs(stp1/stp2)
+                    if (fct .lt. fcts) then
+                        src_stat%stp = st(im1)-(st(im1)-st(im2))/rt
+                    elseif (fct .gt. fctl) then
+                        src_stat%stp = st(im1)+(st(i)-st(im1))/rt
                     else
 c MP  212- steps are similar=> computes gradients (gr*gl<0)
 c        stp given by False position algorithm
-                        gr=(dj(i)-dj(im1))/stp1
-                        gl=(dj(im1)-dj(im2))/stp2
+                        gr = (dj(i)-dj(im1))/stp1
+                        gl = (dj(im1)-dj(im2))/stp2
 c
-                        src_stat%stp=(st(im2)*gr-st(i)*gl)/(gr-gl)
-                        src_stat%stp=0.5d0*(st(im1)+src_stat%stp)
+                        src_stat%stp = (st(im2)*gr-st(i)*gl)/(gr-gl)
+                        src_stat%stp = 0.5d0*(st(im1)+src_stat%stp)
 c
 c MP  213-check step size and set default values if needed
-                        numer=src_stat%stp-st(im1)
-                        denom=max(abs(st(im1)),abs(src_stat%stp),epss)
+                        numer = src_stat%stp-st(im1)
+                        denom = max(abs(st(im1)),abs(src_stat%stp),epss)
                         if (dabs(numer/denom) .lt. epss) then
-                            if (fct.lt.1.d0) then
-                                src_stat%stp=st(im1)
+                            if (fct .lt. 1.d0) then
+                                src_stat%stp = st(im1)
      >                              -(st(im1)-st(im2))/rt
                             else
-                                src_stat%stp=st(im1)
+                                src_stat%stp = st(im1)
      >                              +(st(i)-st(im1))/rt
                             endif
                         endif
@@ -257,33 +270,36 @@ c MP 22-  Find functional values and new im1,im2 & i
 c                   write(*,*)'lsearch_p: 4'
                     call MPI_BCAST(src_stat, 1, MPI_SEARCH_STATUS,
      >                             0, MPI_COMM_WORLD, ierr)
-                    bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
+c
+                    bcn(1:nb) = bc(1:nb)+src_stat%stp*ds(1:nb)
+c
                     call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
      >                                  shdeg, d2a, ppos, nb, bcn,
      >                                  xyzf)
+c
                     call cptstd_dp(npts, nlocpts,
      >                             jcov, cov, ddat,
      >                             xyzf, std)
-
-                    if (src_stat%stp.gt.st(im1)) then
-                        if (std.ge.dj(im1)) then
-                            dj(i)=std
-                            st(i)=src_stat%stp
+c
+                    if (src_stat%stp .gt. st(im1)) then
+                        if (std .ge. dj(im1)) then
+                            dj(i) = std
+                            st(i) = src_stat%stp
                         else
-                            dj(im2)=std
-                            st(im2)=src_stat%stp
-                            im1=im2
-                            im2=6-(i+im1)
+                            dj(im2) = std
+                            st(im2) = src_stat%stp
+                            im1 = im2
+                            im2 = 6-(i+im1)
                         endif
                     else
-                        if (std.ge.dj(im1)) then
-                            dj(im2)=std
-                            st(im2)=src_stat%stp
+                        if (std .ge. dj(im1)) then
+                            dj(im2) = std
+                            st(im2) = src_stat%stp
                         else
-                            dj(i)=std
-                            st(i)=src_stat%stp
-                            im1=i
-                            i=6-(im2+im1)
+                            dj(i) = std
+                            st(i) = src_stat%stp
+                            im1 = i
+                            i = 6-(im2+im1)
                         endif
                     endif
 c
@@ -296,10 +312,10 @@ c MP 23- Check if maximum iteration
                     endif
 c
 c MP 24- Check if significant improvement still possible
-                    dd=max(dj(im2),dj(i))
-                    dd=dabs((dd-dj(im1))/dj(im1))
-                    if (dd.lt.epss) then 
-                        src_stat%yon_ct='n'
+                    dd = max(dj(im2),dj(i))
+                    dd = dabs((dd-dj(im1))/dj(im1))
+                    if (dd .lt. epss) then 
+                        src_stat%yon_ct = 'n'
                         write(iunit,*)
      >                      'Lsearch: No hope of improvement',it
                         write(iunit,'(3e15.7)')dj(i),dj(im1),dj(im2)
@@ -308,7 +324,7 @@ c MP 24- Check if significant improvement still possible
                 
 c end of <if (yon_rf.eq.'y')> clause
                 else
-                    src_stat%yon_ct='n'
+                    src_stat%yon_ct = 'n'
                 endif
 
 c end of <do while (src_stat%yon_ct .eq. 'y')> loop
@@ -316,20 +332,23 @@ c end of <do while (src_stat%yon_ct .eq. 'y')> loop
 
 c
 c MP3- set output value for stp, std and xyzf
-            src_stat%stp=st(im1)
+            src_stat%stp = st(im1)
 c           write(*,*)'lsearch_p: 5'
             call MPI_BCAST(src_stat, 1, MPI_SEARCH_STATUS,
      >                     0, MPI_COMM_WORLD, ierr)
-            bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
+c
+            bcn(1:nb) = bc(1:nb)+src_stat%stp*ds(1:nb)
+c
             call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
      >                          shdeg, d2a, ppos, nb, bcn,
      >                          xyzf)
+c
             call cptstd_dp(npts, nlocpts,
      >                     jcov, cov, ddat,
      >                     xyzf, std)
 c
 c
-c end of <if (rank.eq.0)> clause
+c end of <if (rank .eq. 0)> clause
         else
 c
 c  Sp wait for starting order from master
@@ -337,14 +356,15 @@ c  Sp wait for starting order from master
      >                     0, MPI_COMM_WORLD, ierr)
 c
 c  SP while asked to do some work
-            do while (src_stat%yon_ct.eq.'y')
+            do while (src_stat%yon_ct .eq. 'y')
 c  SP  Receive bcn value from master
 c  SP do the work
-                bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
+                bcn(1:nb) = bc(1:nb)+src_stat%stp*ds(1:nb)
+c
                 call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
      >                              shdeg, d2a, ppos, nb, bcn,
      >                              xyzf)
-
+c
                 call cptstd_dp(npts, nlocpts,
      >                         jcov, cov, ddat,
      >                         xyzf, std)
@@ -355,12 +375,12 @@ c  SP wait for info on next iteration
             enddo
 
 c  SP receive final stp from master & does the final piece of work 
-            bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
-
+            bcn(1:nb) = bc(1:nb)+src_stat%stp*ds(1:nb)
+c
             call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
      >                          shdeg, d2a, ppos, nb, bcn,
      >                          xyzf)
-
+c
             call cptstd_dp(npts, nlocpts,
      >                     jcov, cov, ddat,
      >                     xyzf, std)
@@ -368,7 +388,7 @@ c  SP receive final stp from master & does the final piece of work
 c
         deallocate(bcn)
 c
-        stp=src_stat%stp
+        stp = src_stat%stp
 c
         return
         end
