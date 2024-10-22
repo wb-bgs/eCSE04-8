@@ -24,8 +24,8 @@ SOURCES = \
         dy2mjd.f gauleg.f gc_step_p.f \
         lsearch_p.f misc.f \
         mpi_status_types.f \
-        Psph_bi.f set_FG_sampling.f \
-        ssqgh_dp.f thread_segmenter.f write_comp.f \
+        set_FG_sampling.f \
+        ssqgh_dp.f thread_segmenter.f \
         opt_pr_p3.f
 
 # a list of all the object files
