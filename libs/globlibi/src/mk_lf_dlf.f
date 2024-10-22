@@ -36,23 +36,23 @@ c
         real*8 d1, d2
 c
 c
-#ifdef OMP_OFFLOAD
+#if defined(OMP_OFFLOAD_CPTP2) || defined(OMP_OFFLOAD_SSQGH)
 !$omp declare target
 #endif
 c
 c
 c  Initialise dlf array
         d1 = rs
-        if (d1.ne.0.0d0) then
+        if (d1 .ne. 0.0d0) then
           d1 = d1**im
         else
-          if (im.eq.0) d1 = 1.d0
+          if (im .eq. 0) d1 = 1.d0
         endif
 c
         dlf(1) = d1*d2a(im)                         ! leg. func. (m,m)
         dlf(2) = dlf(1) * rc * dsqrt(dble(2*im+1))  ! leg. func. (m+1,m)
 c
-        do il=2,shdeg-im                     ! l=im+il-1
+        do il = 2,shdeg-im                     ! l=im+il-1
           d0 = il+2*im
           d1 = dble((il-1) * (d0-1))         ! (l-m)*(l+m)
           d2 = dble(il * d0)                 ! (l-m+1)*(l+m+1)	
@@ -61,21 +61,21 @@ c
           dalpha(il) = d1/dsqrt(d2)          !
         enddo
 c
-        do il=2,shdeg-im                     ! l=im+il-1
+        do il = 2,shdeg-im                     ! l=im+il-1
           ! leg. func. (im+il-1,im) 
           dlf(il+1) = dalpha(il)*dlf(il)*rc - dbeta(il)*dlf(il-1)
         enddo
 c
 c
 c  Initialise ddlf array
-        if (rs.eq.0.0d0) then
+        if (rs .eq. 0.0d0) then
 c
-          if (im.ne.1) then 
+          if (im .ne. 1) then 
             ddlf(1:shdeg+1) = 0.0d0
           else
             ddlf(1) = -1.0d0
             ddlf(2) = -dsqrt(3.0d0) 
-            do il=3,shdeg+1
+            do il = 3,shdeg+1
               jl = il*il-1
               d1 = (2*il-1)/dsqrt(dble(jl))
               d2 = dsqrt(dble((il-1)**2-1)/jl)
@@ -85,7 +85,7 @@ c
 c
         else
 c
-          do il=shdeg,im+1,-1
+          do il = shdeg,im+1,-1
             jl = il - im + 1
             d1 = dsqrt(dble((il-im)*(il+im)))
             d2 = dble(il) 

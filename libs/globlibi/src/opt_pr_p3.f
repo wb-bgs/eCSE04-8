@@ -72,7 +72,9 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >                       d2a, ppos, bc, dl,
      >                       cov, jcov, stdt, xyzf, bb, gg)
 c
+#if defined(OMP_OFFLOAD)
         use omp_lib
+#endif
 c
         implicit none
 c
@@ -108,19 +110,8 @@ c
 c
 c
 c All defining parallel enviroment
-
         call MPI_Comm_rank(MPI_COMM_WORLD,rank,ierr)
 c
-c
-#ifdef OMP_OFFLOAD
-        call omp_set_default_device(MOD(rank,4))
-c call omp_set_num_teams(80)
-c call omp_set_teams_thread_limit(32)
-c omp_get_num_devices()
-c omp_get_max_teams()
-c omp_get_teams_thread_limit()
-#endif
-c        
 c
 c Commit the inversion and gradient search MPI status types
         call init_mpi_status_types(nb,bc,inv_stat,src_stat,
@@ -190,7 +181,17 @@ c All define data set
         do ip=1,nlocpts
             ddat(ip)=ppos(nd+1,ip)
         enddo
-
+c
+c
+#ifdef OMP_OFFLOAD
+        call omp_set_default_device(MOD(rank,4))
+c       call omp_set_num_teams(80)
+c       call omp_set_teams_thread_limit(32)
+c       omp_get_num_devices()
+c       omp_get_max_teams()
+c       omp_get_teams_thread_limit()
+#endif
+c
 c
 c All start iteration
         do while (inv_stat%yon(1:1).eq.'y')

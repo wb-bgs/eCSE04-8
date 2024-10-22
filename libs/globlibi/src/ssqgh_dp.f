@@ -26,21 +26,18 @@ c          xyzf           result of forward modelling
 c
 c       output:
 c          gj             gradient of the weighted sum of squares (nb)
-c          hj             diagonal of the Hessian (nb)
+c          dh             diagonal of the Hessian (nb)
 c        
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine ssqgh_dp(nd, nlocpts, nlocdatpts, shdeg,
      >                      d2a, ppos, nb, bc,
      >                      jcov, cov, ddat, xyzf,
      >                      gj_map_len, gj_map,
-     >                      gj, hj)
+     >                      gj, dh)
 c
         implicit none
 c
         include 'mpif.h'
-c
-        real*8, parameter :: RAG = 6371.2d0
-        real*8, parameter :: D2R = 4.d0*datan(1.d0)/180.d0
 c
         integer nd, nlocpts, nlocdatpts
         integer shdeg, nb, jcov(nlocpts+2)
@@ -49,27 +46,31 @@ c
         real*8 ppos(nd+1,nlocpts), bc(nb)
         integer gj_map_len 
         integer gj_map(gj_map_len)
-        real*8 gj(nb), hj(nb)
+        real*8 gj(nb), dh(nb)
+c
+        real*8, parameter :: RAG = 6371.2d0
+        real*8, parameter :: D2R = 4.d0*datan(1.d0)/180.d0
 c
         integer i, j, nu, ierr
         real*8 p1, p2, ra
         real*8 bex, bey, bez
-        real*8 dw_hj, dw_gj
-        real*8, allocatable :: gj2(:), hj2(:)
+        real*8 dw_dh, dw_gj
+c
+        real*8, allocatable :: gj2(:), dh2(:)
 c 
-#ifdef OMP_OFFLOAD
+#if defined(OMP_OFFLOAD_SSQGH)
         logical, save :: firstcall = .TRUE.
 #endif
 c
 c
         allocate(gj2(nb))
-        allocate(hj2(nb))
+        allocate(dh2(nb))
 c
         gj2(1:nb) = 0.0d0
-        hj2(1:nb) = 0.0d0
+        dh2(1:nb) = 0.0d0
 c
 c       
-#ifdef OMP_OFFLOAD
+#if defined(OMP_OFFLOAD_SSQGH)
 !$OMP TARGET DATA if (firstcall)
 !$omp& map(to: nb, nd)
 !$omp& map(to: nlocpts, nlocdatpts, shdeg)
@@ -79,21 +80,24 @@ c
         if (firstcall) then
           firstcall = .FALSE.
         endif
+c
+!$OMP TARGET DATA
+!$omp& map(to: ddat(1:nlocpts))
+!$omp& map(to: xyzf(1:nlocpts))
+!$omp& map(to: bc(1:nb))
+!$omp& map(tofrom: gj2(1:nb), dh2(1:nb))
 #endif
 c
 c
-#ifdef OMP_OFFLOAD
+#if defined(OMP_OFFLOAD_SSQGH)
 !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO
-!$omp& map(to: bc(1:nb))
-!$omp& map(to: ddat(1:nlocpts), xyzf(1:nlocpts))
-!$omp& map(tofrom: gj2(1:nb), hj2(1:nb))
 #else
 !$OMP PARALLEL DO
 #endif
 !$omp& default(shared)
 !$omp& private(p1, p2, ra)
 !$omp& private(bex, bey, bez)
-!$omp& private(dw_hj, dw_gj)
+!$omp& private(dw_dh, dw_gj)
 !$omp& schedule(static)
         do i = 1,nlocdatpts
 c       
@@ -108,38 +112,35 @@ c
 c  calculate the equations of condition   
 c  and update the G matrix and B vector 
 c
-          dw_hj = 2.d0*(1.d0/cov(jcov(i)))
-          dw_gj = dw_hj*(ddat(i)-xyzf(i))
+          dw_dh = 2.d0*(1.d0/cov(jcov(i)))
+          dw_gj = dw_dh*(ddat(i)-xyzf(i))
 c      
           call XYZsph_bi0_sub(shdeg, nb, d2a,
      >                        p1, p2, ra,
      >                        bex, bey, bez,
-     >                        dw_gj, dw_hj,
-     >                        gj2, hj2)
+     >                        dw_gj, dw_dh,
+     >                        gj2, dh2)
 c
         enddo
-#ifdef OMP_OFFLOAD
+#if defined(OMP_OFFLOAD_SSQGH)
 !$OMP END TARGET TEAMS DISTRIBUTE PARALLEL DO
 #else
 !$OMP END PARALLEL DO
 #endif
 c
 c
-#ifdef OMP_OFFLOAD
+#if defined(OMP_OFFLOAD_SSQGH)
 !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO
-!$omp& map(to: bc(1:nb))
-!$omp& map(to: ddat(1:nlocpts), xyzf(1:nlocpts))
-!$omp& map(tofrom: gj2(1:nb), hj2(1:nb))
 #else
 !$OMP PARALLEL DO
 #endif
 !$omp& default(shared)
 !$omp& private(p1, p2, ra)
 !$omp& private(bex, bey, bez)
-!$omp& private(dw_hj, dw_gj)
+!$omp& private(dw_dh, dw_gj)
 !$omp& schedule(static)
         do i = nlocdatpts+1,nlocpts
-
+c
           p1 = ppos(1,i)*D2R
           p2 = ppos(2,i)*D2R
           ra = RAG / ppos(3,i)
@@ -156,53 +157,53 @@ c
 c  calculate the equations of condition   
 c  and update the G matrix and B vector 
 c
-          dw_hj = 2.d0*(1.d0/cov(jcov(i)))
-          dw_gj = dw_hj*(ddat(i)-xyzf(i))
+          dw_dh = 2.d0*(1.d0/cov(jcov(i)))
+          dw_gj = dw_dh*(ddat(i)-xyzf(i))
 c      
           call XYZsph_bi0_sub(shdeg, nb, d2a,
      >                        p1, p2, ra,
      >                        bex, bey, bez,
-     >                        dw_gj, dw_hj,
-     >                        gj2, hj2)
+     >                        dw_gj, dw_dh,
+     >                        gj2, dh2)
 c
         enddo
-#ifdef OMP_OFFLOAD
+#if defined(OMP_OFFLOAD_SSQGH)
 !$OMP END TARGET TEAMS DISTRIBUTE PARALLEL DO
+!$OMP END TARGET DATA
 !$OMP END TARGET DATA
 #else
 !$OMP END PARALLEL DO
 #endif
 c
 c
-c  All: Gather & SUM the GJ and HJ results from ALL the other Processes
         call MPI_ALLREDUCE(MPI_IN_PLACE, gj2, nb,
      >                     MPI_DOUBLE_PRECISION,
      >                     MPI_SUM, MPI_COMM_WORLD, ierr)
 c
-        call MPI_ALLREDUCE(MPI_IN_PLACE, hj2, nb,
+        call MPI_ALLREDUCE(MPI_IN_PLACE, dh2, nb,
      >                     MPI_DOUBLE_PRECISION,
      >                     MPI_SUM, MPI_COMM_WORLD, ierr)
 c
 c
-c  Rearrange coefficient terms in to expected order
-        do i=1,shdeg
+c  Rearrange gj/dh coefficient terms
+        do i = 1,shdeg
           nu = gj_map(i)
           gj(nu) = gj2(i)
-          hj(nu) = hj2(i)
+          dh(nu) = dh2(i)
         enddo
 c
         j = shdeg+1
-        do i=shdeg+1,gj_map_len
+        do i = shdeg+1,gj_map_len
           nu = gj_map(i)
           gj(nu) = gj2(j)
           gj(nu+1) = gj2(j+1)
-          hj(nu) = hj2(j)
-          hj(nu+1) = hj2(j+1)
+          dh(nu) = dh2(j)
+          dh(nu+1) = dh2(j+1)
           nu = nu+2
           j = j+2
         enddo
 c
-        deallocate(gj2, hj2)
+        deallocate(gj2, dh2)
 c
         return
         end
