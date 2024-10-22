@@ -11,7 +11,7 @@
 GLOBLIB = libgloblibi.a
 	
 libdir = 
-FC = nvfortran
+FC = mpifort
 FFLAGS =
 RANLIB = ranlib
 
