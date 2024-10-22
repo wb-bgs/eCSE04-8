@@ -52,7 +52,7 @@ c
         real*8, allocatable :: dra(:), dlf(:), ddlf(:)
 c        
 c 
-#ifdef OMP_OFFLOAD
+#if defined(OMP_OFFLOAD_CPTP2) || defined(OMP_OFFLOAD_SSQGH)
 !$omp declare target
 #endif
 c
@@ -71,7 +71,7 @@ c
         call mk_lf_dlf(im, shdeg, rs, rc,
      >                 d2a, dalpha, dbeta,
      >                 dlf, ddlf)
-        do il=1,shdeg
+        do il = 1,shdeg
           dr = ra**(il+2)
           dra(il) = dr
 c          
@@ -89,13 +89,13 @@ c
         enddo
 c
 c
-        do im=1,shdeg
+        do im = 1,shdeg
           call mk_lf_dlf(im, shdeg, rs, rc,
      >                   d2a, dalpha, dbeta,
      >                   dlf, ddlf)
           dc = dcos(im*p2)
           ds = dsin(im*p2)
-          do il=im,shdeg
+          do il = im,shdeg
             nu = (il*il + 2*(im-1)) + 1
             ik = il-im+1
             dr = dra(il)
@@ -192,7 +192,7 @@ c
         real*8, allocatable :: dra(:), dlf(:), ddlf(:)
 c 
 c
-#ifdef OMP_OFFLOAD
+#if defined(OMP_OFFLOAD_CPTP2)
 !$omp declare target
 #endif
 c
@@ -205,11 +205,11 @@ c
         rc = dcos(p1)
         rs = dsin(p1)
 c
-        im=0
+        im = 0
         call mk_lf_dlf(im, shdeg, rs, rc,
      >                 d2a, dalpha, dbeta,
      >                 dlf, ddlf)
-        do il=1,shdeg
+        do il = 1,shdeg
           dr = ra**(il+2)
           dra(il) = dr
 c          
@@ -226,13 +226,13 @@ c
         enddo
 c
 c
-        do im=1,shdeg
+        do im = 1,shdeg
           call mk_lf_dlf(im, shdeg, rs, rc,
      >                   d2a, dalpha, dbeta,
      >                   dlf, ddlf)
           dc = dcos(im*p2)
           ds = dsin(im*p2)
-          do il=im,shdeg
+          do il = im,shdeg
             nu = (il*il + 2*(im-1)) + 1
             ik = il-im+1
             dr = dra(il)
@@ -311,7 +311,7 @@ c
         real*8, allocatable :: dra(:), dlf(:), ddlf(:)
 c 
 c
-#ifdef OMP_OFFLOAD
+#if defined(OMP_OFFLOAD_SSQGH)
 !$omp declare target
 #endif
 c
@@ -322,12 +322,12 @@ c
         rc = dcos(p1)
         rs = dsin(p1)
 c
-        im=0
-        nu=1
+        im = 0
+        nu = 1
         call mk_lf_dlf(im, shdeg, rs, rc,
      >                 d2a, dalpha, dbeta,
      >                 dlf, ddlf)
-        do il=1,shdeg
+        do il = 1,shdeg
           dr = ra**(il+2)
           dra(il) = dr
 c          
@@ -349,13 +349,13 @@ c
         enddo
 c
 c
-        do im=1,shdeg
+        do im = 1,shdeg
           call mk_lf_dlf(im, shdeg, rs, rc,
      >                   d2a, dalpha, dbeta,
      >                   dlf, ddlf)
           dc = dcos(im*p2)
           ds = dsin(im*p2)
-          do il=im,shdeg
+          do il = im,shdeg
             ik = il-im+1
             dr = dra(il)
 c
