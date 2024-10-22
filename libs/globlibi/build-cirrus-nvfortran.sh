@@ -4,9 +4,9 @@
 function set_compile_options {
   MAKEFILE=$1
   if [[ "${BUILD}" == "release" ]]; then
-    sed -i "s:FFLAGS =:FFLAGS = -I${MPI_HOME}/include -O3 -cpp -DOMP_OFFLOAD -gpu=cuda12.4 -Minfo=mp -mp=gpu -target=gpu -tp=cascadelake -r8:g" ${MAKEFILE}
+    sed -i "s:FFLAGS =:FFLAGS = -I${MPI_HOME}/include -O3 -cpp -fopenmp -DOMP_OFFLOAD -DOMP_OFFLOAD_CPTP2 -DOMP_OFFLOAD_SSQGH -gpu=cuda12.4 -Minfo=mp -mp=gpu -target=gpu -tp=cascadelake -r8:g" ${MAKEFILE}
   elif [[ "${BUILD}" == "debug" ]]; then
-    sed -i "s:FFLAGS =:FFLAGS = -I${MPI_HOME}/include -g -O0 -cpp -DOMP_OFFLOAD -gpu=cuda12.4 -Minfo=mp -mp=gpu -target=gpu -tp=cascadelake -r8 -C -Mnobounds -ffpe-trap=invalid,zero,overflow,underflow,inexact -Ktrap=divz,denorm,inexact,inv,ovf,unf:g" ${MAKEFILE}
+    sed -i "s:FFLAGS =:FFLAGS = -I${MPI_HOME}/include -g -O0 -cpp -fopenmp -DOMP_OFFLOAD -DOMP_OFFLOAD_CPTP2 -DOMP_OFFLOAD_SSQGH -gpu=cuda12.4 -Minfo=mp -mp=gpu -target=gpu -tp=cascadelake -r8 -C -Mnobounds -ffpe-trap=invalid,zero,overflow,underflow,inexact -Ktrap=divz,denorm,inexact,inv,ovf,unf:g" ${MAKEFILE}
   fi
 }
 
@@ -26,7 +26,6 @@ fi
 
 module -s load nvidia/nvhpc-nompi/${NVHPC_VERSION}
 module -s load openmpi/4.1.6-cuda-12.4-nvfortran
-module -s swap -f gcc gcc/${GCC_VERSION}
 
 
 PRFX=${HOME/home/work}
