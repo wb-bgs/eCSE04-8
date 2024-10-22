@@ -110,9 +110,9 @@ c               write(*,*)'lsearch_p: 1'
                 call MPI_BCAST(src_stat, 1, MPI_SEARCH_STATUS,
      >                         0, MPI_COMM_WORLD, ierr)
                 bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
-                call cpt_dat_vals_p2(nd, nlocpts, nlocdatpts,
-     >                               shdeg, d2a, ppos, nb, bcn,
-     >                               xyzf)
+                call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
+     >                              shdeg, d2a, ppos, nb, bcn,
+     >                              xyzf)
                 call cptstd_dp(npts, nlocpts,
      >                         jcov, cov, ddat,
      >                         xyzf, std)
@@ -144,9 +144,9 @@ c                       write(*,*)'lsearch_p: 2'
                         call MPI_BCAST(src_stat, 1, MPI_SEARCH_STATUS,
      >                                 0, MPI_COMM_WORLD, ierr)
                         bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
-                        call cpt_dat_vals_p2(nd, nlocpts, nlocdatpts,
-     >                                       shdeg, d2a, ppos, nb, bcn,
-     >                                       xyzf)
+                        call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
+     >                                      shdeg, d2a, ppos, nb, bcn,
+     >                                      xyzf)
                         call cptstd_dp(npts, nlocpts,
      >                                 jcov, cov, ddat,
      >                                 xyzf, std)
@@ -176,9 +176,9 @@ c                       write(*,*)'lsearch_p: 3'
                         call MPI_BCAST(src_stat, 1, MPI_SEARCH_STATUS,
      >                                 0, MPI_COMM_WORLD, ierr)
                         bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
-                        call cpt_dat_vals_p2(nd, nlocpts, nlocdatpts,
-     >                                       shdeg, d2a, ppos, nb, bcn,
-     >                                       xyzf)
+                        call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
+     >                                      shdeg, d2a, ppos, nb, bcn,
+     >                                      xyzf)
                         call cptstd_dp(npts, nlocpts,
      >                                 jcov, cov, ddat,
      >                                 xyzf, std)
@@ -258,9 +258,9 @@ c                   write(*,*)'lsearch_p: 4'
                     call MPI_BCAST(src_stat, 1, MPI_SEARCH_STATUS,
      >                             0, MPI_COMM_WORLD, ierr)
                     bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
-                    call cpt_dat_vals_p2(nd, nlocpts, nlocdatpts,
-     >                                   shdeg, d2a, ppos, nb, bcn,
-     >                                   xyzf)
+                    call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
+     >                                  shdeg, d2a, ppos, nb, bcn,
+     >                                  xyzf)
                     call cptstd_dp(npts, nlocpts,
      >                             jcov, cov, ddat,
      >                             xyzf, std)
@@ -321,9 +321,9 @@ c           write(*,*)'lsearch_p: 5'
             call MPI_BCAST(src_stat, 1, MPI_SEARCH_STATUS,
      >                     0, MPI_COMM_WORLD, ierr)
             bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
-            call cpt_dat_vals_p2(nd, nlocpts, nlocdatpts,
-     >                           shdeg, d2a, ppos, nb, bcn,
-     >                           xyzf)
+            call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
+     >                          shdeg, d2a, ppos, nb, bcn,
+     >                          xyzf)
             call cptstd_dp(npts, nlocpts,
      >                     jcov, cov, ddat,
      >                     xyzf, std)
@@ -341,9 +341,9 @@ c  SP while asked to do some work
 c  SP  Receive bcn value from master
 c  SP do the work
                 bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
-                call cpt_dat_vals_p2(nd, nlocpts, nlocdatpts,
-     >                               shdeg, d2a, ppos, nb, bcn,
-     >                               xyzf)
+                call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
+     >                              shdeg, d2a, ppos, nb, bcn,
+     >                              xyzf)
 
                 call cptstd_dp(npts, nlocpts,
      >                         jcov, cov, ddat,
@@ -357,9 +357,9 @@ c  SP wait for info on next iteration
 c  SP receive final stp from master & does the final piece of work 
             bcn(1:nb)=bc(1:nb)+src_stat%stp*ds(1:nb)
 
-            call cpt_dat_vals_p2(nd, nlocpts, nlocdatpts,
-     >                           shdeg, d2a, ppos, nb, bcn,
-     >                           xyzf)
+            call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
+     >                          shdeg, d2a, ppos, nb, bcn,
+     >                          xyzf)
 
             call cptstd_dp(npts, nlocpts,
      >                     jcov, cov, ddat,

@@ -118,68 +118,68 @@ c Commit the inversion and gradient search MPI status types
      >                             MPI_INVERSION_STATUS,
      >                             MPI_SEARCH_STATUS)
 c
-        if (rank.eq.0) then
-            allocate (gjo(1:nb))
-            allocate (ghjo(1:nb))
+        if (rank .eq. 0) then
+            allocate(gjo(1:nb))
+            allocate(ghjo(1:nb))
         endif
-        allocate (ds(1:nb))
-        allocate (gj(1:nb))
-        allocate (ghj(1:nb))
-        allocate (ddat(1:nlocpts))
+        allocate(ds(1:nb))
+        allocate(gj(1:nb))
+        allocate(ghj(1:nb))
+        allocate(ddat(1:nlocpts))
 c
 c  Setup gj/hj map
         gj_map_len = shdeg + int((nb-shdeg)/2)
-        allocate (gj_map(1:gj_map_len))
+        allocate(gj_map(1:gj_map_len))
 c
-        do i=1,shdeg
+        do i = 1,shdeg
           gj_map(i) = i*i
         enddo
 c  
         i = shdeg+1
-        do j=1,shdeg
-          do k=j,shdeg
+        do j = 1,shdeg
+          do k = j,shdeg
             gj_map(i) = (k*k + 2*(j-1)) + 1
             i = i+1
           enddo
         enddo
 c
 c Open file for linear search outputs
-        if (rank.eq.0) then
-            ipth=0
-            do while (path(ipth+1:ipth+1).ne.' ')
-                ipth=ipth+1
+        if (rank .eq. 0) then
+            ipth = 0
+            do while (path(ipth+1:ipth+1) .ne. ' ')
+                ipth = ipth+1
             enddo
-            iunit=17
-            open(iunit,file=path(1:ipth)//'opt_pr_p.log')
+            iunit = 17
+            open(iunit, file=path(1:ipth)//'opt_pr_p.log')
         endif
 c
 c Initial
 c I assume that BC is the same for all processes at this point
-        it=0
-        itm=abs(itmax(1))  !number of iteration
-        itm_l=itmax(2)     !number of iteration in linear search
-        itm_r=abs(itmax(3))!number of GC iteration between PR
-        if (itm_r.le.0) itm_r=1
+        it = 0
+        itm = abs(itmax(1))  !number of iteration
+        itm_l = itmax(2)     !number of iteration in linear search
+        itm_r = abs(itmax(3))!number of GC iteration between PR
+        if (itm_r .le. 0) itm_r = 1
 c
-        stdo=1.d99
+        stdo = 1.d99
 c
-        epss=dl(1)
-        cond=dl(3)
-        if (cond.le.0.0d0) cond=1.d30
+        epss = dl(1)
+        cond = dl(3)
+        if (cond .le. 0.0d0) cond = 1.d30
 c
 c Starting conditions
-        inv_stat%yon(1:5)='yyyyr'
-        gj(1:nb)=0.0d0
-        ghj(1:nb)=0.0d0
-        if (rank.eq.0) then
-            gjo(1:nb)=0.0d0
-            ghjo(1:nb)=0.0d0
+        inv_stat%yon(1:5) = 'yyyyr'
+        gj(1:nb) = 0.0d0
+        ghj(1:nb) = 0.0d0
+        if (rank .eq. 0) then
+            gjo(1:nb) = 0.0d0
+            ghjo(1:nb) = 0.0d0
         endif
-        if (itm.eq.0) inv_stat%yon(3:4)='nn'
+        if (itm .eq. 0) inv_stat%yon(3:4) = 'nn'
 c
 c All define data set
-        do ip=1,nlocpts
-            ddat(ip)=ppos(nd+1,ip)
+        do ip = 1,nlocpts
+            ddat(ip) = ppos(nd+1,ip)
         enddo
 c
 c
@@ -194,30 +194,30 @@ c       omp_get_teams_thread_limit()
 c
 c
 c All start iteration
-        do while (inv_stat%yon(1:1).eq.'y')
-            it=it+1
+        do while (inv_stat%yon(1:1) .eq. 'y')
+            it = it+1
 c All: do their part in forward modelling
-            if (inv_stat%yon(2:2).eq.'y') then
+            if (inv_stat%yon(2:2) .eq. 'y') then
 c               if(rank.eq.0)write(*,*)'opt_pr_p3: 1'
                 
-                call cpt_dat_vals_p2(nd, nlocpts, nlocdatpts, shdeg,
-     >                               d2a, ppos, nb, inv_stat%bc,
-     >                               xyzf)
+                call cpt_dat_vals_p(nd, nlocpts, nlocdatpts, shdeg,
+     >                              d2a, ppos, nb, inv_stat%bc,
+     >                              xyzf)
 c
                 call cptstd_dp(npts, nlocpts,
      >                         jcov, cov, ddat, xyzf,
      >                         std)
-                stdo=std
+                stdo = std
             endif
 c
 c All: do their part in finding next step length and direction
-            if (inv_stat%yon(3:3).eq.'y') then
+            if (inv_stat%yon(3:3) .eq. 'y') then
 c All: do their part in finding GJ, DH
-                ip=1
-                allocate(dh(1:nb))
-                dh(1:nb)=0.0d0
+                ip = 1
+                allocate(dh(nb))
+                dh(1:nb) = 0.0d0
 c
-                if (itmax(1).ge.0.or.it.ne.1) then
+                if ((itmax(1) .ge. 0) .or. (it .ne. 1)) then
 c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 2'
                     call ssqgh_dp(nd, nlocpts, nlocdatpts,
      >                            shdeg, d2a, ppos, nb,
@@ -227,10 +227,10 @@ c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 2'
      >                            gj, dh)
                 else
                     if (present(bb)) then
-                        gj(1:nb)=bb(1:nb)
-                        dh(1:nb)=1.d0
+                        gj(1:nb) = bb(1:nb)
+                        dh(1:nb) = 1.d0
                     else
-                        if (rank.eq.0)
+                        if (rank .eq. 0)
      >                      write(*,*)
      >                          'ERROR: bb required for itmax(1)<0'
                         stop
@@ -238,57 +238,57 @@ c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 2'
                 endif
 
 c All: check ZEROgradiant
-                ip=0
-                dm=maxval(dabs(gj(1:nb)))/cond
-                do i=1,nb
-                    if (dabs(gj(i)).lt.dm) then
-                        gj(i)=0.0d0
-                        ip=ip+1
+                ip = 0
+                dm = maxval(dabs(gj(1:nb)))/cond
+                do i = 1,nb
+                    if (dabs(gj(i)) .lt. dm) then
+                        gj(i) = 0.0d0
+                        ip = ip+1
                     endif
                 enddo
 
-                if (rank.eq.0)
+                if (rank .eq. 0)
      >              write(iunit,*)'Number of rejected grad =',ip
 c All: update using inverse of "Hessien matrix diag"
-                dm=maxval(dabs(dh(1:nb)))/cond
-                do i=1,nb
-                    dh(i)=dmax1(dh(i),dm)
-                    ghj(i)=gj(i)/dh(i)
+                dm = maxval(dabs(dh(1:nb)))/cond
+                do i = 1,nb
+                    dh(i) = dmax1(dh(i),dm)
+                    ghj(i) = gj(i)/dh(i)
                 enddo
 c
                 deallocate(dh)
 c MP:  Set descent direction
-                if (rank.eq.0) then
-                    beta=0.0d0
+                if (rank .eq. 0) then
+                    beta = 0.0d0
                     if (inv_stat%yon(5:5) .eq. 'r' .or. 
      >                  inv_stat%yon(5:5) .eq. 'n') then
 c          SD direction
-                        ds(1:nb)=ghj(1:nb)
-                    elseif (inv_stat%yon(5:5).eq.'g') then
+                        ds(1:nb) = ghj(1:nb)
+                    elseif (inv_stat%yon(5:5) .eq. 'g') then
 c          GC direction
-                        dd=dot_product(gjo,ghjo)
-                        if (dabs(dd).gt.epss) then
-                            beta=dot_product(gj,ghj)/dd
-                            ds(1:nb)=ghj(1:nb)+beta*ds(1:nb)
+                        dd = dot_product(gjo, ghjo)
+                        if (dabs(dd) .gt. epss) then
+                            beta = dot_product(gj,ghj)/dd
+                            ds(1:nb) = ghj(1:nb)+beta*ds(1:nb)
                         else
-                            ds(1:nb)=ghj(1:nb)
+                            ds(1:nb) = ghj(1:nb)
                         endif
                     else
 c          Polak-Ribiere direction
-                        dd=dot_product(gjo,ghjo)
-                        if (dabs(dd).gt.epss) then
-                            ghjo(1:nb)=ghj(1:nb)-ghjo(1:nb)
-                            beta=dot_product(gj,ghjo)/dd
-                            beta=dmax1(beta,0.0d0)
-                            ds(1:nb)=ghj(1:nb)+beta*ds(1:nb)
+                        dd = dot_product(gjo,ghjo)
+                        if (dabs(dd) .gt. epss) then
+                            ghjo(1:nb) = ghj(1:nb)-ghjo(1:nb)
+                            beta = dot_product(gj,ghjo)/dd
+                            beta = dmax1(beta,0.0d0)
+                            ds(1:nb) = ghj(1:nb)+beta*ds(1:nb)
                         else
-                            ds(1:nb)=ghj(1:nb)
+                            ds(1:nb) = ghj(1:nb)
                         endif
                     endif
 c MP:  Check on direction
-                    dd=dsqrt(dot_product(ghj,ghj))
-                    dd=dd*dsqrt(dot_product(ds,ds))
-                    dd=dot_product(ds,ghj)/dd
+                    dd = dsqrt(dot_product(ghj,ghj))
+                    dd = dd*dsqrt(dot_product(ds,ds))
+                    dd = dot_product(ds,ghj)/dd
                     write(*,*)
      >                  'descent . gradient directions =',dd,beta
                     write(*,*)
@@ -307,10 +307,10 @@ c               if(rank.eq.0)write(*,*)'opt_pr_p3: 3'
      >                         0, MPI_COMM_WORLD, ierr)
 c
 c ALL: search minimum in descent direction
-                stp=0.d0
+                stp = 0.d0
                 if (inv_stat%yon(5:5) .eq. 'g' .or. 
      >              inv_stat%yon(5:5) .eq. 'r') then
-                    if (itmax(3).ge.0) then
+                    if (itmax(3) .ge. 0) then
 c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 4'
                         call gc_step_p(iunit, nd,
      >                                 npts, nlocpts, nlocdatpts,
@@ -343,11 +343,11 @@ c end of <if (inv_stat%yon(3:3).eq.'y')> clause
             endif
 c
 c MP: What to do next
-            if (rank.eq.0) then
-                if (inv_stat%yon(3:3).eq.'y') then
-                    dd=dabs(stp)*dsqrt(dot_product(ds,ds))
-                    dd=dd/dsqrt(dot_product(inv_stat%bc(1:nb),
-     >                                      inv_stat%bc(1:nb)))
+            if (rank .eq. 0) then
+                if (inv_stat%yon(3:3) .eq. 'y') then
+                    dd = dabs(stp)*dsqrt(dot_product(ds,ds))
+                    dd = dd/dsqrt(dot_product(inv_stat%bc(1:nb),
+     >                                        inv_stat%bc(1:nb)))
                     write(*,*)
                     write(*,'(A,I3,3e17.9,x,A)')
      >           'opt_pr_p',it,std,dd,(stdo-std)/stdo,inv_stat%yon
@@ -356,8 +356,8 @@ c MP: What to do next
      >           'opt_pr_p',it,std,dd,(stdo-std)/stdo,inv_stat%yon
 c
 c      Out conditions
-                    if ((stdo-std)/stdo.lt.epss) then
-                        if (inv_stat%yon(5:5).eq.'n') then
+                    if ((stdo-std)/stdo .lt. epss) then
+                        if (inv_stat%yon(5:5) .eq. 'n') then
 c
                             write(iunit,'(A)')'OUT CONDITIONS'
                             write(iunit,'(A,e17.9)')
@@ -368,42 +368,52 @@ c
      >               '||gj|| : ',dsqrt(dot_product(gj,gj))
                             write(iunit,'(A,e17.9)')
      >               '||ghj|| : ',dsqrt(dot_product(ghj,ghj))
-                            inv_stat%yon(1:5)='yynyn'
-                            if (std.gt.stdo) inv_stat%yon(1:5)='yynnn'
+                            inv_stat%yon(1:5) = 'yynyn'
+                            if (std .gt. stdo) then
+                                inv_stat%yon(1:5) = 'yynnn'
+                            endif
 c        Re-start with stop option: Too small improvement
                         else
-                            inv_stat%yon(1:5)='ynyyn'
-                            if (std.gt.stdo) then
-                                gjo(1:nb)=0.0d0
-                                ghjo(1:nb)=0.0d0
-                                inv_stat%yon(1:5)='yyynn'
+                            inv_stat%yon(1:5) = 'ynyyn'
+                            if (std .gt. stdo) then
+                                gjo(1:nb) = 0.0d0
+                                ghjo(1:nb) = 0.0d0
+                                inv_stat%yon(1:5) = 'yyynn'
                             endif
                         endif
 
                     else
 c
 c        Normal PR or GC iteration
-                        inv_stat%yon(1:5)='ynyyp'
-                        if (itmax(3).ge.0) inv_stat%yon(1:5)='ynyyg'
+                        inv_stat%yon(1:5) = 'ynyyp'
+                        if (itmax(3) .ge. 0) then
+                            inv_stat%yon(1:5) = 'ynyyg'
+                        endif
 c
 c        Re-start: Too small step ... SD iteration
-                        if (dd.lt.epss) inv_stat%yon(5:5)='r'
+                        if (dd .lt. epss) then
+                            inv_stat%yon(5:5) = 'r'
+                        endif
 c
 c        Re-start: No improvement ... restart with stop option
-                        if (std.gt.stdo) inv_stat%yon(1:5)='yyynn'
+                        if (std .gt. stdo) then
+                            inv_stat%yon(1:5)='yyynn'
+                        endif
 c
 c        Re-start: SD Iteration
-                        if (mod(it,itm_r).eq.0) inv_stat%yon(5:5)='r'
+                        if (mod(it,itm_r) .eq. 0) then
+                            inv_stat%yon(5:5) = 'r'
+                        endif
                     endif
 c
 c        Emergency stop 
-                    if (it.ge.itm) inv_stat%yon(1:5)='yynnn'
-                    if (std.lt.stdt) inv_stat%yon(1:5)='yynnn'
+                    if (it .ge. itm) inv_stat%yon(1:5) = 'yynnn'
+                    if (std .lt. stdt) inv_stat%yon(1:5) = 'yynnn'
 
 c end of <if (inv_stat%yon(3:3).eq.'y')> clause
                 else
-                    dd=0.0d0
-                    inv_stat%yon(1:1)='n'
+                    dd = 0.0d0
+                    inv_stat%yon(1:1) = 'n'
                 endif
                 write(*,*)'opt_pr_p next-step : ',inv_stat%yon
                 write(*,*)
@@ -411,22 +421,22 @@ c end of <if (inv_stat%yon(3:3).eq.'y')> clause
                 write(iunit,*)
 c
 c MP: Update parameters
-                if (inv_stat%yon(4:4).eq.'y') then
-                    inv_stat%bc(1:nb)=inv_stat%bc(1:nb)+stp*ds(1:nb)
-                    gjo(1:nb)=gj(1:nb)
-                    ghjo(1:nb)=ghj(1:nb)
-                    stdo=std
+                if (inv_stat%yon(4:4) .eq. 'y') then
+                    inv_stat%bc(1:nb) = inv_stat%bc(1:nb)+stp*ds(1:nb)
+                    gjo(1:nb) = gj(1:nb)
+                    ghjo(1:nb) = ghj(1:nb)
+                    stdo = std
                 endif
 c
 c MP: save temp model file
-                open(11,file=path(1:ipth)//'model_temp.out')
+                open(11, file=path(1:ipth)//'model_temp.out')
                     write(11,'(A,e15.7)')'# STD =',std
                     write(11,'(A,i4)')'# IT =',it
                     write(11,'(2A)')'# yon =',inv_stat%yon(1:5)
                     write(11,'(A)')'###########'
-                    do i=1,nb
-                        write(11,'(i8,2e15.7)')i,
-     >                        inv_stat%bc(i),stp*ds(i)
+                    do i = 1,nb
+                        write(11, '(i8,2e15.7)')i,
+     >                        inv_stat%bc(i), stp*ds(i)
                     enddo
                 close(11)
 
@@ -442,17 +452,17 @@ c end of <do while (inv_stat%yon(1:1).eq.'y')> loop
         enddo
 
 c
-        stdt=std
-        if (rank.eq.0) close(iunit)
+        stdt = std
+        if (rank .eq. 0) close(iunit)
 c
-        deallocate (ddat)
-        deallocate (ghj)
-        deallocate (gj)
-        deallocate (gj_map)
-        deallocate (ds)
-        if (rank.eq.0) then
-            deallocate (ghjo)
-            deallocate (gjo)
+        deallocate(ddat)
+        deallocate(ghj)
+        deallocate(gj)
+        deallocate(gj_map)
+        deallocate(ds)
+        if (rank .eq. 0) then
+            deallocate(ghjo)
+            deallocate(gjo)
         endif
 c        
 c Free the inversion and gradient search MPI status types

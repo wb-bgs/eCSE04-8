@@ -76,11 +76,8 @@ mem = []
 precalc = nparams*3 + (shdeg+1)
 
 lab.append("mod_wmam_020") # mem[0]
-mem.append(SIZEOF_DOUBLE*(1*nparams + 10*nlocpts + precalc) + SIZEOF_INT*(2*(nlocpts+2) + 2*nranks))
+mem.append(SIZEOF_DOUBLE*(1*nparams + 10*nlocpts + precalc) + SIZEOF_INT*(2*(nlocpts+2) + 2*nranks + 1*ncoeffs + 1*(shdeg+1)))
 
-
-lab.append("cpt_dat_vals_p")
-mem.append(mem[0] + SIZEOF_DOUBLE*(1*ncoeffs + 1*(shdeg+1)))
 
 lab.append("build_damp_space")
 mem.append(mem[0] + SIZEOF_DOUBLE*(10*nlocsampts) + SIZEOF_DOUBLE*(1*ncoeffs + 1*(shdeg+1)))
@@ -90,7 +87,7 @@ lab.append("opt_pr_p3") # mem[3]
 mem.append(mem[0] + SIZEOF_DOUBLE*(3 + 2*nparams + 3*nparams + 1*nlocpts))
 
 
-lab.append("cpt_dat_vals_p2")
+lab.append("cpt_dat_vals_p")
 mem.append(mem[3] + SIZEOF_DOUBLE*(1*nparams + 2*(shdeg+1) + 1*(shdeg)))
 
 lab.append("cptstd_dp")
@@ -103,12 +100,12 @@ mem.append(mem[3] + SIZEOF_DOUBLE*(1*nparams) + SIZEOF_DOUBLE*(2*nparams) + SIZE
 
 lab.append("gc_step_p") # mem[7]
 mem.append(mem[3] + SIZEOF_DOUBLE*(1*nlocpts))
-lab.append("cpt_dat_vals_p2")
+lab.append("cpt_dat_vals_p")
 mem.append(mem[7] + SIZEOF_DOUBLE*(1*nparams + 2*(shdeg+1) + 1*(shdeg)))
 
 lab.append("gc_step_p") # mem[9]
 mem.append(mem[3] + SIZEOF_DOUBLE*(1*nparams))
-lab.append("cpt_dat_vals_p2")
+lab.append("cpt_dat_vals_p")
 mem.append(mem[9] + SIZEOF_DOUBLE*(1*nparams + 2*(shdeg+1) + 1*(shdeg)))
 lab.append("cptstd_dp")
 mem.append(mem[9] + SIZEOF_DOUBLE*(2*nranks + 6))
@@ -116,7 +113,7 @@ mem.append(mem[9] + SIZEOF_DOUBLE*(2*nranks + 6))
 
 lab.append("lsearch_p") # mem[12]
 mem.append(mem[3] + SIZEOF_DOUBLE*(1*nparams))
-lab.append("cpt_dat_vals_p2")
+lab.append("cpt_dat_vals_p")
 mem.append(mem[12] + SIZEOF_DOUBLE*(1*nparams + 2*(shdeg+1) + 1*(shdeg)))
 lab.append("cptstd_dp")
 mem.append(mem[12] + SIZEOF_DOUBLE*(2*nranks + 6))

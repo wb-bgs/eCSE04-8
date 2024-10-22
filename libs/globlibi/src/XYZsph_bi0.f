@@ -52,7 +52,7 @@ c
         real*8, allocatable :: dra(:), dlf(:), ddlf(:)
 c        
 c 
-#if defined(OMP_OFFLOAD_CPTP2) || defined(OMP_OFFLOAD_SSQGH)
+#if defined(OMP_OFFLOAD_CPTP) || defined(OMP_OFFLOAD_SSQGH)
 !$omp declare target
 #endif
 c
@@ -192,7 +192,7 @@ c
         real*8, allocatable :: dra(:), dlf(:), ddlf(:)
 c 
 c
-#if defined(OMP_OFFLOAD_CPTP2)
+#if defined(OMP_OFFLOAD_CPTP)
 !$omp declare target
 #endif
 c

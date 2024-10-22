@@ -36,7 +36,7 @@ c
         real*8 d1, d2
 c
 c
-#if defined(OMP_OFFLOAD_CPTP2) || defined(OMP_OFFLOAD_SSQGH)
+#if defined(OMP_OFFLOAD_CPTP) || defined(OMP_OFFLOAD_SSQGH)
 !$omp declare target
 #endif
 c

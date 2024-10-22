@@ -19,7 +19,7 @@ SOURCES = \
         mklf_F.f mkdlf_F.f mk_lf_dlf.f \
         Xsph_bi.f Ysph_bi.f Zsph_bi.f sph_bi.f \
 	XYZsph_bi0.f \
-	cpt_dat_vals_p.f cpt_dat_vals_p2.f \
+	cpt_dat_vals_p.f \
 	cptstd_dp.f \
 	dy2mjd.f gauleg.f gc_step_p.f \
 	lsearch_p.f misc.f \

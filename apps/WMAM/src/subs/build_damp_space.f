@@ -31,7 +31,7 @@ c
 c
         include 'mpif.h'
 c
-        real*8, parameter :: RAG=6371.2d0
+        real*8, parameter :: RAG = 6371.2d0
 c
         integer nlocdatpts, nlocsampts
         integer imin_locpts, imin_locsampts
@@ -40,76 +40,63 @@ c
 c
         real*8, allocatable :: vrt(:,:)
         real*8, allocatable :: glw(:)
-        real*8, allocatable :: dw1(:)
-        real*8, allocatable :: dw2(:,:)
+        real*8, allocatable :: cm(:)
+        real*8, allocatable :: dw(:,:)
 c
-        integer i,j,k
-c
-c
-c  MPI, determine rank
+        integer i, j, k
         integer ierr,rank
+c
+c        
         call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
 c
 c  Define sampling points
-        allocate (glw(nlocsampts))
-        allocate (vrt(nd+1,nlocsampts))
-        allocate (dw2(2,nlocsampts))
+        allocate(glw(nlocsampts))
+        allocate(vrt(nd+1,nlocsampts))
+        allocate(dw(2,nlocsampts))
         call set_FG_sampling(llm, imin_locsampts, 
      >                       imin_locsampts+nlocsampts-1,
-     >                       dw2,glw)
-        do i=1,nlocsampts
-          vrt(1,i)=dw2(1,i)
-          vrt(2,i)=dw2(2,i)
-          vrt(3,i)=RAG
-          vrt(4,i)=ryg
+     >                       dw, glw)
+        do i = 1,nlocsampts
+          vrt(1,i) = dw(1,i)
+          vrt(2,i) = dw(2,i)
+          vrt(3,i) = RAG
+          vrt(4,i) = ryg
         enddo
-        deallocate (dw2)
+        deallocate(dw)
 c
-        allocate(dw1(1:nlocsampts))
-c
-        dw1=0.0d0
-        if (rank.eq.0) write(*,*) ' Calculating CM4 components'
-        call cpt_dat_vals_p(nd, nlocsampts, 1, vrt, ncoeffs,
-     >                      bc, dw1)
-        vrt(5,1:nlocsampts)=dw1(1:nlocsampts)
-        if (rank.eq.0) write(*,*) '  X CM4 component calculated'
-c
-        dw1=0.0d0
-        call cpt_dat_vals_p(nd, nlocsampts, 2, vrt, ncoeffs,
-     >                      bc, dw1)
-        vrt(6,1:nlocsampts)=dw1(1:nlocsampts)
-        if (rank.eq.0) write(*,*) '  Y CM4 component calculated'
-c
-        dw1=0.0d0
-        call cpt_dat_vals_p(nd, nlocsampts, 3, vrt, ncoeffs,
-     >                      bc, dw1)
-        vrt(7,1:nlocsampts)=dw1(1:nlocsampts)
-        if (rank.eq.0) then
-          write(*,*) '  Z CM4 component calculated'
-          write(*,*) ''
-        endif
-
-        deallocate(dw1)
+c  Calculate CM4 components 
+        if (rank .eq. 0) write(*,*) 'Calculating CM4 components'
+        allocate(cm(ncoeffs))
+        do i = 1,3
+          j = 4+i
+          cm = 0.0d0 
+          do k = 1,nlocsampts
+            call sph_bi('f', i, ncoeffs, bc, vrt(1,k), cm)
+            vrt(j,k) = cm(1)
+          enddo
+        enddo
+        deallocate(cm)
+        if (rank .eq. 0) write(*,*) 'XYZ CM4 components calculated'
 
 c
-c for each data point define the covariance
-        j=nlocdatpts+1
-        k=imin_locpts+nlocdatpts
-        do i=1,nlocsampts
-          ppos(1:nd,j)=vrt(1:nd,i)
-          ppos(nd+1,j)=0.0d0
+c  For each data point define the covariance
+        j = nlocdatpts+1
+        k = imin_locpts+nlocdatpts
+        do i = 1,nlocsampts
+          ppos(1:nd,j) = vrt(1:nd,i)
+          ppos(nd+1,j) = 0.0d0
 c
-          ijcov(j,1)=k
-          ijcov(j,2)=k
-          cov(j)=1.d0/glw(i)
-          cov(j)=cov(j)/wgh
+          ijcov(j,1) = k
+          ijcov(j,2) = k
+          cov(j) = 1.d0/glw(i)
+          cov(j) = cov(j)/wgh
 
-          j=j+1
-          k=k+1
+          j = j+1
+          k = k+1
         enddo
 c
-        deallocate (vrt)
-        deallocate (glw)
+        deallocate(vrt)
+        deallocate(glw)
 c
         return
         end subroutine build_damp_space
