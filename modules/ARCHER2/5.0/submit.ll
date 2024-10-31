@@ -15,7 +15,7 @@ ulimit -c unlimited
 ulimit -S -s unlimited
 
 
-module -q load wmam/4.1
+module -q load wmam/5.0
 
 DEGREE=200
 RESOLUTION=1.0
