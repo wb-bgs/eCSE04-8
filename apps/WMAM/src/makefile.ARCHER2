@@ -9,7 +9,7 @@ FFLAGS =
 LIBS =
 RANLIB = ranlib
 
-VPATH=.:subs:io
+VPATH=.:io:globlibi
 #--------------------------------------
 # rule to make .o from .f and .F files
 .f.o:
@@ -18,6 +18,26 @@ VPATH=.:subs:io
 	$(FC) $(FFLAGS) $< -c
 #--------------------------------------
 OBJ=\
+mklf_F.o\
+mkdlf_F.o\
+mk_lf_dlf.o\
+Xsph_bi.o\
+Ysph_bi.o\
+Zsph_bi.o\
+sph_bi.o\
+XYZsph_bi0.o\
+dy2mjd.o\
+gauleg.o\
+misc.o\
+mpi_status_types.o\
+set_FG_sampling.o\
+thread_segmenter.o\
+cpt_dat_vals_p.o\
+cptstd_dp.o\
+ssqgh_dp.o\
+gc_step_p.o\
+lsearch_p.o\
+opt_pr_p3.o\
 build_damp_space.o\
 fit_data.o\
 ini_model.o\

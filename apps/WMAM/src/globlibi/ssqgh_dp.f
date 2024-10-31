@@ -54,6 +54,11 @@ c
         integer i, j, nu, ierr
         real*8 p1, p2, ra
         real*8 bex, bey, bez
+c
+        real*8, allocatable :: dra(:)
+        real*8, allocatable :: dalpha(:), dbeta(:)
+        real*8, allocatable :: dlf(:), ddlf(:)
+c
         real*8 dw_dh, dw_gj
 c
         real*8, allocatable :: gj2(:), dh2(:)
@@ -63,6 +68,10 @@ c
 #endif
 c
 c
+        allocate(dra(shdeg))
+        allocate(dalpha(0:shdeg), dbeta(0:shdeg))
+        allocate(dlf(shdeg+1), ddlf(shdeg+1))
+c 
         allocate(gj2(nb))
         allocate(dh2(nb))
 c
@@ -75,7 +84,9 @@ c
 #if !defined(OMP_OFFLOAD_CPTP)
 !$omp& map(to: nb, nd)
 !$omp& map(to: nlocpts, nlocdatpts, shdeg)
-!$omp& map(to: d2a(0:shdeg))
+!$omp& map(to: d2a(0:shdeg), dra(1:shdeg))
+!$omp& map(to: dalpha(0:shdeg), dbeta(0:shdeg))
+!$omp& map(to: dlf(1:shdeg+1), ddlf(1:shdeg+1))
 !$omp& map(to: ppos(1:nd+1,1:nlocpts))
 #endif
 !$omp& map(to: cov(1:nlocpts), jcov(1:nlocpts+2))
@@ -97,10 +108,16 @@ c
 !$OMP PARALLEL DO
 #endif
 !$omp& default(shared)
+!$omp& private(dra, dalpha, dbeta)
+!$omp& private(dlf, ddlf)
 !$omp& private(p1, p2, ra)
 !$omp& private(bex, bey, bez)
 !$omp& private(dw_dh, dw_gj)
+#if defined(OMP_OFFLOAD_SSQGH)
+!$omp& dist_schedule(static)
+#else
 !$omp& schedule(static)
+#endif
         do i = 1,nlocdatpts
 c       
           p1 = ppos(1,i)*D2R
@@ -118,6 +135,8 @@ c
           dw_gj = dw_dh*(ddat(i)-xyzf(i))
 c      
           call XYZsph_bi0_sub(shdeg, nb, d2a,
+     >                        dra, dalpha, dbeta,
+     >                        dlf, ddlf,
      >                        p1, p2, ra,
      >                        bex, bey, bez,
      >                        dw_gj, dw_dh,
@@ -137,10 +156,16 @@ c
 !$OMP PARALLEL DO
 #endif
 !$omp& default(shared)
+!$omp& private(dra, dalpha, dbeta)
+!$omp& private(dlf, ddlf)
 !$omp& private(p1, p2, ra)
 !$omp& private(bex, bey, bez)
 !$omp& private(dw_dh, dw_gj)
+#if defined(OMP_OFFLOAD_SSQGH)
+!$omp& dist_schedule(static)
+#else
 !$omp& schedule(static)
+#endif
         do i = nlocdatpts+1,nlocpts
 c
           p1 = ppos(1,i)*D2R
@@ -152,7 +177,9 @@ c
           bez = ppos(7,i)
 c
           call XYZsph_bi0_sample(shdeg, nb,
-     >                           d2a, bc,
+     >                           d2a, dra,
+     >                           dalpha, dbeta,
+     >                           dlf, ddlf, bc,
      >                           p1, p2, ra, 
      >                           bex, bey, bez)
 c        
@@ -163,6 +190,8 @@ c
           dw_gj = dw_dh*(ddat(i)-xyzf(i))
 c      
           call XYZsph_bi0_sub(shdeg, nb, d2a,
+     >                        dra, dalpha, dbeta,
+     >                        dlf, ddlf,
      >                        p1, p2, ra,
      >                        bex, bey, bez,
      >                        dw_gj, dw_dh,
@@ -206,6 +235,10 @@ c
         enddo
 c
         deallocate(gj2, dh2)
+c
+        deallocate(dra)
+        deallocate(dalpha, dbeta)
+        deallocate(dlf, ddlf)
 c
         return
         end

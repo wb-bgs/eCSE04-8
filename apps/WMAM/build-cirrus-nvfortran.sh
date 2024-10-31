@@ -4,9 +4,9 @@
 function set_compile_options {
   MAKEFILE=$1
   if [[ "${BUILD}" == "release" ]]; then
-    sed -i "s:FFLAGS =:FFLAGS = -I${MPI_HOME}/include -O3 -cpp -fopenmp -r8:g" ${MAKEFILE}
+    sed -i "s:FFLAGS =:FFLAGS = -I${MPI_HOME}/include -O1 -cpp -r8 -DOMP_OFFLOAD -DOMP_OFFLOAD_CPTP -DOMP_OFFLOAD_SSQGH -tp=cascadelake -target=gpu -mp=gpu -Minfo=mp -gpu=cuda12.4,cc70 -cuda:g" ${MAKEFILE}
   elif [[ "${BUILD}" == "debug" ]]; then
-    sed -i "s:FFLAGS =:FFLAGS = -I${MPI_HOME}/include -g -O0 -cpp -fopenmp -r8 -C -Mnobounds -ffpe-trap=invalid,zero,overflow,underflow,inexact -Ktrap=divz,denorm,inexact,inv,ovf,unf:g" ${MAKEFILE}
+    sed -i "s:FFLAGS =:FFLAGS = -I${MPI_HOME}/include -g -O0 -cpp -r8 -DOMP_OFFLOAD -DOMP_OFFLOAD_CPTP -DOMP_OFFLOAD_SSQGH -tp=cascadelake -target=gpu -mp=gpu -Minfo=mp -gpu=cuda12.4,cc70 -cuda -C -Mnobounds -ffpe-trap=invalid,zero,overflow,underflow,inexact -Ktrap=divz,denorm,inexact,inv,ovf,unf:g" ${MAKEFILE}
   fi
   sed -i "s:LIBS =:LIBS = -L${MPI_HOME}/lib -lmpi_mpifh:g" ${MAKEFILE}
 }
@@ -14,7 +14,6 @@ function set_compile_options {
 
 BUILD=$1
 VERSION=5.0
-GLOBLIBI_VERSION=5.0
 SLATEC_VERSION=4.1
 GCC_VERSION=10.2.0
 NVHPC_VERSION=24.5
@@ -39,18 +38,17 @@ WMAM_BUILD_ROOT=${PRFX}/projects/eCSE04-8/apps/${WMAM_LABEL}/src
 WMAM_INSTALL_ROOT=${PRFX}/apps/${WMAM_LABEL}/${WMAM_VERSION}/GNU/${GCC_VERSION}-nvfortran
 WMAM_INSTALL_PATH=${WMAM_INSTALL_ROOT}/${BUILD}
 
-echo -e "\n\nBuilding ${WMAM_LABEL} ${WMAM_VERSION} with globlibi ${GLOBLIBI_VERSION} (${BUILD}) using GNU ${GCC_VERSION}-nvfortran...\n\n"
+echo -e "\n\nBuilding ${WMAM_LABEL} ${WMAM_VERSION} (${BUILD}) using GNU ${GCC_VERSION}-nvfortran...\n\n"
   
 
 SLATEC_ROOT=${PRFX}/libs/slatec/${SLATEC_VERSION}/GNU/${GCC_VERSION}-nvfortran/${BUILD}
-GLOBLIBI_ROOT=${PRFX}/libs/globlibi/${GLOBLIBI_VERSION}/GNU/${GCC_VERSION}-nvfortran/${BUILD}
 
 cd ${WMAM_BUILD_ROOT}
 
 cp makefile.cirrus.nvfortran makefile
 set_compile_options ./makefile
 
-LIBS_MAKEFILE_LINE="${GLOBLIBI_ROOT}/lib/libgloblibi.a ${SLATEC_ROOT}/lib/libslatec.a"
+LIBS_MAKEFILE_LINE="${SLATEC_ROOT}/lib/libslatec.a"
 sed -i "s:LIBS =:LIBS = ${LIBS_MAKEFILE_LINE}:g" ./makefile
 
 

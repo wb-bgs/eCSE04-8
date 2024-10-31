@@ -8,6 +8,11 @@ c       input:
 c          shdeg  INTEGER       max SH degree value
 c          nb     INTEGER       number of coefficients
 c          d2a    REAL*8        pre-computed array for mk_lf_dlf()
+c          dra    REAL*8        pre-allocated array used in this subroutine
+c          dalpha REAL*8        pre-allocated array used in mk_lf_dlf() subroutine
+c          dbeta  REAL*8        pre-allocated array used in mk_lf_dlf() subroutine
+c          dlf    REAL*8        pre-allocated array used in mk_lf_dlf() subroutine
+c          ddlf   REAL*8        pre-allocated array used in mk_lf_dlf() subroutine
 c          bc     REAL*8        coefficient array
 c          p1     REAL*8        co-latitude
 c          p2     REAL*8        longitude
@@ -19,15 +24,19 @@ c          bey    REAL*8        y component of magnetic field
 c          bez    REAL*8        z component of magnetic field
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine XYZsph_bi0_sample(shdeg, nb,
-     >                               d2a, bc,
+        subroutine XYZsph_bi0_sample(shdeg, nb, d2a,
+     >                               dra, dalpha, dbeta,
+     >                               dlf, ddlf, bc,
      >                               p1, p2, ra,
      >                               bex, bey, bez)
 c
         implicit none
 c
         integer shdeg, nb
-        real*8 d2a(0:shdeg), bc(nb)
+        real*8 d2a(0:shdeg), dra(shdeg)
+        real*8 dalpha(0:shdeg), dbeta(0:shdeg)
+        real*8 dlf(shdeg+1), ddlf(shdeg+1)
+        real*8 bc(nb)
         real*8 p1, p2, ra
         real*8 bex, bey, bez 
 c
@@ -47,18 +56,12 @@ c
         real*8 zx_c, zy_c
 c
         real*8 bex2, bey2, bez2
-c
-        real*8, allocatable :: dalpha(:), dbeta(:)
-        real*8, allocatable :: dra(:), dlf(:), ddlf(:)
 c        
 c 
 #if defined(OMP_OFFLOAD_CPTP) || defined(OMP_OFFLOAD_SSQGH)
 !$omp declare target
 #endif
 c
-c
-        allocate(dalpha(2:shdeg-1), dbeta(2:shdeg-1))
-        allocate(dra(shdeg), dlf(shdeg+1), ddlf(shdeg+1))
 c
         dx = 0.0d0
         dy = 0.0d0 
@@ -120,9 +123,6 @@ c
           enddo
         enddo
 c
-        deallocate(dalpha, dbeta)
-        deallocate(dra, dlf, ddlf)
-c
         dxbey = dx*bey
         dxbez = dx*bez
         dybex = dy*bex
@@ -161,24 +161,36 @@ c       input:
 c          shdeg  INTEGER     max SH degree value
 c          nb     INTEGER     number of coefficients
 c          d2a    REAL*8      pre-computed array for mk_lf_dlf()
+c          dra    REAL*8      pre-allocated array used in this subroutine
+c          dalpha REAL*8      pre-allocated array used in mk_lf_dlf() subroutine
+c          dbeta  REAL*8      pre-allocated array used in mk_lf_dlf() subroutine
+c          dlf    REAL*8      pre-allocated array used in mk_lf_dlf() subroutine
+c          ddlf   REAL*8      pre-allocated array used in mk_lf_dlf() subroutine
 c          bc     REAL*8      coefficient array
 c          p1     REAL*8      co-latitude
 c          p2     REAL*8      longitude
 c          ra     REAL*8      radius
+c          bex    REAL*8      x component of magnetic field
+c          bey    REAL*8      y component of magnetic field
+c          bez    REAL*8      z component of magnetic field
 c
 c       output:
 c          YZsph_bi0_fun  REAL*8
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        real*8 function XYZsph_bi0_fun(shdeg, nb,
-     >                                 d2a, bc,
+        real*8 function XYZsph_bi0_fun(shdeg, nb, d2a,
+     >                                 dra, dalpha, dbeta,
+     >                                 dlf, ddlf, bc,
      >                                 p1, p2, ra,
      >                                 bex, bey, bez)
 c
         implicit none
 c
         integer shdeg, nb
-        real*8 d2a(0:shdeg), bc(nb)
+        real*8 d2a(0:shdeg), dra(shdeg)
+        real*8 dalpha(0:shdeg), dbeta(0:shdeg)
+        real*8 dlf(shdeg+1), ddlf(shdeg+1)
+        real*8 bc(nb)
         real*8 p1, p2, ra
         real*8 bex, bey, bez 
 c
@@ -187,18 +199,12 @@ c
         real*8 ds, dc, dr, dw
         real*8 bx, by, bz
         real*8 bxp1, byp1, bzp1
-c
-        real*8, allocatable :: dalpha(:), dbeta(:)
-        real*8, allocatable :: dra(:), dlf(:), ddlf(:)
 c 
 c
 #if defined(OMP_OFFLOAD_CPTP)
 !$omp declare target
 #endif
 c
-c
-        allocate(dalpha(2:shdeg-1), dbeta(2:shdeg-1))
-        allocate(dra(shdeg), dlf(shdeg+1), ddlf(shdeg+1)) 
 c
         XYZsph_bi0_fun = 0.0d0 
 c        
@@ -257,9 +263,6 @@ c
           enddo
         enddo
 c
-        deallocate(dalpha, dbeta)
-        deallocate(dra, dlf, ddlf)
-c
         return
         end function XYZsph_bi0_fun
 
@@ -274,9 +277,17 @@ c       input:
 c          shdeg    INTEGER     max SH degree value
 c          nb       INTEGER     number of coefficients
 c          d2a      REAL*8      pre-computed array for mk_lf_dlf()
+c          dra      REAL*8      pre-allocated array used in this subroutine
+c          dalpha   REAL*8      pre-allocated array used in mk_lf_dlf() subroutine
+c          dbeta    REAL*8      pre-allocated array used in mk_lf_dlf() subroutine
+c          dlf      REAL*8      pre-allocated array used in mk_lf_dlf() subroutine
+c          ddlf     REAL*8      pre-allocated array used in mk_lf_dlf() subroutine
 c          p1       REAL*8      co-latitude
 c          p2       REAL*8      longitude
 c          ra       REAL*8      radius
+c          bex      REAL*8      x component of magnetic field
+c          bey      REAL*8      y component of magnetic field
+c          bez      REAL*8      z component of magnetic field 
 c          dw_gj    REAL*8      multiplier for gj terms
 c          dw_hj    REAL*8      multiplier for hj terms
 c
@@ -286,6 +297,8 @@ c          hj       REAL*8      diagonal of the Hessian (nb)
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine XYZsph_bi0_sub(shdeg, nb, d2a,
+     >                            dra, dalpha, dbeta,
+     >                            dlf, ddlf,
      >                            p1, p2, ra,
      >                            bex, bey, bez,
      >                            dw_gj, dw_hj,
@@ -294,7 +307,9 @@ c
         implicit none
 c
         integer shdeg, nb
-        real*8 d2a(0:shdeg)
+        real*8 d2a(0:shdeg), dra(shdeg)
+        real*8 dalpha(0:shdeg), dbeta(0:shdeg)
+        real*8 dlf(shdeg+1), ddlf(shdeg+1)
         real*8 p1, p2, ra
         real*8 bex, bey, bez 
         real*8 dw_gj, dw_hj
@@ -306,18 +321,12 @@ c
         real*8 bx, by, bz
         real*8 bxp1, byp1, bzp1
         real*8 be, bep1
-c
-        real*8, allocatable :: dalpha(:), dbeta(:)
-        real*8, allocatable :: dra(:), dlf(:), ddlf(:)
 c 
 c
 #if defined(OMP_OFFLOAD_SSQGH)
 !$omp declare target
 #endif
 c
-c
-        allocate(dalpha(2:shdeg-1), dbeta(2:shdeg-1))
-        allocate(dra(shdeg), dlf(shdeg+1), ddlf(shdeg+1))
 c
         rc = dcos(p1)
         rs = dsin(p1)
@@ -388,9 +397,6 @@ c
             nu = nu+2
           enddo
         enddo
-c
-        deallocate(dalpha, dbeta)
-        deallocate(dra, dlf, ddlf)
 c
         return
         end subroutine XYZsph_bi0_sub
