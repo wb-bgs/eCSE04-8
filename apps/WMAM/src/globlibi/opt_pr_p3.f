@@ -69,10 +69,6 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >                       d2a, ppos, bc, dl,
      >                       cov, jcov, stdt, xyzf)
 c
-#if defined(OMP_OFFLOAD)
-        use omp_lib
-#endif
-c
         implicit none
 c
         include 'mpif.h'
@@ -183,9 +179,13 @@ c All define data set
         enddo
 c
 c
-#if defined(OMP_OFFLOAD)
-        call omp_set_default_device(MOD(rank,4))
-#endif
+!$OMP TARGET DATA
+!$omp& map(to: nb, nd)
+!$omp& map(to: nlocpts, nlocdatpts, shdeg)
+!$omp& map(to: d2a(0:shdeg))
+!$omp& map(to: ppos(1:nd+1,1:nlocpts))
+!$omp& map(to: cov(1:nlocpts))
+!$omp& map(to: jcov(1:nlocpts+2))
 c
 c
 c All start iteration
@@ -441,7 +441,10 @@ c           if(rank.eq.0)write(*,*)'opt_pr_p3: 7'
         
 c end of <do while (inv_stat%yon(1:1).eq.'y')> loop
         enddo
-
+c
+c
+!$OMP END TARGET DATA
+c
 c
         stdt = std
         if (rank .eq. 0) close(iunit)
