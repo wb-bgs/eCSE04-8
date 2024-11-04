@@ -62,10 +62,6 @@ c
         real*8 dw_dh, dw_gj
 c
         real*8, allocatable :: gj2(:), dh2(:)
-c 
-#if defined(OMP_OFFLOAD_SSQGH)
-        logical, save :: firstcall = .TRUE.
-#endif
 c
 c
         allocate(dra(shdeg))
@@ -80,25 +76,16 @@ c
 c
 c       
 #if defined(OMP_OFFLOAD_SSQGH)
-!$OMP TARGET DATA if (firstcall)
-#if !defined(OMP_OFFLOAD_CPTP)
-!$omp& map(to: nb, nd)
-!$omp& map(to: nlocpts, nlocdatpts, shdeg)
-!$omp& map(to: d2a(0:shdeg), dra(1:shdeg))
-!$omp& map(to: dalpha(0:shdeg), dbeta(0:shdeg))
-!$omp& map(to: dlf(1:shdeg+1), ddlf(1:shdeg+1))
-!$omp& map(to: ppos(1:nd+1,1:nlocpts))
-#endif
-!$omp& map(to: cov(1:nlocpts), jcov(1:nlocpts+2))
-        if (firstcall) then
-          firstcall = .FALSE.
-        endif
-c
 !$OMP TARGET DATA
 !$omp& map(to: ddat(1:nlocpts))
 !$omp& map(to: xyzf(1:nlocpts))
 !$omp& map(to: bc(1:nb))
 !$omp& map(tofrom: gj2(1:nb), dh2(1:nb))
+c
+!$OMP TARGET ENTER DATA
+!$omp& map(alloc: dra(1:shdeg))
+!$omp& map(alloc: dalpha(0:shdeg), dbeta(0:shdeg))
+!$omp& map(alloc: dlf(1:shdeg+1), ddlf(1:shdeg+1))
 #endif
 c
 c
@@ -200,7 +187,12 @@ c
         enddo
 #if defined(OMP_OFFLOAD_SSQGH)
 !$OMP END TARGET TEAMS DISTRIBUTE PARALLEL DO
-!$OMP END TARGET DATA
+c
+!$OMP TARGET EXIT DATA
+!$omp& map(delete: dra(1:shdeg))
+!$omp& map(delete: dalpha(0:shdeg), dbeta(0:shdeg))
+!$omp& map(delete: dlf(1:shdeg+1), ddlf(1:shdeg+1))
+c
 !$OMP END TARGET DATA
 #else
 !$OMP END PARALLEL DO

@@ -44,29 +44,19 @@ c
 c
         real*8 XYZsph_bi0_fun
 c
-#if defined(OMP_OFFLOAD_CPTP)
-        logical, save :: firstcall = .TRUE.
-#endif
-c
 c   
         allocate(dra(shdeg))
         allocate(dalpha(0:shdeg), dbeta(0:shdeg))
         allocate(dlf(shdeg+1), ddlf(shdeg+1)) 
 c
 #if defined(OMP_OFFLOAD_CPTP)
-!$OMP TARGET DATA if(firstcall)
-!$omp& map(to: nb, nd)
-!$omp& map(to: nlocpts, nlocdatpts, shdeg)
-!$omp& map(to: d2a(0:shdeg), dra(1:shdeg))
-!$omp& map(to: dalpha(0:shdeg), dbeta(0:shdeg))
-!$omp& map(to: dlf(1:shdeg+1), ddlf(1:shdeg+1))
-!$omp& map(to: ppos(1:nd+1,1:nlocpts))
-        if (firstcall) then
-          firstcall = .FALSE.
-        endif
-c
 !$OMP TARGET DATA
 !$omp& map(to: bc(1:nb))
+c
+!$OMP TARGET ENTER DATA
+!$omp& map(alloc: dra(1:shdeg))
+!$omp& map(alloc: dalpha(0:shdeg), dbeta(0:shdeg))
+!$omp& map(alloc: dlf(1:shdeg+1), ddlf(1:shdeg+1))
 #endif
 c
 c
@@ -152,7 +142,12 @@ c
         enddo
 #if defined(OMP_OFFLOAD_CPTP)
 !$OMP END TARGET TEAMS DISTRIBUTE PARALLEL DO
-!$OMP END TARGET DATA
+c
+!$OMP TARGET EXIT DATA
+!$omp& map(delete: dra(1:shdeg))
+!$omp& map(delete: dalpha(0:shdeg), dbeta(0:shdeg))
+!$omp& map(delete: dlf(1:shdeg+1), ddlf(1:shdeg+1))
+c
 !$OMP END TARGET DATA
 #else
 !$OMP END PARALLEL DO
