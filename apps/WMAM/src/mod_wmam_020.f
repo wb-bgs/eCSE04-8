@@ -18,6 +18,55 @@ c
         end subroutine prepare_cm4_components
 c
 c
+#if defined(OMP_OFFLOAD)    
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c    function node_num()
+c
+c    Return the number part of the name of the compute node on which
+c    this MPI rank is running. This function searches for the first
+c    contiguous sequence of numeric characters from the end of the
+c    processor name.
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc  
+        function node_num()
+c        
+        implicit none
+c
+        include 'mpif.h'
+c
+        integer, parameter :: AC_0 = iachar('0')
+        integer, parameter :: AC_9 = iachar('9')
+c
+        character node_name(MPI_MAX_PROCESSOR_NAME)
+        integer node_name_len, ierr 
+        integer nn_i, nn_m, ac
+        logical found_digit
+c        
+        integer node_num
+c
+c
+        node_num = 0
+        found_digit = .false.
+c        
+        call MPI_Get_processor_name(node_name, node_name_len, ierr)
+        if (node_name_len .gt. 0) then
+          nn_i = node_name_len
+          nn_m = 1
+          do nn_i = node_name_len,1,-1
+            ac = iachar(node_name(nn_i))
+            if (ac .ge. AC_0 .and. ac .le. AC_9) then
+              found_digit = .true.
+              node_num = node_num + (ac - AC_0)*nn_m
+              nn_m = 10*nn_m
+            else
+              if (found_digit) exit
+            endif
+          enddo
+        endif
+c
+        end function node_num
+#endif
+c
+c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c	Program MOD_WMAM
 c    
@@ -26,6 +75,10 @@ c    total intensity data in Geocentric
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         program mod_wmam
+c
+#if defined(OMP_OFFLOAD)
+        use omp_lib
+#endif
 c
         implicit none
 c
@@ -71,16 +124,37 @@ c  variables for populating d2a array
         real*8  dnm, d1, d2
         real*8, allocatable :: d2a(:)
 c
+c  MPI-related variables
+        integer ierr, nranks, rank
+#if defined(OMP_OFFLOAD)
+        integer node_num
+        integer mpi_comm_local
+        integer nranks_local, rank_local
+        integer ndevices
+#endif
+c
 c  slatec subroutine
         real*8 dgamln
         external dgamln 
 c
 c
 c  Initialize MPI, determine rank
-        integer ierr, nranks, rank
         call MPI_Init(ierr)
         call MPI_Comm_size(MPI_COMM_WORLD, nranks, ierr)
         call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
+c
+#if defined(OMP_OFFLOAD)
+c
+c  Assign the MPI rank to a GPU
+        call MPI_Comm_split(MPI_COMM_WORLD, node_num(),
+     >                      rank, mpi_comm_local, ierr);
+        call MPI_Comm_size(mpi_comm_local, nranks_local, ierr)
+        rank_local = MOD(rank,nranks_local)
+c
+        ndevices = omp_get_num_devices()
+        call omp_set_default_device(MOD(rank_local,ndevices))
+c
+#endif
 c
 c  Read in command line arguments
         cmdcnt = COMMAND_ARGUMENT_COUNT()
