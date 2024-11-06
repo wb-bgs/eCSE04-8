@@ -40,13 +40,13 @@ c
         include 'mpif.h'
 c
         integer nd, nlocpts, nlocdatpts
-        integer shdeg, nb, jcov(nlocpts+2)
-        real*8 d2a(0:shdeg), ddat(nlocpts)
-        real*8 xyzf(nlocpts), cov(nlocpts)
-        real*8 ppos(nd+1,nlocpts), bc(nb)
+        integer shdeg, nb, jcov(1:nlocpts+2)
+        real*8 d2a(0:shdeg), ddat(1:nlocpts)
+        real*8 xyzf(1:nlocpts), cov(1:nlocpts)
+        real*8 ppos(1:nd+1,1:nlocpts), bc(1:nb)
         integer gj_map_len 
-        integer gj_map(gj_map_len)
-        real*8 gj(nb), dh(nb)
+        integer gj_map(1:gj_map_len)
+        real*8 gj(1:nb), dh(1:nb)
 c
         real*8, parameter :: RAG = 6371.2d0
         real*8, parameter :: D2R = 4.d0*datan(1.d0)/180.d0
@@ -64,12 +64,12 @@ c
         real*8, allocatable :: gj2(:), dh2(:)
 c
 c
-        allocate(dra(shdeg))
+        allocate(dra(1:shdeg))
         allocate(dalpha(0:shdeg), dbeta(0:shdeg))
-        allocate(dlf(shdeg+1), ddlf(shdeg+1))
+        allocate(dlf(1:shdeg+1), ddlf(1:shdeg+1))
 c 
-        allocate(gj2(nb))
-        allocate(dh2(nb))
+        allocate(gj2(1:nb))
+        allocate(dh2(1:nb))
 c
         gj2(1:nb) = 0.0d0
         dh2(1:nb) = 0.0d0
@@ -189,9 +189,9 @@ c
 !$OMP END TARGET TEAMS DISTRIBUTE PARALLEL DO
 c
 !$OMP TARGET EXIT DATA
-!$omp& map(delete: dra(1:shdeg))
-!$omp& map(delete: dalpha(0:shdeg), dbeta(0:shdeg))
-!$omp& map(delete: dlf(1:shdeg+1), ddlf(1:shdeg+1))
+!$omp& map(delete: dra)
+!$omp& map(delete: dalpha, dbeta)
+!$omp& map(delete: dlf, ddlf)
 c
 !$OMP END TARGET DATA
 #else
