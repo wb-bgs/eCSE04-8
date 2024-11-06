@@ -5,30 +5,30 @@ c       Setup equations for the Norm:
 c        int_{\Omega} ( B_r \dot B.cm4)^2 d_{\omega}
 c
 c       input:
+c       shdeg           integer    maxium degree for lithospheric field
+c       ncoeffs         integer    number of coefficients from ref model
+c       nparams         integer    number of coefficients based on max spherical deg 
+c       nd              integer    such that nd+1 is the lead dim of ppos
 c       nlocdatpts      integer    number of data points local to rank
 c       nlocsampts      integer    number of sampling points local to rank
 c       nlocpts         integer    nlocdatpts + nlocsampts
 c       imin_locpts     integer    local rank's global index for data+sampling points
 c       imin_locsampts  integer    local rank's global index for sampling points
-c       nd              integer    such that nd+1 is the lead dim of ppos
-c       ncoeffs         integer    number of coefficients from ref model
-c       nparams         integer    number of coefficients based on max spherical deg 
-c       llm             integer    maxium degree for lithospheric field
 c       ryg             real*8     reference year for the model
-c       wgh             real*8     weight for damping
+c       dampfac         real*8     weight for damping
 c       bc              real*8     array of initial parameters
 c
 c       output:
-c       ijcov(*)        integer    array defining cov matrix
 c       cov(*)          real*8     array of cov matrix
+c       ijcov(*)        integer    array defining cov matrix
 c       ppos(*)         real*8     array of data values
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine build_damp_space(nlocdatpts, nlocsampts, nlocpts,
+        subroutine build_damp_space(shdeg, ncoeffs, nparams, nd,
+     >                              nlocdatpts, nlocsampts, nlocpts,
      >                              imin_locpts, imin_locsampts,
-     >                              nd, ncoeffs, nparams,
-     >                              llm, ryg, wgh, bc,
-     >                              ijcov, cov, ppos)
+     >                              ryg, dampfac, bc,
+     >                              cov, ijcov, ppos)
 c
         implicit none
 c
@@ -36,13 +36,14 @@ c
 c
         real*8, parameter :: RAG = 6371.2d0
 c
+        integer shdeg, ncoeffs, nparams, nd
         integer nlocdatpts, nlocsampts, nlocpts
         integer imin_locpts, imin_locsampts
-        integer nd, ncoeffs, nparams
-        integer llm, ijcov(nlocpts+2,2)
-        real*8 bc(nparams), ppos(nd+1,nlocpts)
-        real*8 cov(nlocpts), ryg, wgh
-c
+        real*8  ryg, dampfac
+        real*8  bc(1:nparams), cov(1:nlocpts)
+        integer ijcov(1:nlocpts+2,1:2)
+        real*8  ppos(1:nd+1,1:nlocpts)
+        
         real*8, allocatable :: vrt(:,:)
         real*8, allocatable :: glw(:)
         real*8, allocatable :: cm(:)
@@ -55,10 +56,10 @@ c
         call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
 c
 c  Define sampling points
-        allocate(glw(nlocsampts))
-        allocate(vrt(nd+1,nlocsampts))
-        allocate(dw(2,nlocsampts))
-        call set_FG_sampling(llm, nlocsampts,
+        allocate(glw(1:nlocsampts))
+        allocate(vrt(1:nd+1,1:nlocsampts))
+        allocate(dw(1:2,1:nlocsampts))
+        call set_FG_sampling(shdeg, nlocsampts,
      >                       imin_locsampts, 
      >                       imin_locsampts+nlocsampts-1,
      >                       dw, glw)
@@ -72,7 +73,7 @@ c  Define sampling points
 c
 c  Calculate CM4 components 
         if (rank .eq. 0) write(*,*) 'Calculating CM4 components'
-        allocate(cm(ncoeffs))
+        allocate(cm(1:ncoeffs))
         do i = 1,3
           j = 4+i
           cm = 0.0d0 
@@ -96,7 +97,7 @@ c
           ijcov(j,1) = k
           ijcov(j,2) = k
           cov(j) = 1.d0/glw(i)
-          cov(j) = cov(j)/wgh
+          cov(j) = cov(j)/dampfac
 
           j = j+1
           k = k+1

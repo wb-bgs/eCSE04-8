@@ -337,11 +337,11 @@ c  Define covariance matrix: sin(colat) weight
 c
 c  Add smoothing equations
         if (rank .eq. 0) write(*,*) 'Define regularisation'
-        call build_damp_space(nlocdatpts, nlocsampts, nlocpts,
+        call build_damp_space(shdeg, ncoeffs, nparams, nd,
+     >                        nlocdatpts, nlocsampts, nlocpts,
      >                        imin_locpts, imin_locsampts,
-     >                        ND, ncoeffs, nparams,
-     >                        shdeg, ryg, dampfac, bc,
-     >                        ijcov, cov, ppos)
+     >                        ryg, dampfac, bc,
+     >                        cov, ijcov, ppos)
 
 c
 c  Prepare the CM4 components for use within XYZsph_bi0 source
