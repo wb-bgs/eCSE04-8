@@ -13,6 +13,11 @@ c         nd            Space dimension
 c         nlocpts       number of data+sampling points local to rank
 c         nlocdatpts    number of data points local to rank
 c         d2a           pre-computed array for mk_lf_dlf()
+c         dra           pre-allocated array used within XYZsph_bi0
+c         dalpha        "
+c         dbeta         "
+c         dlf           "
+c         ddlf          "
 c         bc            base coefficients
 c         ppos(nd+1,*)  point position in nd
 c
@@ -21,12 +26,15 @@ c         XYZF(*)       X,Y,Z or F value at point position
 c        
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine cpt_dat_vals_p(shdeg, nb, nd, nlocpts, nlocdatpts,
-     >                            d2a, bc, ppos, xyzf)
+     >                            d2a, dra, dalpha, dbeta, dlf, ddlf,
+     >                            bc, ppos, xyzf)
 c
         implicit none
 c
         integer shdeg, nb, nd, nlocpts, nlocdatpts
-        real*8  d2a(0:shdeg)
+        real*8  d2a(0:shdeg), dra(1:shdeg)
+        real*8  dalpha(0:shdeg), dbeta(0:shdeg)
+        real*8  dlf(1:shdeg+1), ddlf(1:shdeg+1)
         real*8  bc(1:nb), ppos(nd+1,nlocpts)
         real*8  xyzf(1:nlocpts)
 c
@@ -37,26 +45,13 @@ c
         real*8 p1, p2, ra
         real*8 bex, bey, bez
 c
-        real*8, allocatable :: dra(:)
-        real*8, allocatable :: dalpha(:), dbeta(:)
-        real*8, allocatable :: dlf(:), ddlf(:)
-c
         real*8 XYZsph_bi0_fun
 c
-c   
-        allocate(dra(1:shdeg))
-        allocate(dalpha(0:shdeg), dbeta(0:shdeg))
-        allocate(dlf(1:shdeg+1), ddlf(1:shdeg+1)) 
 c
 #if defined(OMP_OFFLOAD_CPTP)
 !$OMP TARGET DATA
 !$omp& map(to: bc(1:nb))
 !$omp& map(tofrom: xyzf(1:nlocpts))
-c
-!$OMP TARGET ENTER DATA
-!$omp& map(alloc: dra(1:shdeg))
-!$omp& map(alloc: dalpha(0:shdeg), dbeta(0:shdeg))
-!$omp& map(alloc: dlf(1:shdeg+1), ddlf(1:shdeg+1))
 #endif
 c
 c
@@ -141,20 +136,11 @@ c
 #if defined(OMP_OFFLOAD_CPTP)
 !$OMP END TARGET TEAMS DISTRIBUTE PARALLEL DO
 c
-!$OMP TARGET EXIT DATA
-!$omp& map(delete: dra)
-!$omp& map(delete: dalpha, dbeta)
-!$omp& map(delete: dlf, ddlf)
-c
 !$OMP END TARGET DATA
 #else
 !$OMP END PARALLEL DO
 #endif
 c
-c
-        deallocate(dra)
-        deallocate(dalpha, dbeta)
-        deallocate(dlf, ddlf)
 c
         return
         end

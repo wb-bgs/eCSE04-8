@@ -17,6 +17,11 @@ c          nd             space dimension
 c          nlocpts        number of data+sampling points local to rank
 c          nlocdatpts     number of data points assigned to rank
 c          d2a            pre-computed array for mk_lf_dlf()
+c          dra            pre-allocated array used within XYZsph_bi0
+c          dalpha         "
+c          dbeta          "
+c          dlf            "
+c          ddlf           "
 c          bc             Estimation of Base function coefficients
 c          ppos           data point position
 c          cov            Covariance matrix in SLAP column format
@@ -31,7 +36,8 @@ c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine ssqgh_dp(shdeg, nb, nd,
      >                      nlocpts, nlocdatpts,
-     >                      d2a, bc, ppos,
+     >                      d2a, dra, dalpha, dbeta,
+     >                      dlf, ddlf, bc, ppos,
      >                      cov, jcov, ddat, xyzf,
      >                      gj_map_len, gj_map,
      >                      gj, dh)
@@ -41,7 +47,10 @@ c
         include 'mpif.h'
 c
         integer shdeg, nb, nd, nlocpts, nlocdatpts
-        real*8 d2a(0:shdeg), bc(1:nb)
+        real*8 d2a(0:shdeg), dra(1:shdeg)
+        real*8 dalpha(0:shdeg), dbeta(0:shdeg)
+        real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
+        real*8 bc(1:nb)
         real*8 ppos(1:nd+1,1:nlocpts)
         real*8 cov(1:nlocpts)
         integer jcov(1:nlocpts+2)
@@ -58,18 +67,10 @@ c
         real*8 p1, p2, ra
         real*8 bex, bey, bez
 c
-        real*8, allocatable :: dra(:)
-        real*8, allocatable :: dalpha(:), dbeta(:)
-        real*8, allocatable :: dlf(:), ddlf(:)
-c
         real*8 dw_dh, dw_gj
 c
         real*8, allocatable :: gj2(:), dh2(:)
 c
-c
-        allocate(dra(1:shdeg))
-        allocate(dalpha(0:shdeg), dbeta(0:shdeg))
-        allocate(dlf(1:shdeg+1), ddlf(1:shdeg+1))
 c 
         allocate(gj2(1:nb))
         allocate(dh2(1:nb))
@@ -84,11 +85,6 @@ c
 !$omp& map(to: xyzf(1:nlocpts))
 !$omp& map(to: bc(1:nb))
 !$omp& map(tofrom: gj2(1:nb), dh2(1:nb))
-c
-!$OMP TARGET ENTER DATA
-!$omp& map(alloc: dra(1:shdeg))
-!$omp& map(alloc: dalpha(0:shdeg), dbeta(0:shdeg))
-!$omp& map(alloc: dlf(1:shdeg+1), ddlf(1:shdeg+1))
 #endif
 c
 c
@@ -191,11 +187,6 @@ c
 #if defined(OMP_OFFLOAD_SSQGH)
 !$OMP END TARGET TEAMS DISTRIBUTE PARALLEL DO
 c
-!$OMP TARGET EXIT DATA
-!$omp& map(delete: dra)
-!$omp& map(delete: dalpha, dbeta)
-!$omp& map(delete: dlf, ddlf)
-c
 !$OMP END TARGET DATA
 #else
 !$OMP END PARALLEL DO
@@ -230,10 +221,6 @@ c
         enddo
 c
         deallocate(gj2, dh2)
-c
-        deallocate(dra)
-        deallocate(dalpha, dbeta)
-        deallocate(dlf, ddlf)
 c
         return
         end

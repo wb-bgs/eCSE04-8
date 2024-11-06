@@ -102,7 +102,9 @@ c
 c  variables for populating d2a array 
         integer nm
         real*8  dnm, d1, d2
-        real*8, allocatable :: d2a(:)
+        real*8, allocatable :: d2a(:), dra(:)
+        real*8, allocatable :: dalpha(:), dbeta(:)
+        real*8, allocatable :: dlf(:), ddlf(:)
 c
         real*8, allocatable :: ds(:), dh(:), ddat(:)
         real*8, allocatable :: gj(:), gjo(:)
@@ -188,22 +190,25 @@ c All define data set
         enddo
 c
 c
+c  Allocate private arrays used within XYZshp_bi0
+        allocate(d2a(0:shdeg), dra(1:shdeg))
+        allocate(dalpha(0:shdeg), dbeta(0:shdeg))
+        allocate(dlf(1:shdeg+1), ddlf(1:shdeg+1))
+c 
 c  Initialize d2a array
-        allocate(d2a(0:shdeg))
-c
         do nm = 0,shdeg
-          dnm = dble(nm)                    ! dble real for nm
-          d1 = dgamln(2*dnm+1.0d0, ierr)    ! d1=log(fact(2dnm))
-          d2 = dgamln(dnm+1.0d0, ierr)      ! d2=log(fact(dnm))
+          dnm = dble(nm)
+          d1 = dgamln(2*dnm+1.0d0, ierr)
+          d2 = dgamln(dnm+1.0d0, ierr)
           if (ierr .ne. 0) then
             write(*,*) 'd2a: Cannot computes normalisation cst !'
             stop
           endif
 c
-          d2 = 0.5d0*d1 - d2                ! d2=sqrt(fact(2dnm))/fact(dnm)
-          d2 = d2 - nm*dlog(2.0d0)          !
-          d2 = dexp(d2)                     ! normalisation cst.
-          if (nm .ne. 0) d2 = d2*dsqrt(2.0d0) ! special case  m=0
+          d2 = 0.5d0*d1 - d2
+          d2 = d2 - nm*dlog(2.0d0)
+          d2 = dexp(d2)
+          if (nm .ne. 0) d2 = d2*dsqrt(2.0d0)
 c
           d2a(nm) = d2
         enddo
@@ -217,16 +222,21 @@ c
 !$omp& map(to: cov(1:nlocpts))
 !$omp& map(to: jcov(1:nlocpts+2))
 c
+!$OMP TARGET ENTER DATA
+!$omp& map(alloc: dra(1:shdeg))
+!$omp& map(alloc: dalpha(0:shdeg), dbeta(0:shdeg))
+!$omp& map(alloc: dlf(1:shdeg+1), ddlf(1:shdeg+1))
+c
 c
 c All start iteration
         do while (inv_stat%yon(1:1) .eq. 'y')
             it = it+1
 c All: do their part in forward modelling
             if (inv_stat%yon(2:2) .eq. 'y') then
-c               if(rank.eq.0)write(*,*)'opt_pr_p3: 1'
-                
+c               if(rank.eq.0)write(*,*)'opt_pr_p3: 1'           
                 call cpt_dat_vals_p(shdeg, nb, nd, nlocpts, nlocdatpts,
-     >                              d2a, inv_stat%bc, ppos, xyzf)
+     >                              d2a, dra, dalpha, dbeta, dlf, ddlf,
+     >                              inv_stat%bc, ppos, xyzf)
 c
                 call cptstd_dp(npts, nlocpts,
      >                         cov, jcov, ddat, xyzf,
@@ -244,7 +254,8 @@ c
                 if ((itmax(1) .ge. 0) .or. (it .ne. 1)) then
 c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 2'
                     call ssqgh_dp(shdeg, nb, nd, nlocpts, nlocdatpts,
-     >                            d2a, inv_stat%bc, ppos,
+     >                            d2a, dra, dalpha, dbeta, dlf, ddlf,
+     >                            inv_stat%bc, ppos,
      >                            cov, jcov, ddat, xyzf,
      >                            gj_map_len, gj_map, 
      >                            gj, dh)
@@ -333,7 +344,8 @@ c ALL: search minimum in descent direction
 c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 4'
                         call gc_step_p(iunit, shdeg, nb, nd,
      >                                 npts, nlocpts, nlocdatpts,
-     >                                 d2a, inv_stat%bc,
+     >                                 d2a, dra, dalpha, dbeta,
+     >                                 dlf, ddlf, inv_stat%bc,
      >                                 ppos, ddat,
      >                                 cov, jcov, std,
      >                                 gj, ghj, ds, stp, xyzf)
@@ -341,7 +353,8 @@ c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 4'
 c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 5'
                         call lsearch_p(iunit, itm_l, shdeg, nb, nd, 
      >                                 npts, nlocpts, nlocdatpts,
-     >                                 d2a, inv_stat%bc,
+     >                                 d2a, dra, dalpha, dbeta,
+     >                                 dlf, ddlf, inv_stat%bc,
      >                                 ppos, ddat,
      >                                 src_stat, MPI_SEARCH_STATUS,
      >                                 dl, cov, jcov,
@@ -351,7 +364,8 @@ c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 5'
 c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 6'
                     call lsearch_p(iunit, itm_l, shdeg, nb, nd,
      >                             npts, nlocpts, nlocdatpts,
-     >                             d2a, inv_stat%bc,
+     >                             d2a, dra, dalpha, dbeta,
+     >                             dlf, ddlf, inv_stat%bc,
      >                             ppos, ddat,
      >                             src_stat, MPI_SEARCH_STATUS,
      >                             dl, cov, jcov,
@@ -471,13 +485,20 @@ c end of <do while (inv_stat%yon(1:1).eq.'y')> loop
         enddo
 c
 c
+!$OMP TARGET EXIT DATA
+!$omp& map(delete: dra)
+!$omp& map(delete: dalpha, dbeta)
+!$omp& map(delete: dlf, ddlf)
+c
 !$OMP END TARGET DATA
 c
 c
         stdt = std
         if (rank .eq. 0) close(iunit)
 c
-        deallocate(d2a)
+        deallocate(d2a, dra)
+        deallocate(dalpha, dbeta)
+        deallocate(dlf, ddlf)
 c
         deallocate(ddat)
         deallocate(ghj)

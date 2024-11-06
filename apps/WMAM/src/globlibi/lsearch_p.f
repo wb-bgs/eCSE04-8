@@ -28,24 +28,30 @@ c         npts          Total number of points (data + sampling) for all ranks
 c         nlocpts       Total number of points for this rank
 c         nlocdatpts    number of data points assigned to rank
 c         d2a           pre-computed array for mk_lf_dlf()
+c         dra           pre-allocated array used within XYZsph_bi0
+c         dalpha        "
+c         dbeta         "
+c         dlf           "
+c         ddlf          "
 c         bc            Estimate of Base function coefficients
 c         ppos          data point position in ndD
 c         ddat          data values
 c         src_stat      MPI gradient search status
 c         dl(3)         control lsearch process & damping
-c         cov(*)        covariance matrix in SLAP Column format
+c         cov           covariance matrix in SLAP Column format
 c         jcov          Integer vector describing cov format
 c         std           STD value for given BC
-c         ds(*)         gradient direction
+c         ds            gradient direction
 c
 c       output:
 c         stp           recommended step in direction ds(*)
 c         std           STD value for given BC+stp*DS
-c         xyzf(*)       Forward modelling for given BC+stp*DS
+c         xyzf          Forward modelling for given BC+stp*DS
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine lsearch_p(iunit, itm, shdeg, nb, nd,
      >                       npts, nlocpts, nlocdatpts,
-     >                       d2a, bc, ppos, ddat,
+     >                       d2a, dra, dalpha, dbeta, dlf, ddlf,
+     >                       bc, ppos, ddat,
      >                       src_stat, MPI_SEARCH_STATUS,
      >                       dl, cov, jcov,
      >                       std, ds, stp, xyzf)
@@ -57,7 +63,10 @@ c
 c
         integer iunit, itm, shdeg, nb, nd
         integer npts, nlocpts, nlocdatpts
-        real*8 d2a(0:shdeg), bc(1:nb)
+        real*8 d2a(0:shdeg), dra(1:shdeg)
+        real*8 dalpha(0:shdeg), dbeta(0:shdeg)
+        real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
+        real*8 bc(1:nb)
         real*8 ppos(1:nd+1,1:nlocpts)
         real*8 ddat(1:nlocpts)
         type(search_status) src_stat
@@ -117,7 +126,9 @@ c
 c
                 call cpt_dat_vals_p(shdeg, nb, nd,
      >                              nlocpts, nlocdatpts,
-     >                              d2a, bcn, ppos, xyzf)
+     >                              d2a, dra, dalpha,
+     >                              dbeta, dlf, ddlf,
+     >                              bcn, ppos, xyzf)
 c
                 call cptstd_dp(npts, nlocpts,
      >                         cov, jcov, ddat,
@@ -155,7 +166,9 @@ c
 c
                         call cpt_dat_vals_p(shdeg, nb, nd,
      >                                      nlocpts, nlocdatpts,
-     >                                      d2a, bcn, ppos, xyzf)
+     >                                      d2a, dra, dalpha, dbeta,
+     >                                      dlf, ddlf,
+     >                                      bcn, ppos, xyzf)
 c
                         call cptstd_dp(npts, nlocpts,
      >                                 cov, jcov, ddat,
@@ -191,7 +204,9 @@ c
 c
                         call cpt_dat_vals_p(shdeg, nb, nd,
      >                                      nlocpts, nlocdatpts,
-     >                                      d2a, bcn, ppos, xyzf)
+     >                                      d2a, dra, dalpha, dbeta,
+     >                                      dlf, ddlf,
+     >                                      bcn, ppos, xyzf)
 c
                         call cptstd_dp(npts, nlocpts,
      >                                 cov, jcov, ddat,
@@ -277,7 +292,9 @@ c
 c
                     call cpt_dat_vals_p(shdeg, nb, nd,
      >                                  nlocpts, nlocdatpts,
-     >                                  d2a, bcn, ppos, xyzf)
+     >                                  d2a, dra, dalpha, dbeta,
+     >                                  dlf, ddlf,
+     >                                  bcn, ppos, xyzf)
 c
                     call cptstd_dp(npts, nlocpts,
      >                             cov, jcov, ddat,
@@ -343,7 +360,9 @@ c
 c
             call cpt_dat_vals_p(shdeg, nb, nd,
      >                          nlocpts, nlocdatpts,
-     >                          d2a, bcn, ppos, xyzf)
+     >                          d2a, dra, dalpha, dbeta,
+     >                          dlf, ddlf,
+     >                          bcn, ppos, xyzf)
 c
             call cptstd_dp(npts, nlocpts,
      >                     cov, jcov, ddat,
@@ -365,7 +384,9 @@ c  SP do the work
 c
                 call cpt_dat_vals_p(shdeg, nb, nd,
      >                              nlocpts, nlocdatpts,
-     >                              d2a, bcn, ppos, xyzf)
+     >                              d2a, dra, dalpha, dbeta,
+     >                              dlf, ddlf,
+     >                              bcn, ppos, xyzf)
 c
                 call cptstd_dp(npts, nlocpts,
      >                         cov, jcov, ddat,
@@ -381,7 +402,9 @@ c  SP receive final stp from master & does the final piece of work
 c
             call cpt_dat_vals_p(shdeg, nb, nd,
      >                          nlocpts, nlocdatpts,
-     >                          d2a, bcn, ppos, xyzf)
+     >                          d2a, dra, dalpha,
+     >                          dbeta, dlf, ddlf,
+     >                          bcn, ppos, xyzf)
 c
             call cptstd_dp(npts, nlocpts,
      >                     cov, jcov, ddat,
