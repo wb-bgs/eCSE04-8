@@ -26,7 +26,7 @@ c
         implicit none
 c
         integer ,intent(in)    :: nranks, nelems
-        integer ,intent(out)   :: proc_np(nranks), proc_ip(nranks)
+        integer ,intent(out)   :: proc_np(1:nranks), proc_ip(1:nranks)
 c
         integer                :: i,k,n
 c

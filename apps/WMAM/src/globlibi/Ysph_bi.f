@@ -38,7 +38,7 @@ c
         real*8, parameter :: D2R = 4.d0*datan(1.d0)/180.d0
 c
         integer nd, nb, nlie
-        real*8 pos(nd), be(nb)
+        real*8 pos(1:nd), be(1:nb)
 c
         integer nlis, nti
         integer nu, il, im, nus, it
@@ -50,7 +50,7 @@ c
 c
         nlis = 1
         nti = 1
-        allocate(dlf(nlie+1))
+        allocate(dlf(1:nlie+1))
 c
         p1 = pos(1)*D2R
         p2 = pos(2)*D2R

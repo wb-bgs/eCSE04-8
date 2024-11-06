@@ -22,7 +22,7 @@ c
         implicit none
 c
         integer nm, ilg
-        real*8 ds, dc, dlf(ilg+1)
+        real*8 ds, dc, dlf(1:ilg+1)
 c
         integer ierr, il, d0
         real*8 dnm, d1, d2, dbeta, dalpha

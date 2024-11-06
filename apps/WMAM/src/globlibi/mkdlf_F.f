@@ -24,7 +24,7 @@ c
         implicit none
 c
         integer nm, nl, il, jl
-        real*8 ds, dc, ddlf(nl+1), d1, d2
+        real*8 ds, dc, ddlf(1:nl+1), d1, d2
 c
 c
         if (ds .eq. 0.0d0) then

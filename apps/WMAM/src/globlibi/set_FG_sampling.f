@@ -26,7 +26,7 @@ c
 c
         integer lmax, nlocsampts
         integer imin_locsampts, imax_locsampts
-        real*8 vrt(2,nlocsampts), wght(nlocsampts)
+        real*8 vrt(1:2,1:nlocsampts), wght(1:nlocsampts)
 c
         real*8 dw1, dw2
         integer nn, ilo, ila, j, np
@@ -38,7 +38,7 @@ c
         dw2 = 1.0d0
 c
 c  Find the zeros and weight
-        allocate(xx(nn), ww(nn))
+        allocate(xx(1:nn), ww(1:nn))
 c
         call gauleg(dw1, dw2, xx, ww, nn)
 c
