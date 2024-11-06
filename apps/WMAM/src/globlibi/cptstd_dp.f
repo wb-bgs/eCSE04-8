@@ -25,6 +25,7 @@ c       input:
 c          npts           Total number of points (data + sampling) for all ranks
 c          nlocpts        Total number of points for this rank
 c          cov            Covariance matrix in SLAP column format
+c         j cov           Integer vector describing cov format
 c          ddat           data vector
 c          xyzf           result of forward modelling
 c
@@ -32,17 +33,19 @@ c       output:
 c          std            STD value
 c        
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine cptstd_dp(npts, nlocpts, jcov,
-     >                       cov, ddat, xyzf, std)
+        subroutine cptstd_dp(npts, nlocpts, cov,
+     >                       jcov, ddat, xyzf, std)
 c
         implicit none
 c
         include 'mpif.h'
 c
-        integer :: npts, nlocpts
-        integer :: jcov(nlocpts+2)
-        real*8  :: cov(nlocpts), ddat(nlocpts), xyzf(nlocpts)       
-        real*8  :: std
+        integer npts, nlocpts
+        real*8  cov(1:nlocpts)
+        integer jcov(1:nlocpts+2)
+        real*8  ddat(1:nlocpts)
+        real*8  xyzf(1:nlocpts)       
+        real*8  std
 c
         integer i, ierr
         real*8 dwgh, ddif
