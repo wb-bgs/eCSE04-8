@@ -387,9 +387,9 @@ c
 c
         fname = './Results/'
 c
-        call opt_pr_p3(fname, itmax, ND, nparams,
-     >                 npts, nlocpts, nlocdatpts, shdeg,
-     >                 ppos, bc, dl,
+        call opt_pr_p3(fname, itmax, shdeg, nparams,
+     >                 ND, npts, nlocpts, nlocdatpts,
+     >                 bc, ppos, dl,
      >                 cov, ijcov(1,2),
      >                 stdt, dw)
 c

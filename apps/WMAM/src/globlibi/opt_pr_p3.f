@@ -45,15 +45,14 @@ c
 c     input:
 c         path          path where should be writen outputs
 c         itmax(3)      array for Maximum number of iterations
-c         nd            space dimension
+c         shdeg         max SH degree value
 c         nb            Number of parameters
+c         nd            space dimension
 c         npts          Total number of points (data + sampling) for all ranks
 c         nlocpts       Total number of points for this rank
 c         nlocdatpts    number of data points assigned to rank
-c         shdeg         max SH degree value
-c         d2a           pre-computed array for mk_lf_dlf()
-c         ppos          data point position in ndD + data value
 c         bc            Estimate of Base function coefficients
+c         ppos          data point position in ndD + data value
 c         dl(3)         control process + damping factor
 c         cov(*)        covariance matrix in SLAP Column format
 c         jcov          Integer vector describing cov format
@@ -64,9 +63,9 @@ c         stdt          STD value for given BC
 c         xyzf(*)       Forward modelling for given BC
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine opt_pr_p3(path, itmax, nd, nb,
-     >                       npts, nlocpts, nlocdatpts, shdeg,
-     >                       ppos, bc, dl,
+        subroutine opt_pr_p3(path, itmax, shdeg, nb, nd,
+     >                       npts, nlocpts, nlocdatpts,
+     >                       bc, ppos, dl,
      >                       cov, jcov, stdt, xyzf)
 c
         implicit none
@@ -75,12 +74,13 @@ c
         include 'mpi_status_types.h'
 c
         character path*100 
-        integer itmax(3), nd, nb
-        integer npts, nlocpts, nlocdatpts, shdeg
-        real*8 ppos(nd+1,nlocpts)
-        real*8 bc(nb), dl(3), cov(nlocpts)
-        integer jcov(nlocpts+2)
-        real*8 stdt, xyzf(nlocpts)
+        integer itmax(1:3), shdeg, nb, nd
+        integer npts, nlocpts, nlocdatpts
+        real*8 bc(1:nb)
+        real*8 ppos(1:nd+1,1:nlocpts)
+        real*8 dl(1:3), cov(1:nlocpts)
+        integer jcov(1:nlocpts+2)
+        real*8 stdt, xyzf(1:nlocpts)
 c
         integer i, j, k
         integer ip, it, itm, iunit
@@ -230,7 +230,7 @@ c               if(rank.eq.0)write(*,*)'opt_pr_p3: 1'
      >                              xyzf)
 c
                 call cptstd_dp(npts, nlocpts,
-     >                         jcov, cov, ddat, xyzf,
+     >                         cov, jcov, ddat, xyzf,
      >                         std)
                 stdo = std
             endif
@@ -239,7 +239,7 @@ c All: do their part in finding next step length and direction
             if (inv_stat%yon(3:3) .eq. 'y') then
 c All: do their part in finding GJ, DH
                 ip = 1
-                allocate(dh(nb))
+                allocate(dh(1:nb))
                 dh(1:nb) = 0.0d0
 c
                 if ((itmax(1) .ge. 0) .or. (it .ne. 1)) then
@@ -333,28 +333,28 @@ c ALL: search minimum in descent direction
      >              inv_stat%yon(5:5) .eq. 'r') then
                     if (itmax(3) .ge. 0) then
 c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 4'
-                        call gc_step_p(iunit, nd, nb,
+                        call gc_step_p(iunit, shdeg, nb, nd,
      >                                 npts, nlocpts, nlocdatpts,
-     >                                 shdeg, d2a, ppos, ddat,
-     >                                 inv_stat%bc,
+     >                                 d2a, inv_stat%bc,
+     >                                 ppos, ddat,
      >                                 cov, jcov, std,
      >                                 gj, ghj, ds, stp, xyzf)
                     else
 c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 5'
-                        call lsearch_p(iunit, itm_l, nd, nb, 
+                        call lsearch_p(iunit, itm_l, shdeg, nb, nd, 
      >                                 npts, nlocpts, nlocdatpts,
-     >                                 shdeg, d2a, ppos, ddat,
-     >                                 inv_stat%bc,
+     >                                 d2a, inv_stat%bc,
+     >                                 ppos, ddat,
      >                                 src_stat, MPI_SEARCH_STATUS,
      >                                 dl, cov, jcov,
      >                                 std, ds, stp, xyzf)
                     endif
                 else
 c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 6'
-                    call lsearch_p(iunit, itm_l, nd, nb,
+                    call lsearch_p(iunit, itm_l, shdeg, nb, nd,
      >                             npts, nlocpts, nlocdatpts,
-     >                             shdeg, d2a, ppos, ddat,
-     >                             inv_stat%bc,
+     >                             d2a, inv_stat%bc,
+     >                             ppos, ddat,
      >                             src_stat, MPI_SEARCH_STATUS,
      >                             dl, cov, jcov,
      >                             std, ds, stp, xyzf)
