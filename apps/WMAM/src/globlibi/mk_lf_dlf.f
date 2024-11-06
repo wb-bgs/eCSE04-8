@@ -30,7 +30,7 @@ c
         real*8 rs, rc
         real*8 d2a(0:shdeg)
         real*8 dalpha(0:shdeg), dbeta(0:shdeg)
-        real*8 dlf(shdeg+1), ddlf(shdeg+1)
+        real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
 c
         integer d0, il, jl
         real*8 d1, d2
@@ -49,20 +49,19 @@ c  Initialise dlf array
           if (im .eq. 0) d1 = 1.d0
         endif
 c
-        dlf(1) = d1*d2a(im)                         ! leg. func. (m,m)
-        dlf(2) = dlf(1) * rc * dsqrt(dble(2*im+1))  ! leg. func. (m+1,m)
+        dlf(1) = d1*d2a(im)
+        dlf(2) = dlf(1) * rc * dsqrt(dble(2*im+1))
 c
-        do il = 2,shdeg-im                   ! l=im+il-1
+        do il = 2,shdeg-im
           d0 = il+2*im
-          d1 = dble((il-1) * (d0-1))         ! (l-m)*(l+m)
-          d2 = dble(il * d0)                 ! (l-m+1)*(l+m+1)	
-          dbeta(il) = dsqrt(d1/d2)           ! recurrence coeff.
-          d1 = dble(2*(il+im)-1)             ! 2l+1
-          dalpha(il) = d1/dsqrt(d2)          !
+          d1 = dble((il-1) * (d0-1))
+          d2 = dble(il * d0)
+          dbeta(il) = dsqrt(d1/d2)
+          d1 = dble(2*(il+im)-1)
+          dalpha(il) = d1/dsqrt(d2)
         enddo
 c
-        do il = 2,shdeg-im                   ! l=im+il-1
-c         ! leg. func. (im+il-1,im) 
+        do il = 2,shdeg-im
           dlf(il+1) = dalpha(il)*dlf(il)*rc - dbeta(il)*dlf(il-1)
         enddo
 c

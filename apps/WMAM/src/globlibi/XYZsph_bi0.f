@@ -10,9 +10,9 @@ c          nb     INTEGER       number of coefficients
 c          d2a    REAL*8        pre-computed array for mk_lf_dlf()
 c          dra    REAL*8        pre-allocated array used in this subroutine
 c          dalpha REAL*8        pre-allocated array used in mk_lf_dlf() subroutine
-c          dbeta  REAL*8        pre-allocated array used in mk_lf_dlf() subroutine
-c          dlf    REAL*8        pre-allocated array used in mk_lf_dlf() subroutine
-c          ddlf   REAL*8        pre-allocated array used in mk_lf_dlf() subroutine
+c          dbeta  REAL*8        "
+c          dlf    REAL*8        "
+c          ddlf   REAL*8        "
 c          bc     REAL*8        coefficient array
 c          p1     REAL*8        co-latitude
 c          p2     REAL*8        longitude
@@ -33,10 +33,10 @@ c
         implicit none
 c
         integer shdeg, nb
-        real*8 d2a(0:shdeg), dra(shdeg)
+        real*8 d2a(0:shdeg), dra(1:shdeg)
         real*8 dalpha(0:shdeg), dbeta(0:shdeg)
-        real*8 dlf(shdeg+1), ddlf(shdeg+1)
-        real*8 bc(nb)
+        real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
+        real*8 bc(1:nb)
         real*8 p1, p2, ra
         real*8 bex, bey, bez 
 c
@@ -163,9 +163,9 @@ c          nb     INTEGER     number of coefficients
 c          d2a    REAL*8      pre-computed array for mk_lf_dlf()
 c          dra    REAL*8      pre-allocated array used in this subroutine
 c          dalpha REAL*8      pre-allocated array used in mk_lf_dlf() subroutine
-c          dbeta  REAL*8      pre-allocated array used in mk_lf_dlf() subroutine
-c          dlf    REAL*8      pre-allocated array used in mk_lf_dlf() subroutine
-c          ddlf   REAL*8      pre-allocated array used in mk_lf_dlf() subroutine
+c          dbeta  REAL*8      "
+c          dlf    REAL*8      "
+c          ddlf   REAL*8      "
 c          bc     REAL*8      coefficient array
 c          p1     REAL*8      co-latitude
 c          p2     REAL*8      longitude
@@ -187,10 +187,10 @@ c
         implicit none
 c
         integer shdeg, nb
-        real*8 d2a(0:shdeg), dra(shdeg)
+        real*8 d2a(0:shdeg), dra(1:shdeg)
         real*8 dalpha(0:shdeg), dbeta(0:shdeg)
-        real*8 dlf(shdeg+1), ddlf(shdeg+1)
-        real*8 bc(nb)
+        real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
+        real*8 bc(1:nb)
         real*8 p1, p2, ra
         real*8 bex, bey, bez 
 c
@@ -279,9 +279,9 @@ c          nb       INTEGER     number of coefficients
 c          d2a      REAL*8      pre-computed array for mk_lf_dlf()
 c          dra      REAL*8      pre-allocated array used in this subroutine
 c          dalpha   REAL*8      pre-allocated array used in mk_lf_dlf() subroutine
-c          dbeta    REAL*8      pre-allocated array used in mk_lf_dlf() subroutine
-c          dlf      REAL*8      pre-allocated array used in mk_lf_dlf() subroutine
-c          ddlf     REAL*8      pre-allocated array used in mk_lf_dlf() subroutine
+c          dbeta    REAL*8      "
+c          dlf      REAL*8      "
+c          ddlf     REAL*8      "
 c          p1       REAL*8      co-latitude
 c          p2       REAL*8      longitude
 c          ra       REAL*8      radius
@@ -307,13 +307,13 @@ c
         implicit none
 c
         integer shdeg, nb
-        real*8 d2a(0:shdeg), dra(shdeg)
+        real*8 d2a(0:shdeg), dra(1:shdeg)
         real*8 dalpha(0:shdeg), dbeta(0:shdeg)
-        real*8 dlf(shdeg+1), ddlf(shdeg+1)
+        real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
         real*8 p1, p2, ra
         real*8 bex, bey, bez 
         real*8 dw_gj, dw_hj
-        real*8 gj(nb), hj(nb) 
+        real*8 gj(1:nb), hj(1:nb) 
 c
         integer nu, il, im, ik
         real*8 rc, rs
