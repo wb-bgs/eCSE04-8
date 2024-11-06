@@ -40,7 +40,7 @@ c  globlibi subroutine
 c
 c
         nreals = 1 + ncoeffs
-        allocate(buf(nreals))
+        allocate(buf(1:nreals))
 c
         call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
 c
@@ -224,7 +224,7 @@ c
             exit
           endif
 
-          allocate(buf(nreals))
+          allocate(buf(1:nreals))
           buf_allocated = .true.
   
           array_of_sizes(1) = nreals

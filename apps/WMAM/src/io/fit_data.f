@@ -74,7 +74,7 @@ c
           endif
 c
           nlocreals = (nmax - nmin + 1)*FIT_VALUES_PER_PT
-          allocate(buf(nlocreals))
+          allocate(buf(1:nlocreals))
           buf_allocated = .true.
 c
           j = 0

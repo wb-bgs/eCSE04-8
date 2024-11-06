@@ -78,7 +78,7 @@ c
           endif
    
           nlocreals = nlocdatpts*NUM_OF_PTCOMPS
-          allocate(buf(nlocreals))
+          allocate(buf(1:nlocreals))
           buf_allocated = .true.
     
           disp = (imin_locdatpts-1)*SIZE_OF_PT

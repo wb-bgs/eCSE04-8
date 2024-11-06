@@ -231,17 +231,17 @@ c  Settings
 
 c
 c  Partition workload
-        allocate(proc_ndp(nranks), proc_idp(nranks))
+        allocate(proc_ndp(1:nranks), proc_idp(1:nranks))
         call thread_segmenter(nranks, ndatpts, proc_ndp, proc_idp)
         nlocdatpts = proc_ndp(rank+1)
         imin_locdatpts = proc_idp(rank+1)
         
-        allocate(proc_nsp(nranks), proc_isp(nranks))        
+        allocate(proc_nsp(1:nranks), proc_isp(1:nranks))        
         call thread_segmenter(nranks, nsampts, proc_nsp, proc_isp)
         nlocsampts = proc_nsp(rank+1)
         imin_locsampts = proc_isp(rank+1)
 
-        allocate(proc_np(nranks), proc_ip(nranks))
+        allocate(proc_np(1:nranks), proc_ip(1:nranks))
         proc_np(1:nranks) = proc_ndp(1:nranks) + proc_nsp(1:nranks)
         proc_ip(1) = 1
         do i = 2,nranks
@@ -255,11 +255,11 @@ c  Partition workload
 
 c
 c  Array allocations
-        allocate(bc(nparams))
-        allocate(ppos(ND+1,nlocpts))
-        allocate(cov(nlocpts))
-        allocate(ijcov(nlocpts+2,2))
-        allocate(dw(nlocpts))
+        allocate(bc(1:nparams))
+        allocate(ppos(1:ND+1,1:nlocpts))
+        allocate(cov(1:nlocpts))
+        allocate(ijcov(1:nlocpts+2,1:2))
+        allocate(dw(1:nlocpts))
 
 c
 c  Initialize d2a array
@@ -332,7 +332,7 @@ c  Read in data
 c
 c  Calculate CM4 components 
         if (rank .eq. 0) write(*,*) 'Calculating CM4 components'
-        allocate(cm(ncoeffs))
+        allocate(cm(1:ncoeffs))
         do i = 1,3
           j = 4+i 
           do k = 1,nlocdatpts
@@ -464,7 +464,7 @@ c
 
 c
           std = stdt*npts/(npts-nparams)
-          allocate(err(nparams))
+          allocate(err(1:nparams))
           err(1:nparams) = std
 c
 c  Saving update base coefficients
