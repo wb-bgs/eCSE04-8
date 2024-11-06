@@ -25,11 +25,9 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
         implicit none
 c
-        include 'mpif.h'
-c
         integer :: nd, nb, nlocpts, nlocdatpts, shdeg
-        real*8  :: d2a(0:shdeg), ppos(nd+1,nlocpts), bc(nb)
-        real*8  :: xyzf(nlocpts)
+        real*8  :: d2a(0:shdeg), ppos(nd+1,nlocpts), bc(1:nb)
+        real*8  :: xyzf(1:nlocpts)
 c
         real*8, parameter :: RAG = 6371.2d0
         real*8, parameter :: D2R = 4.d0*datan(1.d0)/180.d0
@@ -45,13 +43,14 @@ c
         real*8 XYZsph_bi0_fun
 c
 c   
-        allocate(dra(shdeg))
+        allocate(dra(1:shdeg))
         allocate(dalpha(0:shdeg), dbeta(0:shdeg))
-        allocate(dlf(shdeg+1), ddlf(shdeg+1)) 
+        allocate(dlf(1:shdeg+1), ddlf(1:shdeg+1)) 
 c
 #if defined(OMP_OFFLOAD_CPTP)
 !$OMP TARGET DATA
 !$omp& map(to: bc(1:nb))
+!$omp& map(tofrom: xyzf(1:nlocpts))
 c
 !$OMP TARGET ENTER DATA
 !$omp& map(alloc: dra(1:shdeg))
@@ -62,7 +61,6 @@ c
 c
 #if defined(OMP_OFFLOAD_CPTP)
 !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO
-!$omp& map(tofrom: xyzf(1:nlocdatpts))
 #else
 !$OMP PARALLEL DO
 #endif
@@ -102,7 +100,6 @@ c
 c
 #if defined(OMP_OFFLOAD_CPTP)
 !$OMP TARGET TEAMS DISTRIBUTE PARALLEL DO
-!$omp& map(tofrom: xyzf(nlocdatpts+1:nlocpts))
 #else
 !$OMP PARALLEL DO
 #endif
@@ -144,9 +141,9 @@ c
 !$OMP END TARGET TEAMS DISTRIBUTE PARALLEL DO
 c
 !$OMP TARGET EXIT DATA
-!$omp& map(delete: dra(1:shdeg))
-!$omp& map(delete: dalpha(0:shdeg), dbeta(0:shdeg))
-!$omp& map(delete: dlf(1:shdeg+1), ddlf(1:shdeg+1))
+!$omp& map(delete: dra)
+!$omp& map(delete: dalpha, dbeta)
+!$omp& map(delete: dlf, ddlf)
 c
 !$OMP END TARGET DATA
 #else
