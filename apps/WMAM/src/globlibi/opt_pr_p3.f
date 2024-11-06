@@ -244,10 +244,9 @@ c All: do their part in finding GJ, DH
 c
                 if ((itmax(1) .ge. 0) .or. (it .ne. 1)) then
 c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 2'
-                    call ssqgh_dp(nd, nlocpts, nlocdatpts,
-     >                            shdeg, d2a, ppos, nb,
-     >                            inv_stat%bc,
-     >                            jcov, cov, ddat, xyzf,
+                    call ssqgh_dp(shdeg, nb, nd, nlocpts, nlocdatpts,
+     >                            d2a, inv_stat%bc, ppos,
+     >                            cov, jcov, ddat, xyzf,
      >                            gj_map_len, gj_map, 
      >                            gj, dh)
                 else

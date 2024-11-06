@@ -11,16 +11,16 @@ c
 c       Called: ssqgh, MPI_ALLREDUCE
 c
 c       input:
+c          shdeg          max SH degree value
+c          nb             Number or base function to use
 c          nd             space dimension
 c          nlocpts        number of data+sampling points local to rank
 c          nlocdatpts     number of data points assigned to rank
-c          shdeg          max SH degree value
 c          d2a            pre-computed array for mk_lf_dlf()
-c          ppos           data point position in ndD
-c          nb             Number or base function to use
 c          bc             Estimation of Base function coefficients
-c          jcov           integer arrays describing cov format
+c          ppos           data point position
 c          cov            Covariance matrix in SLAP column format
+c          jcov           integer arrays describing cov format
 c          ddat           data vector
 c          xyzf           result of forward modelling
 c
@@ -29,9 +29,10 @@ c          gj             gradient of the weighted sum of squares (nb)
 c          dh             diagonal of the Hessian (nb)
 c        
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine ssqgh_dp(nd, nlocpts, nlocdatpts, shdeg,
-     >                      d2a, ppos, nb, bc,
-     >                      jcov, cov, ddat, xyzf,
+        subroutine ssqgh_dp(shdeg, nb, nd,
+     >                      nlocpts, nlocdatpts,
+     >                      d2a, bc, ppos,
+     >                      cov, jcov, ddat, xyzf,
      >                      gj_map_len, gj_map,
      >                      gj, dh)
 c
@@ -39,11 +40,13 @@ c
 c
         include 'mpif.h'
 c
-        integer nd, nlocpts, nlocdatpts
-        integer shdeg, nb, jcov(1:nlocpts+2)
-        real*8 d2a(0:shdeg), ddat(1:nlocpts)
-        real*8 xyzf(1:nlocpts), cov(1:nlocpts)
-        real*8 ppos(1:nd+1,1:nlocpts), bc(1:nb)
+        integer shdeg, nb, nd, nlocpts, nlocdatpts
+        real*8 d2a(0:shdeg), bc(1:nb)
+        real*8 ppos(1:nd+1,1:nlocpts)
+        real*8 cov(1:nlocpts)
+        integer jcov(1:nlocpts+2)
+        real*8 ddat(1:nlocpts)
+        real*8 xyzf(1:nlocpts)
         integer gj_map_len 
         integer gj_map(1:gj_map_len)
         real*8 gj(1:nb), dh(1:nb)
