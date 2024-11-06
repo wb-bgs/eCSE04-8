@@ -225,9 +225,8 @@ c All: do their part in forward modelling
             if (inv_stat%yon(2:2) .eq. 'y') then
 c               if(rank.eq.0)write(*,*)'opt_pr_p3: 1'
                 
-                call cpt_dat_vals_p(nd, nlocpts, nlocdatpts, shdeg,
-     >                              d2a, ppos, nb, inv_stat%bc,
-     >                              xyzf)
+                call cpt_dat_vals_p(shdeg, nb, nd, nlocpts, nlocdatpts,
+     >                              d2a, inv_stat%bc, ppos, xyzf)
 c
                 call cptstd_dp(npts, nlocpts,
      >                         cov, jcov, ddat, xyzf,

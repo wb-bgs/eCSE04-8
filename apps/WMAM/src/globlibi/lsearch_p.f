@@ -115,9 +115,9 @@ c               write(*,*)'lsearch_p: 1'
 c
                 bcn(1:nb) = bc(1:nb)+src_stat%stp*ds(1:nb)
 c
-                call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
-     >                              shdeg, d2a, ppos, nb, bcn,
-     >                              xyzf)
+                call cpt_dat_vals_p(shdeg, nb, nd,
+     >                              nlocpts, nlocdatpts,
+     >                              d2a, bcn, ppos, xyzf)
 c
                 call cptstd_dp(npts, nlocpts,
      >                         cov, jcov, ddat,
@@ -153,9 +153,9 @@ c                       write(*,*)'lsearch_p: 2'
 c
                         bcn(1:nb) = bc(1:nb)+src_stat%stp*ds(1:nb)
 c
-                        call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
-     >                                      shdeg, d2a, ppos, nb, bcn,
-     >                                      xyzf)
+                        call cpt_dat_vals_p(shdeg, nb, nd,
+     >                                      nlocpts, nlocdatpts,
+     >                                      d2a, bcn, ppos, xyzf)
 c
                         call cptstd_dp(npts, nlocpts,
      >                                 cov, jcov, ddat,
@@ -189,9 +189,9 @@ c                       write(*,*)'lsearch_p: 3'
 c
                         bcn(1:nb) = bc(1:nb)+src_stat%stp*ds(1:nb)
 c
-                        call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
-     >                                      shdeg, d2a, ppos, nb, bcn,
-     >                                      xyzf)
+                        call cpt_dat_vals_p(shdeg, nb, nd,
+     >                                      nlocpts, nlocdatpts,
+     >                                      d2a, bcn, ppos, xyzf)
 c
                         call cptstd_dp(npts, nlocpts,
      >                                 cov, jcov, ddat,
@@ -275,9 +275,9 @@ c                   write(*,*)'lsearch_p: 4'
 c
                     bcn(1:nb) = bc(1:nb)+src_stat%stp*ds(1:nb)
 c
-                    call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
-     >                                  shdeg, d2a, ppos, nb, bcn,
-     >                                  xyzf)
+                    call cpt_dat_vals_p(shdeg, nb, nd,
+     >                                  nlocpts, nlocdatpts,
+     >                                  d2a, bcn, ppos, xyzf)
 c
                     call cptstd_dp(npts, nlocpts,
      >                             cov, jcov, ddat,
@@ -341,9 +341,9 @@ c           write(*,*)'lsearch_p: 5'
 c
             bcn(1:nb) = bc(1:nb)+src_stat%stp*ds(1:nb)
 c
-            call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
-     >                          shdeg, d2a, ppos, nb, bcn,
-     >                          xyzf)
+            call cpt_dat_vals_p(shdeg, nb, nd,
+     >                          nlocpts, nlocdatpts,
+     >                          d2a, bcn, ppos, xyzf)
 c
             call cptstd_dp(npts, nlocpts,
      >                     cov, jcov, ddat,
@@ -363,9 +363,9 @@ c  SP  Receive bcn value from master
 c  SP do the work
                 bcn(1:nb) = bc(1:nb)+src_stat%stp*ds(1:nb)
 c
-                call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
-     >                              shdeg, d2a, ppos, nb, bcn,
-     >                              xyzf)
+                call cpt_dat_vals_p(shdeg, nb, nd,
+     >                              nlocpts, nlocdatpts,
+     >                              d2a, bcn, ppos, xyzf)
 c
                 call cptstd_dp(npts, nlocpts,
      >                         cov, jcov, ddat,
@@ -379,9 +379,9 @@ c  SP wait for info on next iteration
 c  SP receive final stp from master & does the final piece of work 
             bcn(1:nb) = bc(1:nb)+src_stat%stp*ds(1:nb)
 c
-            call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
-     >                          shdeg, d2a, ppos, nb, bcn,
-     >                          xyzf)
+            call cpt_dat_vals_p(shdeg, nb, nd,
+     >                          nlocpts, nlocdatpts,
+     >                          d2a, bcn, ppos, xyzf)
 c
             call cptstd_dp(npts, nlocpts,
      >                     cov, jcov, ddat,

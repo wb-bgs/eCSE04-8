@@ -7,27 +7,28 @@ c
 c       Called: cpt_dat_vals_p
 c
 c       input:
+c         shdeg         max SH degree value
+c         nb            Number of base functions
 c         nd            Space dimension
 c         nlocpts       number of data+sampling points local to rank
 c         nlocdatpts    number of data points local to rank
-c         shdeg         max SH degree value
 c         d2a           pre-computed array for mk_lf_dlf()
-c         ppos(nd+1,*)  point position in nd
-c         nb            Number of base functions
 c         bc            base coefficients
+c         ppos(nd+1,*)  point position in nd
 c
 c       output:
 c         XYZF(*)       X,Y,Z or F value at point position
 c        
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine cpt_dat_vals_p(nd, nlocpts, nlocdatpts, shdeg,
-     >                            d2a, ppos, nb, bc, xyzf)
+        subroutine cpt_dat_vals_p(shdeg, nb, nd, nlocpts, nlocdatpts,
+     >                            d2a, bc, ppos, xyzf)
 c
         implicit none
 c
-        integer :: nd, nb, nlocpts, nlocdatpts, shdeg
-        real*8  :: d2a(0:shdeg), ppos(nd+1,nlocpts), bc(1:nb)
-        real*8  :: xyzf(1:nlocpts)
+        integer shdeg, nb, nd, nlocpts, nlocdatpts
+        real*8  d2a(0:shdeg)
+        real*8  bc(1:nb), ppos(nd+1,nlocpts)
+        real*8  xyzf(1:nlocpts)
 c
         real*8, parameter :: RAG = 6371.2d0
         real*8, parameter :: D2R = 4.d0*datan(1.d0)/180.d0

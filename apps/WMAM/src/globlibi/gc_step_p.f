@@ -77,9 +77,8 @@ c
 c All: Calculate  sqrt(w).A.DS 
         allocate(zz(1:nlocpts))
         zz(1:nlocpts) = 0.0d0
-        call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
-     >                      shdeg, d2a, ppos, nb, ds,
-     >                      zz)
+        call cpt_dat_vals_p(shdeg, nb, nlocpts, nlocdatpts,
+     >                      d2a, ds, ppos, zz)
 c
         do i = 1,nlocpts
           zz(i) = zz(i)/dsqrt(cov(jcov(i)))
@@ -108,9 +107,8 @@ c ALL: Estimate the new set of parameter for a step stp in direction ds
 c
 c ALL: Do the forward modelling
         xyzf(1:nlocpts) = 0.0d0
-        call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
-     >                      shdeg, d2a, ppos, nb, bcn,
-     >                      xyzf)
+        call cpt_dat_vals_p(shdeg, nb, nd, nlocpts, nlocdatpts,
+     >                      d2a, bcn, ppos, xyzf)
 c
         call cptstd_dp(npts, nlocpts,
      >                 cov, jcov, ddat,
