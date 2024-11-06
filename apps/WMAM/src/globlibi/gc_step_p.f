@@ -21,16 +21,16 @@ c     Parallel version
 c
 c     input:
 c         iunit         integer unit number for I/O
-c         nd            space dimension
+c         shdeg         max SH degree value
 c         nb            Number or base function to use
+c         nd            space dimension
 c         npts          Total number of points (data + sampling) for all ranks
 c         nlocpts       Total number of points for this rank
 c         nlocdatpts    number of data points assigned to rank
-c         shdeg         max SH degree value
 c         d2a(*)        pre-computed array for mk_lf_dlf()
+c         bc(*)         Estimate of Base function coefficients
 c         ppos(*,*)     data point position in ndD
 c         ddat(*)       data values
-c         bc(*)         Estimate of Base function coefficients
 c         cov(*)        covariance matrix in SLAP Column format
 c         jcov(*)       Integer vector describing cov format
 c         std           STD value for given BC
@@ -43,9 +43,9 @@ c         stp           recommended step in direction ds(*)
 c         std           STD value for given BC+stp*DS
 c         xyzf(*)       Forward modelling for given BC+stp*DS
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine gc_step_p(iunit, nd, nb, npts,
-     >                       nlocpts, nlocdatpts, shdeg,
-     >                       d2a, ppos, ddat, bc,
+        subroutine gc_step_p(iunit, shdeg, nb, nd, npts,
+     >                       nlocpts, nlocdatpts,
+     >                       d2a, bc, ppos, ddat,
      >                       cov, jcov,
      >                       std, gj, ghj,
      >                       ds, stp, xyzf)
@@ -54,26 +54,28 @@ c
 c
         include 'mpif.h'
 c
-        integer iunit, nd, nb
+        integer iunit, shdeg, nb, nd
         integer npts, nlocpts, nlocdatpts
-        integer shdeg
-        real*8 d2a(0:shdeg), ppos(nd+1,nlocpts)
-        real*8 ddat(nlocpts)
-        real*8 bc(nb), cov(nlocpts)
-        integer jcov(nlocpts+2)
-        real*8 std, gj(nb), ghj(nb)
-        real*8 ds(nb), stp, xyzf(nlocpts)
+        real*8 d2a(0:shdeg)
+        real*8 bc(1:nb)
+        real*8 ppos(1:nd+1,1:nlocpts)
+        real*8 ddat(1:nlocpts)
+        real*8 cov(1:nlocpts)
+        integer jcov(1:nlocpts+2)
+        real*8 std, gj(1:nb), ghj(1:nb)
+        real*8 ds(1:nb), stp, xyzf(1:nlocpts)
 c
         integer i
         integer ierr, rank 
         real*8, allocatable :: bcn(:), zz(:)
-        real*8 zzs        
+        real*8 zzs
+c        
 c
 c All: Defining parallel enviroment
         call MPI_Comm_rank(MPI_COMM_WORLD,rank,ierr)
 c
 c All: Calculate  sqrt(w).A.DS 
-        allocate(zz(nlocpts))
+        allocate(zz(1:nlocpts))
         zz(1:nlocpts) = 0.0d0
         call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
      >                      shdeg, d2a, ppos, nb, ds,
@@ -101,7 +103,7 @@ c
         endif
 c
 c ALL: Estimate the new set of parameter for a step stp in direction ds
-        allocate(bcn(nb))
+        allocate(bcn(1:nb))
         bcn(1:nb) = bc(1:nb) + stp*ds(1:nb)
 c
 c ALL: Do the forward modelling
@@ -109,8 +111,9 @@ c ALL: Do the forward modelling
         call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
      >                      shdeg, d2a, ppos, nb, bcn,
      >                      xyzf)
+c
         call cptstd_dp(npts, nlocpts,
-     >                 jcov, cov, ddat,
+     >                 cov, jcov, ddat,
      >                 xyzf, std)
 c
         deallocate(bcn)

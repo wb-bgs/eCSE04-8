@@ -21,16 +21,16 @@ c
 c     input:
 c         iunit         unit to write outputs
 c         itm           Maximum number of iterations
-c         nd            space dimension
+c         shdeg         max SH degree value
 c         nb            Number or base function to use
+c         nd            space dimension
 c         npts          Total number of points (data + sampling) for all ranks
 c         nlocpts       Total number of points for this rank
 c         nlocdatpts    number of data points assigned to rank
-c         shdeg         max SH degree value
 c         d2a           pre-computed array for mk_lf_dlf()
+c         bc            Estimate of Base function coefficients
 c         ppos          data point position in ndD
 c         ddat          data values
-c         bc            Estimate of Base function coefficients
 c         src_stat      MPI gradient search status
 c         dl(3)         control lsearch process & damping
 c         cov(*)        covariance matrix in SLAP Column format
@@ -43,10 +43,10 @@ c         stp           recommended step in direction ds(*)
 c         std           STD value for given BC+stp*DS
 c         xyzf(*)       Forward modelling for given BC+stp*DS
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine lsearch_p(iunit, itm, nd, nb,
-     >                       npts, nlocpts, nlocdatpts, shdeg,
-     >                       d2a, ppos, ddat,
-     >                       bc, src_stat, MPI_SEARCH_STATUS,
+        subroutine lsearch_p(iunit, itm, shdeg, nb, nd,
+     >                       npts, nlocpts, nlocdatpts,
+     >                       d2a, bc, ppos, ddat,
+     >                       src_stat, MPI_SEARCH_STATUS,
      >                       dl, cov, jcov,
      >                       std, ds, stp, xyzf)
 c
@@ -55,19 +55,20 @@ c
         include 'mpif.h'
         include 'mpi_status_types.h'
 c
-        integer iunit, itm, nd, nb
-        integer npts, nlocpts, nlocdatpts, shdeg
-        real*8 d2a(0:shdeg), ppos(nd+1,nlocpts)
-        real*8 ddat(nlocpts), bc(nb)
+        integer iunit, itm, shdeg, nb, nd
+        integer npts, nlocpts, nlocdatpts
+        real*8 d2a(0:shdeg), bc(1:nb)
+        real*8 ppos(1:nd+1,1:nlocpts)
+        real*8 ddat(1:nlocpts)
         type(search_status) src_stat
         integer MPI_SEARCH_STATUS
-        real*8 dl(3), cov(nlocpts)
-        integer jcov(nlocpts+2)
-        real*8 std, ds(nb), stp, xyzf(nlocpts)
+        real*8 dl(1:3), cov(1:nlocpts)
+        integer jcov(1:nlocpts+2)
+        real*8 std, ds(1:nb), stp, xyzf(1:nlocpts)
 c
         integer i, im1, im2, it
         integer ierr, rank
-        real*8 dj(3), st(3)
+        real*8 dj(1:3), st(1:3)
         real*8 fct, fctt, fctl, fcts, dd, rt
         real*8 epss, stp1, stp2, gr, gl, numer, denom
         real*8, allocatable :: bcn(:)
@@ -117,8 +118,9 @@ c
                 call cpt_dat_vals_p(nd, nlocpts, nlocdatpts,
      >                              shdeg, d2a, ppos, nb, bcn,
      >                              xyzf)
+c
                 call cptstd_dp(npts, nlocpts,
-     >                         jcov, cov, ddat,
+     >                         cov, jcov, ddat,
      >                         xyzf, std)
 c
                 dj(3) = std
@@ -156,7 +158,7 @@ c
      >                                      xyzf)
 c
                         call cptstd_dp(npts, nlocpts,
-     >                                 jcov, cov, ddat,
+     >                                 cov, jcov, ddat,
      >                                 xyzf, std)
 c
                         dj(i) = std
@@ -192,7 +194,7 @@ c
      >                                      xyzf)
 c
                         call cptstd_dp(npts, nlocpts,
-     >                                 jcov, cov, ddat,
+     >                                 cov, jcov, ddat,
      >                                 xyzf, std)
 c
                         dj(im2) = std
@@ -278,7 +280,7 @@ c
      >                                  xyzf)
 c
                     call cptstd_dp(npts, nlocpts,
-     >                             jcov, cov, ddat,
+     >                             cov, jcov, ddat,
      >                             xyzf, std)
 c
                     if (src_stat%stp .gt. st(im1)) then
@@ -344,7 +346,7 @@ c
      >                          xyzf)
 c
             call cptstd_dp(npts, nlocpts,
-     >                     jcov, cov, ddat,
+     >                     cov, jcov, ddat,
      >                     xyzf, std)
 c
 c
@@ -366,7 +368,7 @@ c
      >                              xyzf)
 c
                 call cptstd_dp(npts, nlocpts,
-     >                         jcov, cov, ddat,
+     >                         cov, jcov, ddat,
      >                         xyzf, std)
 
 c  SP wait for info on next iteration
@@ -382,7 +384,7 @@ c
      >                          xyzf)
 c
             call cptstd_dp(npts, nlocpts,
-     >                     jcov, cov, ddat,
+     >                     cov, jcov, ddat,
      >                     xyzf, std)
         endif
 c
