@@ -133,10 +133,6 @@ c  MPI-related variables
         integer ndevices
 #endif
 c
-c  slatec subroutine
-        real*8 dgamln
-        external dgamln 
-c
 c
 c  Initialize MPI, determine rank
         call MPI_Init(ierr)
@@ -260,27 +256,6 @@ c  Array allocations
         allocate(cov(1:nlocpts))
         allocate(ijcov(1:nlocpts+2,1:2))
         allocate(dw(1:nlocpts))
-
-c
-c  Initialize d2a array
-        allocate(d2a(0:shdeg))
-c
-        do nm = 0,shdeg
-          dnm = dble(nm)                    ! dble real for nm
-          d1 = dgamln(2*dnm+1.0d0, ierr)    ! d1=log(fact(2dnm))
-          d2 = dgamln(dnm+1.0d0, ierr)      ! d2=log(fact(dnm))
-          if (ierr .ne. 0) then
-            write(*,*) 'd2a: Cannot computes normalisation cst !'
-            stop
-          endif
-c
-          d2 = 0.5d0*d1 - d2                ! d2=sqrt(fact(2dnm))/fact(dnm)
-          d2 = d2 - nm*dlog(2.0d0)          !
-          d2 = dexp(d2)                     ! normalisation cst.
-          if (nm .ne. 0) d2 = d2*dsqrt(2.0d0) ! special case  m=0
-c
-          d2a(nm) = d2
-        enddo
 
 c
 c  Output array sizes
@@ -414,7 +389,7 @@ c
 c
         call opt_pr_p3(fname, itmax, ND, nparams,
      >                 npts, nlocpts, nlocdatpts, shdeg,
-     >                 d2a, ppos, bc, dl,
+     >                 ppos, bc, dl,
      >                 cov, ijcov(1,2),
      >                 stdt, dw)
 c
@@ -492,7 +467,6 @@ c  Saving update base coefficients
         endif
 c
 c  Deallocate arrays
-        deallocate(d2a)
         deallocate(dw)
         deallocate(ijcov)
         deallocate(cov)

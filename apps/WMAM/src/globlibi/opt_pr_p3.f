@@ -66,7 +66,7 @@ c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine opt_pr_p3(path, itmax, nd, nb,
      >                       npts, nlocpts, nlocdatpts, shdeg,
-     >                       d2a, ppos, bc, dl,
+     >                       ppos, bc, dl,
      >                       cov, jcov, stdt, xyzf)
 c
         implicit none
@@ -77,7 +77,7 @@ c
         character path*100 
         integer itmax(3), nd, nb
         integer npts, nlocpts, nlocdatpts, shdeg
-        real*8 d2a(0:shdeg), ppos(nd+1,nlocpts)
+        real*8 ppos(nd+1,nlocpts)
         real*8 bc(nb), dl(3), cov(nlocpts)
         integer jcov(nlocpts+2)
         real*8 stdt, xyzf(nlocpts)
@@ -99,10 +99,19 @@ c       inv_stat%yon(3:3) => yon_dwn
 c       inv_stat%yon(4:4) => yon_upg
 c       inv_stat%yon(5:5) => yon_ds: g=GC, p=PR, r=restart, n=restart with stop option
 c
+c  variables for populating d2a array 
+        integer nm
+        real*8  dnm, d1, d2
+        real*8, allocatable :: d2a(:)
+c
         real*8, allocatable :: ds(:), dh(:), ddat(:)
         real*8, allocatable :: gj(:), gjo(:)
         real*8, allocatable :: ghj(:), ghjo(:)
         integer, allocatable :: gj_map(:)
+c
+c  slatec subroutine
+        real*8 dgamln
+        external dgamln 
 c
 c
 c All defining parallel enviroment
@@ -176,6 +185,27 @@ c
 c All define data set
         do ip = 1,nlocpts
             ddat(ip) = ppos(nd+1,ip)
+        enddo
+c
+c
+c  Initialize d2a array
+        allocate(d2a(0:shdeg))
+c
+        do nm = 0,shdeg
+          dnm = dble(nm)                    ! dble real for nm
+          d1 = dgamln(2*dnm+1.0d0, ierr)    ! d1=log(fact(2dnm))
+          d2 = dgamln(dnm+1.0d0, ierr)      ! d2=log(fact(dnm))
+          if (ierr .ne. 0) then
+            write(*,*) 'd2a: Cannot computes normalisation cst !'
+            stop
+          endif
+c
+          d2 = 0.5d0*d1 - d2                ! d2=sqrt(fact(2dnm))/fact(dnm)
+          d2 = d2 - nm*dlog(2.0d0)          !
+          d2 = dexp(d2)                     ! normalisation cst.
+          if (nm .ne. 0) d2 = d2*dsqrt(2.0d0) ! special case  m=0
+c
+          d2a(nm) = d2
         enddo
 c
 c
@@ -448,6 +478,8 @@ c
 c
         stdt = std
         if (rank .eq. 0) close(iunit)
+c
+        deallocate(d2a)
 c
         deallocate(ddat)
         deallocate(ghj)
