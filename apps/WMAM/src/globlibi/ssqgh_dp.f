@@ -103,6 +103,7 @@ c
 !$omp& dist_schedule(static)
 #else
 !$omp& schedule(static)
+!$omp& reduction(+:gj2,dh2)
 #endif
         do i = 1,nlocdatpts
 c       
@@ -151,6 +152,7 @@ c
 !$omp& dist_schedule(static)
 #else
 !$omp& schedule(static)
+!$omp& reduction(+:gj2,dh2)
 #endif
         do i = nlocdatpts+1,nlocpts
 c
