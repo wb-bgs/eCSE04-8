@@ -75,7 +75,7 @@ c
             ddlf(1) = -1.0d0
             ddlf(2) = -dsqrt(3.0d0) 
             do il = 3,shdeg+1
-              jl = il*il-1
+              jl = (il**2)-1
               d1 = (2*il-1)/dsqrt(dble(jl))
               d2 = dsqrt(dble((il-1)**2-1)/jl)
               ddlf(il) = d1*ddlf(il-1) - d2*ddlf(il-2)

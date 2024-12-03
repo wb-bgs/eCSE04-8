@@ -78,7 +78,7 @@ c
           dr = ra**(il+2)
           dra(il) = dr
 c          
-          nu = il*il
+          nu = il**2
           ik = il+1
 c          
           bx = ddlf(ik) * dr
@@ -99,7 +99,7 @@ c
           dc = dcos(im*p2)
           ds = dsin(im*p2)
           do il = im,shdeg
-            nu = (il*il + 2*(im-1)) + 1
+            nu = ((il**2) + 2*(im-1)) + 1
             ik = il-im+1
             dr = dra(il)
 
@@ -219,7 +219,7 @@ c
           dr = ra**(il+2)
           dra(il) = dr
 c          
-          nu = il*il
+          nu = il**2
           ik = il+1
 c          
           bx = ddlf(ik) * dr
@@ -239,7 +239,7 @@ c
           dc = dcos(im*p2)
           ds = dsin(im*p2)
           do il = im,shdeg
-            nu = (il*il + 2*(im-1)) + 1
+            nu = ((il**2) + 2*(im-1)) + 1
             ik = il-im+1
             dr = dra(il)
 c
@@ -353,10 +353,10 @@ c
 !$OMP ATOMIC UPDATE
           gj(nu) = gj(nu) + dw_gj*be
 !$OMP ATOMIC UPDATE
-          dh(nu) = dh(nu) + dw_dh*be*be
+          dh(nu) = dh(nu) + dw_dh*(be**2)
 #else
           gj(nu) = gj(nu) + dw_gj*be
-          dh(nu) = dh(nu) + dw_dh*be*be
+          dh(nu) = dh(nu) + dw_dh*(be**2)
 #endif
 c
           nu = nu+1
@@ -396,14 +396,14 @@ c
 !$OMP ATOMIC UPDATE
             gj(nu+1) = gj(nu+1) + dw_gj*bep1
 !$OMP ATOMIC UPDATE
-            dh(nu)   = dh(nu)   + dw_dh*be*be
+            dh(nu)   = dh(nu)   + dw_dh*(be**2)
 !$OMP ATOMIC UPDATE
-            dh(nu+1) = dh(nu+1) + dw_dh*bep1*bep1
+            dh(nu+1) = dh(nu+1) + dw_dh*(bep1**2)
 #else
             gj(nu)   = gj(nu)   + dw_gj*be
             gj(nu+1) = gj(nu+1) + dw_gj*bep1
-            dh(nu)   = dh(nu)   + dw_dh*be*be
-            dh(nu+1) = dh(nu+1) + dw_dh*bep1*bep1
+            dh(nu)   = dh(nu)   + dw_dh*(be**2)
+            dh(nu+1) = dh(nu+1) + dw_dh*(bep1**2)
 #endif
 c
             nu = nu+2
