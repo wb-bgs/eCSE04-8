@@ -289,11 +289,11 @@ c          bex      REAL*8      x component of magnetic field
 c          bey      REAL*8      y component of magnetic field
 c          bez      REAL*8      z component of magnetic field 
 c          dw_gj    REAL*8      multiplier for gj terms
-c          dw_hj    REAL*8      multiplier for hj terms
+c          dw_dh    REAL*8      multiplier for dh terms
 c
 c       output:
 c          gj       REAL*8      gradient of the weighted sum of squares (nb)
-c          hj       REAL*8      diagonal of the Hessian (nb)
+c          dh       REAL*8      diagonal of the Hessian (nb)
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine XYZsph_bi0_sub(shdeg, nb, d2a,
@@ -301,8 +301,8 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >                            dlf, ddlf,
      >                            p1, p2, ra,
      >                            bex, bey, bez,
-     >                            dw_gj, dw_hj,
-     >                            gj, hj)
+     >                            dw_gj, dw_dh,
+     >                            gj, dh)
 c
         implicit none
 c
@@ -312,8 +312,8 @@ c
         real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
         real*8 p1, p2, ra
         real*8 bex, bey, bez 
-        real*8 dw_gj, dw_hj
-        real*8 gj(1:nb), hj(1:nb) 
+        real*8 dw_gj, dw_dh
+        real*8 gj(1:nb), dh(1:nb) 
 c
         integer nu, il, im, ik
         real*8 rc, rs
@@ -349,10 +349,15 @@ c
 c
           be = (bex*bx + bey*by + bez*bz)
 c
-!$OMP ATOMIC
+#if defined(OMP_OFFLOAD_SSQGH)
+!$OMP ATOMIC UPDATE
           gj(nu) = gj(nu) + dw_gj*be
-!$OMP ATOMIC
-          hj(nu) = hj(nu) + dw_hj*be*be
+!$OMP ATOMIC UPDATE
+          dh(nu) = dh(nu) + dw_dh*be*be
+#else
+          gj(nu) = gj(nu) + dw_gj*be
+          dh(nu) = dh(nu) + dw_dh*be*be
+#endif
 c
           nu = nu+1
         enddo
@@ -385,14 +390,21 @@ c
             be = bex*bx + bey*by + bez*bz
             bep1 = bex*bxp1 + bey*byp1 + bez*bzp1 
 c
-!$OMP ATOMIC
-            gj(nu) = gj(nu) + dw_gj*be
-!$OMP ATOMIC
+#if defined(OMP_OFFLOAD_SSQGH)
+!$OMP ATOMIC UPDATE
+            gj(nu)   = gj(nu)   + dw_gj*be
+!$OMP ATOMIC UPDATE
             gj(nu+1) = gj(nu+1) + dw_gj*bep1
-!$OMP ATOMIC
-            hj(nu) = hj(nu) + dw_hj*be*be
-!$OMP ATOMIC
-            hj(nu+1) = hj(nu+1) + dw_hj*bep1*bep1
+!$OMP ATOMIC UPDATE
+            dh(nu)   = dh(nu)   + dw_dh*be*be
+!$OMP ATOMIC UPDATE
+            dh(nu+1) = dh(nu+1) + dw_dh*bep1*bep1
+#else
+            gj(nu)   = gj(nu)   + dw_gj*be
+            gj(nu+1) = gj(nu+1) + dw_gj*bep1
+            dh(nu)   = dh(nu)   + dw_dh*be*be
+            dh(nu+1) = dh(nu+1) + dw_dh*bep1*bep1
+#endif
 c
             nu = nu+2
           enddo
