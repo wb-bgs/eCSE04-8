@@ -9,7 +9,7 @@ c
         include 'mpi_status_types.h'
 c
 	integer :: nb
-	real*8 :: bc(*)
+	real*8 :: bc(1:nb)
         type(inversion_status) :: inv_stat
         type(search_status) :: src_stat
         integer :: MPI_INVERSION_STATUS

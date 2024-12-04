@@ -3,11 +3,13 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c    subroutine prepare_cm4_components
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine prepare_cm4_components(bp)
+        subroutine prepare_cm4_components(nd, bp)
 c
         implicit none
 c 
-        real*8 bp(*)
+        integer nd
+        real*8 bp(1:nd+1)
+c
         real*8 dd
 c 
         dd = dsqrt(bp(5)**2 + bp(6)**2 + bp(7)**2)
@@ -285,9 +287,9 @@ c  Read in reference model
         if (rank .eq. 0) write(*,*)
      >    'Reading in reference model, ', fname
         if (serialrd .gt. 0) then
-          call mpi_read_ref_model(fname, ncoeffs, ryg, bc)
+          call mpi_read_ref_model(fname, ncoeffs, nparams, ryg, bc)
         else
-          call mpi_read_all_ref_model(fname, ncoeffs, ryg, bc)
+          call mpi_read_all_ref_model(fname, ncoeffs, nparams, ryg, bc)
         endif
         if (rank .eq. 0) then
           write(*,*) 'Coefficients: ', ncoeffs
@@ -300,10 +302,11 @@ c  Read in data
         fname = './Data/wdmam_geocentric.dat.bin'
         if (rank .eq. 0) write(*,*)
      >    'Reading in data, ', fname
-        call mpi_read_all_data(fname, ND, ndatpts, nlocdatpts,
-     >                         imin_locdatpts, ryg, ppos)
+        call mpi_read_all_data(fname, ND, nlocpts, ndatpts,
+     >                         nlocdatpts, imin_locdatpts,
+     >                         ryg, ppos)
         if (nlocdatpts .eq. 0) stop
-        
+
 c
 c  Calculate CM4 components 
         if (rank .eq. 0) write(*,*) 'Calculating CM4 components'
@@ -311,7 +314,7 @@ c  Calculate CM4 components
         do i = 1,3
           j = 4+i 
           do k = 1,nlocdatpts
-            call sph_bi('f', i, nd, ncoeffs, nparams,
+            call sph_bi('f', i, ND, ncoeffs, nparams,
      >                  bc, ppos(1,k), cm)
             ppos(j,k) = cm(1)
           enddo
@@ -337,7 +340,7 @@ c  Define covariance matrix: sin(colat) weight
 c
 c  Add smoothing equations
         if (rank .eq. 0) write(*,*) 'Define regularisation'
-        call build_damp_space(shdeg, ncoeffs, nparams, nd,
+        call build_damp_space(shdeg, ncoeffs, nparams, ND,
      >                        nlocdatpts, nlocsampts, nlocpts,
      >                        imin_locpts, imin_locsampts,
      >                        ryg, dampfac, bc,
@@ -346,7 +349,7 @@ c  Add smoothing equations
 c
 c  Prepare the CM4 components for use within XYZsph_bi0 source
         do i = 1,nlocpts
-          call prepare_cm4_components(ppos(1,i))
+          call prepare_cm4_components(ND, ppos(1,i))
         enddo
         
 c
@@ -402,13 +405,13 @@ c
 c
 c
         fname = './Results/fit_No_P.out.bin'
-        call mpi_write_all_fit_data(fname, ND,
+        call mpi_write_all_fit_data(fname, ND, nlocpts,
      >                              ndatpts, imin_locdatpts,
      >                              1, nlocdatpts,
      >                              ppos, dw, diff(1:2))
 
         fname = './Results/fit_damp.out.bin'
-        call mpi_write_all_fit_data(fname, ND,
+        call mpi_write_all_fit_data(fname, ND, nlocpts,
      >                              nsampts, imin_locsampts,
      >                              nlocdatpts+1, nlocpts,
      >                              ppos, dw, diff(3:4))

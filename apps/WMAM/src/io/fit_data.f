@@ -7,7 +7,8 @@ c
 c  input:
 c       fname      : character : name of fit data file
 c       nd         : integer : nd+1 is the lead dim of ppos
-c       np         : integer : total number of points
+c       nlocpts    : integer : total number of points assigned to rank
+c       np         : integer : total number of points to write out
 c       imin       : integer : offset into fit data file.
 c       nmin       : integer : starting count
 c       nmax       : integer : finishing count
@@ -17,7 +18,7 @@ c  output:
 c       diff       : real*8  : two element array
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine mpi_write_all_fit_data(fname, nd, np,
+        subroutine mpi_write_all_fit_data(fname, nd, nlocpts, np,
      >                                    imin, nmin, nmax,
      >                                    ppos, xyzf, diff)
 c        
@@ -29,8 +30,9 @@ c
         integer, parameter :: FIT_VALUES_PER_PT = 10
 c
         character fname*100
-        integer nd, np, imin, nmin, nmax
-        real*8 ppos(nd+1, *), xyzf(*), diff(*)        
+        integer nd, nlocpts, np, imin, nmin, nmax
+        real*8 ppos(1:nd+1, 1:nlocpts), xyzf(1:nlocpts)
+        real*8 diff(1:2)        
 c
         integer i, j, rank, ierr
         integer fhandle, nwritten, nlocreals

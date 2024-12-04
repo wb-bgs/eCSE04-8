@@ -7,6 +7,7 @@ c
 c  input:
 c       fname      : character : name of data file
 c       nd         : integer : nd+1 is the lead dim of ppos
+c       nlocpts    : integer : total number of points assigned to rank
 c       ndatpts    : integer : number of data points in file
 c       nlocdatpts : integer : number of data points assigned to rank
 c       ryg        : real*8  : reference year for the model
@@ -16,8 +17,9 @@ c  output:
 c       ppos(*,*) : real*8 : array of data points assigned to rank
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine mpi_read_all_data(fname, nd, ndatpts, nlocdatpts,
-     >                               imin_locdatpts, ryg, ppos)
+        subroutine mpi_read_all_data(fname, nd, nlocpts, ndatpts,
+     >                               nlocdatpts, imin_locdatpts,
+     >                               ryg, ppos)
 c
         implicit none
 c
@@ -28,8 +30,8 @@ c
         integer, parameter :: SIZE_OF_PT = NUM_OF_PTCOMPS*SIZE_OF_REAL
 c
         character fname*100
-        integer nd, ndatpts, nlocdatpts, imin_locdatpts
-        real*8 ryg, ppos(nd+1,*)
+        integer nd, nlocpts, ndatpts, nlocdatpts, imin_locdatpts
+        real*8 ryg, ppos(1:nd+1,1:nlocpts)
 c
         integer i, j, rank, ierr
         integer fhandle, fsize, npts, nread, nlocreals

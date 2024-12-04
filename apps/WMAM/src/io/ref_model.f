@@ -6,13 +6,14 @@ c  Rank 0 does the read and then broadcasts data to all other ranks.
 c
 c  input:
 c       fname   : character : name of reference model file
-c       ncoeffs : integer : number of coefficients/parameters
+c       ncoeffs : integer : number of coefficients/parameters for reference model
+c       nparams : integer : number of coefficients/parameters for model
 c  output:
 c       ryg     : real*8  : reference year for the model
 c       bc(*)   : real*8  : coefficients/parameters
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine mpi_read_ref_model(fname, ncoeffs, ryg, bc)
+        subroutine mpi_read_ref_model(fname, ncoeffs, nparams, ryg, bc)
 c
         implicit none
 c
@@ -21,9 +22,9 @@ c
         integer, parameter :: SIZE_OF_REAL = 8
 c
         character fname*100
-        integer ncoeffs
+        integer ncoeffs, nparams
         real*8 ryg
-        real*8 bc(*)
+        real*8 bc(1:nparams)
 c
         integer rank, ierr
         integer fhandle, fsize, nreals, nread
@@ -148,12 +149,14 @@ c
 c  input:
 c       fname   : character : name of reference model file
 c  output:
-c       ncoeffs : integer : number of coefficients/parameters
+c       ncoeffs : integer : number of coefficients/parameters for reference model
+c       nparams : integer : number of coefficients/parameters for model
 c       ryg     : real*8  : reference year for the model
 c       bc(*)   : real*8  : coefficients/parameters
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine mpi_read_all_ref_model(fname, ncoeffs, ryg, bc)
+        subroutine mpi_read_all_ref_model(fname, ncoeffs, nparams,
+     >                                    ryg, bc)
 c
         implicit none
 c
@@ -162,9 +165,9 @@ c
         integer, parameter :: SIZE_OF_REAL = 8
 c
         character fname*100
-        integer ncoeffs
+        integer ncoeffs, nparams
         real*8 ryg
-        real*8 bc(*)
+        real*8 bc(1:nparams)
 c
         integer, parameter :: ndims = 1
 c
