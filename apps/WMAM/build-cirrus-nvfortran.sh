@@ -4,7 +4,7 @@
 function set_compile_options {
   MAKEFILE=$1
   if [[ "${BUILD}" == "release" ]]; then
-    sed -i "s:FFLAGS =:FFLAGS = -I${MPI_HOME}/include -O1 -cpp -r8 -DOMP_OFFLOAD -DOMP_OFFLOAD_CPTP -DOMP_OFFLOAD_SSQGH -tp=cascadelake -target=gpu -mp=gpu -Minfo=mp -gpu=cuda12.4,cc70 -cuda:g" ${MAKEFILE}
+    sed -i "s:FFLAGS =:FFLAGS = -I${MPI_HOME}/include -O3 -cpp -r8 -DOMP_OFFLOAD -DOMP_OFFLOAD_CPTP -DOMP_OFFLOAD_SSQGH -tp=cascadelake -target=gpu -mp=gpu -Minfo=mp -gpu=cuda12.4,cc70 -cuda:g" ${MAKEFILE}
   elif [[ "${BUILD}" == "debug" ]]; then
     sed -i "s:FFLAGS =:FFLAGS = -I${MPI_HOME}/include -g -O0 -cpp -r8 -DOMP_OFFLOAD -DOMP_OFFLOAD_CPTP -DOMP_OFFLOAD_SSQGH -tp=cascadelake -target=gpu -mp=gpu -Minfo=mp -gpu=cuda12.4,cc70 -cuda -C -Mnobounds -ffpe-trap=invalid,zero,overflow,underflow,inexact -Ktrap=divz,denorm,inexact,inv,ovf,unf:g" ${MAKEFILE}
   fi
