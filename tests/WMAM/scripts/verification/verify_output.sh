@@ -1,19 +1,20 @@
 #!/bin/bash
 
-# ./verify_output.sh 22.12 cce15 cmpich8 ofi 3.6 200 2784014
-# ./verify_output.sh 10.2.0 gnu10 ompi4 ucx 5.0 200 2784014
+# ./verify_output.sh cpu 10.2.0 gnu10 ompi4 ucx 5.0 200 6619617
+# ./verify_output.sh gpu 10.2.0-nvfortran gnu10 ompi4 ucx 5.0 200 6619620
 
 ROOT=${HOME/home/work}
 PYPP_HOME=${ROOT}/utils/pypp/py38
 SCRIPTS_HOME=${ROOT}/tests/WMAM/scripts
 
-PE_RELEASE=$1
-COMPILER_LABEL=$2
-MPI_LABEL=$3
-COMMS_LABEL=$4
-APP_VERSION=$5
-DEGREE=$6
-JOBID=$7
+HARDWARE=$1
+PE_RELEASE=$2
+COMPILER_LABEL=$3
+MPI_LABEL=$4
+COMMS_LABEL=$5
+APP_VERSION=$6
+DEGREE=$7
+JOBID=$8
 
 APP_LABEL=WMAM
 TARGET_PATH=${PE_RELEASE}/${COMPILER_LABEL}/${MPI_LABEL}-${COMMS_LABEL}
@@ -26,6 +27,12 @@ set -
 
 . ${PYPP_HOME}/bin/activate
 
-python ${VERIFY_SCRIPT} "${RESULTS_HOME}/${TARGET_PATH}/n*/tpn*/tpt*/${JOBID}/Results/model_No_P.out" "${REFERENCE_HOME}/model_No_P.out"
+if [[ "$HARDWARE" == "cpu" ]]; then
+  python ${VERIFY_SCRIPT} "${RESULTS_HOME}/${TARGET_PATH}/n*/tpn*/tpt*/${JOBID}/Results/model_No_P.out" "${REFERENCE_HOME}/model_No_P.out"
+fi
+
+if [[ "$HARDWARE" == "gpu" ]]; then
+  python ${VERIFY_SCRIPT} "${RESULTS_HOME}/${TARGET_PATH}/n*/tpn*/tpg*/tpt*/${JOBID}/Results/model_No_P.out" "${REFERENCE_HOME}/model_No_P.out"
+fi
 
 conda deactivate
