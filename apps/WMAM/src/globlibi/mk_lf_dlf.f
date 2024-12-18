@@ -1,4 +1,4 @@
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c 	subroutine mk_lf_dlf
 c               V. Lesur 19 June 2005
 c
@@ -14,21 +14,20 @@ c
 c       input:
 c         im/shdeg      order and degree max
 c         rc/rs         cos(colatitude)/sin(colatitude)
-c         d2a           pre-computed array for populating dlf
+c         d2a_im        element at position im from d2a array
 c       output:
 c         dlf           legendre function from im to nl
 c         ddlf          derivative of legendre function from im to nl
 c
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine mk_lf_dlf(im, shdeg, rs, rc, 
-     >                       d2a, dalpha, dbeta,
+     >                       d2a_im, dalpha, dbeta,
      >                       dlf, ddlf)
 c
         implicit none
 c
         integer im, shdeg
-        real*8 rs, rc
-        real*8 d2a(0:shdeg)
+        real*8 rs, rc, d2a_im
         real*8 dalpha(0:shdeg), dbeta(0:shdeg)
         real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
 c
@@ -49,7 +48,7 @@ c  Initialise dlf array
           if (im .eq. 0) d1 = 1.d0
         endif
 c
-        dlf(1) = d1*d2a(im)
+        dlf(1) = d1*d2a_im
         dlf(2) = dlf(1) * rc * dsqrt(dble(2*im+1))
 c
         do il = 2,shdeg-im

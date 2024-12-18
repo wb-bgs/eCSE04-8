@@ -1,4 +1,4 @@
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c	subroutine XYZsph_bi0_sample
 c		
 c       Compute dx = bx.bc, dy = by.bc and dz = bz.bc.
@@ -7,7 +7,7 @@ c
 c       input:
 c          shdeg  INTEGER       max SH degree value
 c          nb     INTEGER       number of coefficients
-c          d2a    REAL*8        pre-computed array for mk_lf_dlf()
+c          d2a    REAL*8        pre-computed array for mk_lf_dlf() subroutine
 c          dra    REAL*8        pre-allocated array used in this subroutine
 c          dalpha REAL*8        pre-allocated array used in mk_lf_dlf() subroutine
 c          dbeta  REAL*8        "
@@ -23,7 +23,7 @@ c          bex    REAL*8        x component of magnetic field
 c          bey    REAL*8        y component of magnetic field
 c          bez    REAL*8        z component of magnetic field
 c
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine XYZsph_bi0_sample(shdeg, nb, d2a,
      >                               dra, dalpha, dbeta,
      >                               dlf, ddlf, bc,
@@ -72,7 +72,7 @@ c
 c
         im=0
         call mk_lf_dlf(im, shdeg, rs, rc,
-     >                 d2a, dalpha, dbeta,
+     >                 d2a(im), dalpha, dbeta,
      >                 dlf, ddlf)
         do il = 1,shdeg
           dr = ra**(il+2)
@@ -94,7 +94,7 @@ c
 c
         do im = 1,shdeg
           call mk_lf_dlf(im, shdeg, rs, rc,
-     >                   d2a, dalpha, dbeta,
+     >                   d2a(im), dalpha, dbeta,
      >                   dlf, ddlf)
           dc = dcos(im*p2)
           ds = dsin(im*p2)
@@ -151,7 +151,7 @@ c
         end subroutine XYZsph_bi0_sample
 
       
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c	function XYZsph_bi0_fun
 c		
 c       Computes the dot product of 'be' and 'bc', avoiding the need
@@ -160,7 +160,7 @@ c
 c       input:
 c          shdeg  INTEGER     max SH degree value
 c          nb     INTEGER     number of coefficients
-c          d2a    REAL*8      pre-computed array for mk_lf_dlf()
+c          d2a    REAL*8      pre-computed array for mk_lf_dlf() subroutine
 c          dra    REAL*8      pre-allocated array used in this subroutine
 c          dalpha REAL*8      pre-allocated array used in mk_lf_dlf() subroutine
 c          dbeta  REAL*8      "
@@ -177,7 +177,7 @@ c
 c       output:
 c          YZsph_bi0_fun  REAL*8
 c
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         real*8 function XYZsph_bi0_fun(shdeg, nb, d2a,
      >                                 dra, dalpha, dbeta,
      >                                 dlf, ddlf, bc,
@@ -213,7 +213,7 @@ c
 c
         im = 0
         call mk_lf_dlf(im, shdeg, rs, rc,
-     >                 d2a, dalpha, dbeta,
+     >                 d2a(im), dalpha, dbeta,
      >                 dlf, ddlf)
         do il = 1,shdeg
           dr = ra**(il+2)
@@ -234,7 +234,7 @@ c
 c
         do im = 1,shdeg
           call mk_lf_dlf(im, shdeg, rs, rc,
-     >                   d2a, dalpha, dbeta,
+     >                   d2a(im), dalpha, dbeta,
      >                   dlf, ddlf)
           dc = dcos(im*p2)
           ds = dsin(im*p2)
@@ -267,7 +267,7 @@ c
         end function XYZsph_bi0_fun
 
 
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c	subroutine XYZsph_bi0_sub
 c		
 c       Computes the gradient of the weighted sum of squares (gj) and
@@ -276,7 +276,7 @@ c
 c       input:
 c          shdeg    INTEGER     max SH degree value
 c          nb       INTEGER     number of coefficients
-c          d2a      REAL*8      pre-computed array for mk_lf_dlf()
+c          d2a      REAL*8      pre-computed array for mk_lf_dlf() subroutine
 c          dra      REAL*8      pre-allocated array used in this subroutine
 c          dalpha   REAL*8      pre-allocated array used in mk_lf_dlf() subroutine
 c          dbeta    REAL*8      "
@@ -295,7 +295,7 @@ c       output:
 c          gj       REAL*8      gradient of the weighted sum of squares (nb)
 c          dh       REAL*8      diagonal of the Hessian (nb)
 c
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine XYZsph_bi0_sub(shdeg, nb, d2a,
      >                            dra, dalpha, dbeta,
      >                            dlf, ddlf,
@@ -334,7 +334,7 @@ c
         im = 0
         nu = 1
         call mk_lf_dlf(im, shdeg, rs, rc,
-     >                 d2a, dalpha, dbeta,
+     >                 d2a(im), dalpha, dbeta,
      >                 dlf, ddlf)
         do il = 1,shdeg
           dr = ra**(il+2)
@@ -365,7 +365,7 @@ c
 c
         do im = 1,shdeg
           call mk_lf_dlf(im, shdeg, rs, rc,
-     >                   d2a, dalpha, dbeta,
+     >                   d2a(im), dalpha, dbeta,
      >                   dlf, ddlf)
           dc = dcos(im*p2)
           ds = dsin(im*p2)
