@@ -30,23 +30,20 @@ c
         real*8 dgamln
         external dgamln
 c
-c    start calculs
 c
-c       l=nm,  l=nm+1
-c
-        dnm = dble(nm)                    ! dble real for nm
-        d1 = dgamln(2*dnm+1.0d0,ierr)     ! d1=log(fact(2dnm))
-        d2 = dgamln(dnm+1.0d0,ierr)       ! d2=log(fact(dnm))
+        dnm = dble(nm)
+        d1 = dgamln(2*dnm+1.0d0,ierr)
+        d2 = dgamln(dnm+1.0d0,ierr)
         if (ierr .ne. 0) then
-          write(*,*)'mklf_F: Cannot computes normalisation cst !'
+          write(*,*) 'mklf_F: Cannot computes normalisation cst !'
           stop
         endif
 c
-        d2 = 0.5d0*d1 - d2                ! d2=sqrt(fact(2dnm))/fact(dnm)
-        d2 = d2 - nm*dlog(2.0d0)          !
-        d2 = dexp(d2)                     ! normalisation cst.
+        d2 = 0.5d0*d1 - d2
+        d2 = d2 - nm*dlog(2.0d0)
+        d2 = dexp(d2)
         if (nm .ne. 0) then
-            d2 = d2*dsqrt(2.0d0) ! special case  m=0
+          d2 = d2*dsqrt(2.0d0)
         endif
 c
         d1 = ds
@@ -56,21 +53,18 @@ c
           if (nm .eq. 0) d1 = 1.d0
         endif
 c
-        dlf(1) = d1*d2                              ! leg. func. (m,m)
-        dlf(2) = dlf(1) * dc * dsqrt(dble(2*nm+1))  ! leg. func. (m+1,m)
+        dlf(1) = d1*d2
+        dlf(2) = dlf(1) * dc * dsqrt(dble(2*nm+1))
 c
-c     l=nm+2....lm
+        do il = 2,ilg-nm
 c
-        do il = 2,ilg-nm                        ! l=nm+il-1
+          d0 = il + 2*nm
+          d1 = dble((il-1) * (d0-1))
+          d2 = dble(il * d0)
+          dbeta = dsqrt(d1/d2)
+          d1 = dble(2*(il+nm)-1)
+          dalpha = d1/dsqrt(d2)
 c
-          d0 = il+2*nm
-          d1 = dble((il-1) * (d0-1))         ! (l-m)*(l+m)
-          d2 = dble(il * d0)                 ! (l-m+1)*(l+m+1)	
-          dbeta = dsqrt(d1/d2)               ! recurrence coeff.
-          d1 = dble(2*(il+nm)-1)             ! 2l+1
-          dalpha = d1/dsqrt(d2)              !
-c
-          ! leg. func. (nm+il-1,nm) 
           dlf(il+1) = dalpha*dlf(il)*dc - dbeta*dlf(il-1)
 c
         enddo

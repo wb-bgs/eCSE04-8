@@ -19,7 +19,7 @@ c	output:
 c	  ddlf		derivative of legendre function from nm to nl
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-	subroutine mkdlf_F(nm, nl, ds, dc, ddlf)
+        subroutine mkdlf_F(nm, nl, ds, dc, ddlf)
 c
         implicit none
 c
@@ -57,5 +57,5 @@ c
           enddo
         endif
 c
-99999   return
+        return
         end
