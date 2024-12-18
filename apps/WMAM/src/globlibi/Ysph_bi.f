@@ -38,7 +38,7 @@ c
         real*8, parameter :: D2R = 4.d0*datan(1.d0)/180.d0
 c
         integer nd, nb, nlie
-        real*8 pos(1:nd), be(1:nb)
+        real*8 pos(1:nd+1), be(1:nb)
 c
         integer nlis, nti
         integer nu, il, im, nus, it

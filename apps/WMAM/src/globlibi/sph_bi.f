@@ -38,7 +38,7 @@ c
 c
         character iof
         integer nub, nb0, nb, nd
-        real*8 bc(1:nb), bp(1:nd), be(1:nb0)
+        real*8 bc(1:nb), bp(1:nd+1), be(1:nb0)
 c
         integer nlie
 c
