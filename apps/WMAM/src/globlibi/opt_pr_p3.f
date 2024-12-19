@@ -68,8 +68,6 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >                       bc, ppos, dl, cov, jcov,
      >                       stdt, xyzf)
 c
-        use coeff_map
-c
         implicit none
 c
         include 'mpif.h'
@@ -198,8 +196,6 @@ c
 c
           d2a(nm) = d2
         enddo
-c
-        call create_coeff_map(shdeg)
 c
 c
 !$OMP TARGET DATA
@@ -469,8 +465,6 @@ c           if(rank.eq.0)write(*,*)'opt_pr_p3: 7'
         
 c end of <do while (inv_stat%yon(1:1).eq.'y')> loop
         enddo
-c
-        call destroy_coeff_map()
 c
 c
 !$OMP TARGET EXIT DATA
