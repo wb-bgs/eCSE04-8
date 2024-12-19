@@ -29,6 +29,7 @@ XYZsph_bi0.o\
 dy2mjd.o\
 gauleg.o\
 misc.o\
+coeff_map.o\
 mpi_status_types.o\
 set_FG_sampling.o\
 thread_segmenter.o\

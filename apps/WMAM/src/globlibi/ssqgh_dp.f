@@ -39,8 +39,9 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >                      d2a, dra, dalpha, dbeta,
      >                      dlf, ddlf, bc, ppos,
      >                      cov, jcov, ddat, xyzf,
-     >                      gj_map_len, gj_map,
      >                      gj, dh)
+c
+        use coeff_map
 c
         implicit none
 c
@@ -56,8 +57,6 @@ c
         integer jcov(1:nlocpts+2)
         real*8 ddat(1:nlocpts)
         real*8 xyzf(1:nlocpts)
-        integer gj_map_len 
-        integer gj_map(1:gj_map_len)
         real*8 gj(1:nb), dh(1:nb)
 c
         real*8, parameter :: RAG = 6371.2d0
@@ -69,14 +68,9 @@ c
 c
         real*8 dw_dh, dw_gj
 c
-        real*8, allocatable :: gj2(:), dh2(:)
 c
-c 
-        allocate(gj2(1:nb))
-        allocate(dh2(1:nb))
-c
-        gj2(1:nb) = 0.0d0
-        dh2(1:nb) = 0.0d0
+        gj(1:nb) = 0.0d0
+        dh(1:nb) = 0.0d0
 c
 c       
 #if defined(OMP_OFFLOAD_SSQGH)
@@ -84,7 +78,7 @@ c
 !$omp& map(to: ddat(1:nlocpts))
 !$omp& map(to: xyzf(1:nlocpts))
 !$omp& map(to: bc(1:nb))
-!$omp& map(tofrom: gj2(1:nb), dh2(1:nb))
+!$omp& map(tofrom: gj(1:nb), dh(1:nb))
 #endif
 c
 c
@@ -103,7 +97,7 @@ c
 !$omp& dist_schedule(static)
 #else
 !$omp& schedule(static)
-!$omp& reduction(+:gj2,dh2)
+!$omp& reduction(+:gj,dh)
 #endif
         do i = 1,nlocdatpts
 c       
@@ -127,7 +121,7 @@ c
      >                        p1, p2, ra,
      >                        bex, bey, bez,
      >                        dw_gj, dw_dh,
-     >                        gj2, dh2)
+     >                        gj, dh)
 c
         enddo
 #if defined(OMP_OFFLOAD_SSQGH)
@@ -152,7 +146,7 @@ c
 !$omp& dist_schedule(static)
 #else
 !$omp& schedule(static)
-!$omp& reduction(+:gj2,dh2)
+!$omp& reduction(+:gj,dh)
 #endif
         do i = nlocdatpts+1,nlocpts
 c
@@ -183,7 +177,7 @@ c
      >                        p1, p2, ra,
      >                        bex, bey, bez,
      >                        dw_gj, dw_dh,
-     >                        gj2, dh2)
+     >                        gj, dh)
 c
         enddo
 #if defined(OMP_OFFLOAD_SSQGH)
@@ -195,34 +189,18 @@ c
 #endif
 c
 c
-        call MPI_ALLREDUCE(MPI_IN_PLACE, gj2, nb,
+        call MPI_ALLREDUCE(MPI_IN_PLACE, gj, nb,
      >                     MPI_DOUBLE_PRECISION,
      >                     MPI_SUM, MPI_COMM_WORLD, ierr)
 c
-        call MPI_ALLREDUCE(MPI_IN_PLACE, dh2, nb,
+        call MPI_ALLREDUCE(MPI_IN_PLACE, dh, nb,
      >                     MPI_DOUBLE_PRECISION,
      >                     MPI_SUM, MPI_COMM_WORLD, ierr)
 c
 c
-c  Rearrange gj/dh coefficient terms
-        do i = 1,shdeg
-          nu = gj_map(i)
-          gj(nu) = gj2(i)
-          dh(nu) = dh2(i)
-        enddo
+        call desequentialise(gj)
+        call desequentialise(dh)
 c
-        j = shdeg+1
-        do i = shdeg+1,gj_map_len
-          nu = gj_map(i)
-          gj(nu) = gj2(j)
-          gj(nu+1) = gj2(j+1)
-          dh(nu) = dh2(j)
-          dh(nu+1) = dh2(j+1)
-          nu = nu+2
-          j = j+2
-        enddo
-c
-        deallocate(gj2, dh2)
 c
         return
         end

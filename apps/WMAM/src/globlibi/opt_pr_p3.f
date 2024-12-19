@@ -65,8 +65,10 @@ c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine opt_pr_p3(path, itmax, shdeg, nb, nd,
      >                       npts, nlocpts, nlocdatpts,
-     >                       bc, ppos, dl,
-     >                       cov, jcov, stdt, xyzf)
+     >                       bc, ppos, dl, cov, jcov,
+     >                       stdt, xyzf)
+c
+        use coeff_map
 c
         implicit none
 c
@@ -85,8 +87,8 @@ c
         integer i, j, k
         integer ip, it, itm, iunit
         integer ipth, itm_l, itm_r
-        integer ierr, rank, gj_map_len 
-        real*8 stdo, stp, std
+        integer ierr, rank
+        real*8 std0, stp, std
         real*8 epss, dd, cond, dm, beta
 c
         type(inversion_status) inv_stat
@@ -102,14 +104,16 @@ c
 c  variables for populating d2a array 
         integer nm
         real*8  dnm, d1, d2
+c
+c  declare arrays used within "XYZsph_bi0.f"
         real*8, allocatable :: d2a(:), dra(:)
         real*8, allocatable :: dalpha(:), dbeta(:)
         real*8, allocatable :: dlf(:), ddlf(:)
 c
+c  declare arrays used to handle output from ssqgh_dp() subroutine
         real*8, allocatable :: ds(:), dh(:), ddat(:)
-        real*8, allocatable :: gj(:), gjo(:)
-        real*8, allocatable :: ghj(:), ghjo(:)
-        integer, allocatable :: gj_map(:)
+        real*8, allocatable :: gj(:), gj0(:)
+        real*8, allocatable :: ghj(:), ghj0(:)
 c
 c  slatec subroutine
         real*8 dgamln
@@ -125,30 +129,6 @@ c Commit the inversion and gradient search MPI status types
      >                             MPI_INVERSION_STATUS,
      >                             MPI_SEARCH_STATUS)
 c
-        if (rank .eq. 0) then
-            allocate(gjo(1:nb))
-            allocate(ghjo(1:nb))
-        endif
-        allocate(ds(1:nb))
-        allocate(gj(1:nb))
-        allocate(ghj(1:nb))
-        allocate(ddat(1:nlocpts))
-c
-c  Setup gj/hj map
-        gj_map_len = shdeg + int((nb-shdeg)/2)
-        allocate(gj_map(1:gj_map_len))
-c
-        do i = 1,shdeg
-          gj_map(i) = i*i
-        enddo
-c  
-        i = shdeg+1
-        do j = 1,shdeg
-          do k = j,shdeg
-            gj_map(i) = (k*k + 2*(j-1)) + 1
-            i = i+1
-          enddo
-        enddo
 c
 c Open file for linear search outputs
         if (rank .eq. 0) then
@@ -168,7 +148,7 @@ c I assume that BC is the same for all processes at this point
         itm_r = abs(itmax(3))!number of GC iteration between PR
         if (itm_r .le. 0) itm_r = 1
 c
-        stdo = 1.d99
+        std0 = 1.d99
 c
         epss = dl(1)
         cond = dl(3)
@@ -176,26 +156,32 @@ c
 c
 c Starting conditions
         inv_stat%yon(1:5) = 'yyyyr'
-        gj(1:nb) = 0.0d0
-        ghj(1:nb) = 0.0d0
-        if (rank .eq. 0) then
-            gjo(1:nb) = 0.0d0
-            ghjo(1:nb) = 0.0d0
-        endif
         if (itm .eq. 0) inv_stat%yon(3:4) = 'nn'
 c
-c All define data set
+c  Allocate and initialise arrays used to handle output from ssqgh_dp() subroutine
+        allocate(ddat(1:nlocpts))
         do ip = 1,nlocpts
             ddat(ip) = ppos(nd+1,ip)
         enddo
 c
+        allocate(ds(1:nb))
+        allocate(gj(1:nb))
+        allocate(ghj(1:nb))
+        gj(1:nb)  = 0.0d0
+        ghj(1:nb) = 0.0d0
+        if (rank .eq. 0) then
+            allocate(gj0(1:nb))
+            allocate(ghj0(1:nb))
+            gj0(1:nb)  = 0.0d0
+            ghj0(1:nb) = 0.0d0
+        endif
 c
-c  Allocate private arrays used within XYZshp_bi0
+c  Allocate private arrays used within "XYZshp_bi0.f"
         allocate(d2a(0:shdeg), dra(1:shdeg))
         allocate(dalpha(0:shdeg), dbeta(0:shdeg))
         allocate(dlf(1:shdeg+1), ddlf(1:shdeg+1))
 c 
-c  Initialize d2a array
+c  Initialize d2a array used within mk_lf_dlf() subroutine
         do nm = 0,shdeg
           dnm = dble(nm)
           d1 = dgamln(2*dnm+1.0d0, ierr)
@@ -212,6 +198,8 @@ c
 c
           d2a(nm) = d2
         enddo
+c
+        call create_coeff_map(shdeg)
 c
 c
 !$OMP TARGET DATA
@@ -238,10 +226,9 @@ c               if(rank.eq.0)write(*,*)'opt_pr_p3: 1'
      >                              d2a, dra, dalpha, dbeta, dlf, ddlf,
      >                              inv_stat%bc, ppos, xyzf)
 c
-                call cptstd_dp(npts, nlocpts,
-     >                         cov, jcov, ddat, xyzf,
-     >                         std)
-                stdo = std
+                call cptstd_dp(npts, nlocpts, cov, jcov,
+     >                         ddat, xyzf, std)
+                std0 = std
             endif
 c
 c All: do their part in finding next step length and direction
@@ -257,7 +244,6 @@ c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 2'
      >                            d2a, dra, dalpha, dbeta, dlf, ddlf,
      >                            inv_stat%bc, ppos,
      >                            cov, jcov, ddat, xyzf,
-     >                            gj_map_len, gj_map, 
      >                            gj, dh)
                 else
                     if (rank .eq. 0) then
@@ -296,7 +282,7 @@ c          SD direction
                         ds(1:nb) = ghj(1:nb)
                     elseif (inv_stat%yon(5:5) .eq. 'g') then
 c          GC direction
-                        dd = dot_product(gjo, ghjo)
+                        dd = dot_product(gj0, ghj0)
                         if (dabs(dd) .gt. epss) then
                             beta = dot_product(gj,ghj)/dd
                             ds(1:nb) = ghj(1:nb)+beta*ds(1:nb)
@@ -305,10 +291,10 @@ c          GC direction
                         endif
                     else
 c          Polak-Ribiere direction
-                        dd = dot_product(gjo,ghjo)
+                        dd = dot_product(gj0,ghj0)
                         if (dabs(dd) .gt. epss) then
-                            ghjo(1:nb) = ghj(1:nb)-ghjo(1:nb)
-                            beta = dot_product(gj,ghjo)/dd
+                            ghj0(1:nb) = ghj(1:nb)-ghj0(1:nb)
+                            beta = dot_product(gj,ghj0)/dd
                             beta = dmax1(beta,0.0d0)
                             ds(1:nb) = ghj(1:nb)+beta*ds(1:nb)
                         else
@@ -383,13 +369,13 @@ c MP: What to do next
      >                                        inv_stat%bc(1:nb)))
                     write(*,*)
                     write(*,'(A,I3,3e17.9,x,A)')
-     >           'opt_pr_p',it,std,dd,(stdo-std)/stdo,inv_stat%yon
+     >           'opt_pr_p',it,std,dd,(std0-std)/std0,inv_stat%yon
                     write(iunit,*)
                     write(iunit,'(A,I3,3e17.9,x,A)')
-     >           'opt_pr_p',it,std,dd,(stdo-std)/stdo,inv_stat%yon
+     >           'opt_pr_p',it,std,dd,(std0-std)/std0,inv_stat%yon
 c
 c      Out conditions
-                    if ((stdo-std)/stdo .lt. epss) then
+                    if ((std0-std)/std0 .lt. epss) then
                         if (inv_stat%yon(5:5) .eq. 'n') then
 c
                             write(iunit,'(A)')'OUT CONDITIONS'
@@ -402,15 +388,15 @@ c
                             write(iunit,'(A,e17.9)')
      >               '||ghj|| : ',dsqrt(dot_product(ghj,ghj))
                             inv_stat%yon(1:5) = 'yynyn'
-                            if (std .gt. stdo) then
+                            if (std .gt. std0) then
                                 inv_stat%yon(1:5) = 'yynnn'
                             endif
 c        Re-start with stop option: Too small improvement
                         else
                             inv_stat%yon(1:5) = 'ynyyn'
-                            if (std .gt. stdo) then
-                                gjo(1:nb) = 0.0d0
-                                ghjo(1:nb) = 0.0d0
+                            if (std .gt. std0) then
+                                gj0(1:nb) = 0.0d0
+                                ghj0(1:nb) = 0.0d0
                                 inv_stat%yon(1:5) = 'yyynn'
                             endif
                         endif
@@ -429,7 +415,7 @@ c        Re-start: Too small step ... SD iteration
                         endif
 c
 c        Re-start: No improvement ... restart with stop option
-                        if (std .gt. stdo) then
+                        if (std .gt. std0) then
                             inv_stat%yon(1:5)='yyynn'
                         endif
 c
@@ -456,9 +442,9 @@ c
 c MP: Update parameters
                 if (inv_stat%yon(4:4) .eq. 'y') then
                     inv_stat%bc(1:nb) = inv_stat%bc(1:nb)+stp*ds(1:nb)
-                    gjo(1:nb) = gj(1:nb)
-                    ghjo(1:nb) = ghj(1:nb)
-                    stdo = std
+                    gj0(1:nb) = gj(1:nb)
+                    ghj0(1:nb) = ghj(1:nb)
+                    std0 = std
                 endif
 c
 c MP: save temp model file
@@ -484,6 +470,8 @@ c           if(rank.eq.0)write(*,*)'opt_pr_p3: 7'
 c end of <do while (inv_stat%yon(1:1).eq.'y')> loop
         enddo
 c
+        call destroy_coeff_map()
+c
 c
 !$OMP TARGET EXIT DATA
 !$omp& map(delete: dra)
@@ -500,14 +488,9 @@ c
         deallocate(dalpha, dbeta)
         deallocate(dlf, ddlf)
 c
-        deallocate(ddat)
-        deallocate(ghj)
-        deallocate(gj)
-        deallocate(gj_map)
-        deallocate(ds)
+        deallocate(ddat, ds, gj, ghj)
         if (rank .eq. 0) then
-            deallocate(ghjo)
-            deallocate(gjo)
+            deallocate(gj0, ghj0)
         endif
 c        
 c Free the inversion and gradient search MPI status types
