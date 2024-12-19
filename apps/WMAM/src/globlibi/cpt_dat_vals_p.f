@@ -13,9 +13,8 @@ c         nd            Space dimension
 c         nlocpts       number of data+sampling points local to rank
 c         nlocdatpts    number of data points local to rank
 c         d2a           pre-computed array used by mk_lf_dlf()
-c         dra           pre-allocated array used within XYZsph_bi0
-c         dlf           "
-c         ddlf          "
+c         (d)dlf        pre-allocated arrays computed by mk_lf_dlf() and
+c                       used within XYZsph_bi0
 c         bc            base coefficients
 c         ppos(nd+1,*)  point position in nd
 c
@@ -24,13 +23,12 @@ c         XYZF(*)       X,Y,Z or F value at point position
 c        
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine cpt_dat_vals_p(shdeg, nb, nd, nlocpts, nlocdatpts,
-     >                            d2a, dra, dlf, ddlf,
-     >                            bc, ppos, xyzf)
+     >                            d2a, dlf, ddlf, bc, ppos, xyzf)
 c
         implicit none
 c
         integer shdeg, nb, nd, nlocpts, nlocdatpts
-        real*8  d2a(0:shdeg), dra(1:shdeg)
+        real*8  d2a(0:shdeg)
         real*8  dlf(1:shdeg+1), ddlf(1:shdeg+1)
         real*8  bc(1:nb), ppos(nd+1,nlocpts)
         real*8  xyzf(1:nlocpts)
@@ -58,7 +56,6 @@ c
 !$OMP PARALLEL DO
 #endif
 !$omp& default(shared)
-!$omp& private(dra)
 !$omp& private(dlf, ddlf)
 !$omp& private(p1, p2, ra)
 !$omp& private(bex, bey, bez)
@@ -78,7 +75,7 @@ c
            bez = ppos(7,i)
 c
            xyzf(i) = XYZsph_bi0_fun(shdeg, nb, d2a,
-     >                              dra, dlf, ddlf,
+     >                              dlf, ddlf,
      >                              bc, p1, p2, ra,
      >                              bex, bey, bez)
 c
@@ -96,7 +93,6 @@ c
 !$OMP PARALLEL DO
 #endif
 !$omp& default(shared)
-!$omp& private(dra)
 !$omp& private(dlf, ddlf)
 !$omp& private(p1, p2, ra)
 !$omp& private(bex, bey, bez)
@@ -116,12 +112,11 @@ c
           bez = ppos(7,i)
 c
           call XYZsph_bi0_sample(shdeg, nb, d2a,
-     >                           dra, dlf, ddlf, bc,
+     >                           dlf, ddlf, bc,
      >                           p1, p2, ra, 
      >                           bex, bey, bez)
 c
-          xyzf(i) = XYZsph_bi0_fun(shdeg, nb,
-     >                             d2a, dra,
+          xyzf(i) = XYZsph_bi0_fun(shdeg, nb, d2a,
      >                             dlf, ddlf, bc,
      >                             p1, p2, ra,
      >                             bex, bey, bez)

@@ -17,9 +17,8 @@ c          nd             space dimension
 c          nlocpts        number of data+sampling points local to rank
 c          nlocdatpts     number of data points assigned to rank
 c          d2a            pre-computed array used by mk_lf_dlf()
-c          dra            pre-allocated array used within XYZsph_bi0
-c          dlf            "
-c          ddlf           "
+c          (d)dlf         pre-allocated arrays computed by mk_lf_dlf() and
+c                         used within XYZsph_bi0
 c          bc             Estimation of Base function coefficients
 c          ppos           data point position
 c          cov            Covariance matrix in SLAP column format
@@ -34,8 +33,7 @@ c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine ssqgh_dp(shdeg, nb, nd,
      >                      nlocpts, nlocdatpts,
-     >                      d2a, dra,
-     >                      dlf, ddlf, bc, ppos,
+     >                      d2a, dlf, ddlf, bc, ppos,
      >                      cov, jcov, ddat, xyzf,
      >                      gj, dh)
 c
@@ -44,7 +42,7 @@ c
         include 'mpif.h'
 c
         integer shdeg, nb, nd, nlocpts, nlocdatpts
-        real*8 d2a(0:shdeg), dra(1:shdeg)
+        real*8 d2a(0:shdeg)
         real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
         real*8 bc(1:nb)
         real*8 ppos(1:nd+1,1:nlocpts)
@@ -83,7 +81,6 @@ c
 !$OMP PARALLEL DO
 #endif
 !$omp& default(shared)
-!$omp& private(dra)
 !$omp& private(dlf, ddlf)
 !$omp& private(p1, p2, ra)
 !$omp& private(bex, bey, bez)
@@ -111,7 +108,7 @@ c
           dw_gj = dw_dh*(ddat(i)-xyzf(i))
 c      
           call XYZsph_bi0_sub(shdeg, nb, d2a,
-     >                        dra, dlf, ddlf,
+     >                        dlf, ddlf,
      >                        p1, p2, ra,
      >                        bex, bey, bez,
      >                        dw_gj, dw_dh,
@@ -131,7 +128,6 @@ c
 !$OMP PARALLEL DO
 #endif
 !$omp& default(shared)
-!$omp& private(dra)
 !$omp& private(dlf, ddlf)
 !$omp& private(p1, p2, ra)
 !$omp& private(bex, bey, bez)
@@ -152,8 +148,7 @@ c
           bey = ppos(6,i)
           bez = ppos(7,i)
 c
-          call XYZsph_bi0_sample(shdeg, nb,
-     >                           d2a, dra,
+          call XYZsph_bi0_sample(shdeg, nb, d2a,
      >                           dlf, ddlf, bc,
      >                           p1, p2, ra, 
      >                           bex, bey, bez)
@@ -165,7 +160,7 @@ c
           dw_gj = dw_dh*(ddat(i)-xyzf(i))
 c      
           call XYZsph_bi0_sub(shdeg, nb, d2a,
-     >                        dra, dlf, ddlf,
+     >                        dlf, ddlf,
      >                        p1, p2, ra,
      >                        bex, bey, bez,
      >                        dw_gj, dw_dh,
