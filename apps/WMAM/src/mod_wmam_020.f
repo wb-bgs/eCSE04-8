@@ -30,7 +30,7 @@ c    contiguous sequence of numeric characters from the end of the
 c    processor name.
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc  
         function node_num()
-c        
+c      
         implicit none
 c
         include 'mpif.h'
@@ -78,6 +78,8 @@ c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         program mod_wmam
 c
+        use coeff_map
+c
 #if defined(OMP_OFFLOAD)
         use omp_lib
 #endif
@@ -115,7 +117,8 @@ c
         integer, allocatable :: proc_np(:), proc_ip(:)
 c
         integer, allocatable :: ijcov(:,:)
-        real*8, allocatable :: ppos(:,:), bc(:), cov(:)
+        real*8, allocatable :: ppos(:,:), cov(:)
+        real*8, allocatable :: bc(:)
         real*8, allocatable :: dw(:), cm(:)
         real*8, allocatable :: err(:)
         real*8 diff(4)
@@ -388,6 +391,9 @@ c
          endif
 c
 c
+        call create_coeff_map(shdeg)
+        call sequentialise(bc)
+c
         fname = './Results/'
 c
         call opt_pr_p3(fname, itmax, shdeg, nparams,
@@ -395,6 +401,10 @@ c
      >                 bc, ppos, dl,
      >                 cov, ijcov(1,2),
      >                 stdt, dw)
+c
+c
+        call desequentialise(bc)
+        call destroy_coeff_map()
 c
 c
         if (rank .eq. 0) then
