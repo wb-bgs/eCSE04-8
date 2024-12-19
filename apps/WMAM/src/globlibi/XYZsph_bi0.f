@@ -78,17 +78,17 @@ c
           dr = ra**(il+2)
           dra(il) = dr
 c          
-          nu = il**2
           ik = il+1
 c          
           bx =  ddlf(ik) * dr
           bz = -dlf(ik)  * dr * dble(ik)
 c
-          dx = dx + bx * bc(nu) 
-          dz = dz + bz * bc(nu) 
+          dx = dx + bx * bc(il)
+          dz = dz + bz * bc(il)
         enddo
 c
 c
+        nu = shdeg + 1
         do im = 1,shdeg
           call mk_lf_dlf(im, shdeg, rs, rc,
      >                   d2a(im), dalpha, dbeta,
@@ -96,7 +96,6 @@ c
           dc = dcos(im*p2)
           ds = dsin(im*p2)
           do il = im,shdeg
-            nu = ((il**2) + 2*(im-1)) + 1
             bc_nu   = bc(nu)
             bc_nup1 = bc(nu+1)
 
@@ -106,17 +105,19 @@ c
             dw   = ddlf(ik) * dr
             bx   = dc * bc_nu
             bxp1 = ds * bc_nup1
-            dx   = dx + dw*(bx + bxp1) 
+            dx   = dx + dw*(bx + bxp1)
 
-            dw   = (dlf(ik)/rs) * dr * dble(im) 
+            dw   = (dlf(ik)/rs) * dr * dble(im)
             by   =  ds * bc_nu
             byp1 = -dc * bc_nup1
-            dy   =  dy + dw*(by + byp1) 
+            dy   =  dy + dw*(by + byp1)
             
             dw   =  dlf(ik) * dr * dble(il+1)
             bz   = -dc * bc_nu
             bzp1 = -ds * bc_nup1
-            dz   =  dz + dw*(bz + bzp1) 
+            dz   =  dz + dw*(bz + bzp1)
+
+            nu = nu + 2
           enddo
         enddo
 c
@@ -215,17 +216,17 @@ c
           dr = ra**(il+2)
           dra(il) = dr
 c          
-          nu = il**2
           ik = il+1
 c          
           bx =  ddlf(ik) * dr
           bz = -dlf(ik)  * dr * dble(ik)
 c
           XYZsph_bi0_fun = XYZsph_bi0_fun
-     >                   + (bex*bx + bez*bz) * bc(nu) 
+     >                   + (bex*bx + bez*bz) * bc(il)
         enddo
 c
 c
+        nu = shdeg + 1
         do im = 1,shdeg
           call mk_lf_dlf(im, shdeg, rs, rc,
      >                   d2a(im), dalpha, dbeta,
@@ -233,15 +234,14 @@ c
           dc = dcos(im*p2)
           ds = dsin(im*p2)
           do il = im,shdeg
-            nu = ((il**2) + 2*(im-1)) + 1
             ik = il-im+1
             dr = dra(il)
 c
-            dw   = ddlf(ik) * dr * bex 
+            dw   = ddlf(ik) * dr * bex
             bx   = dw*dc
             bxp1 = dw*ds
 c            
-            dw   = (dlf(ik)/rs) * dr * dble(im) * bey 
+            dw   = (dlf(ik)/rs) * dr * dble(im) * bey
             by   =  dw*ds
             byp1 = -dw*dc
 c            
@@ -250,8 +250,10 @@ c
             bzp1 = -dw*ds
 c
             XYZsph_bi0_fun = XYZsph_bi0_fun
-     >                     + (bx + by + bz) * bc(nu) 
-     >                     + (bxp1 + byp1 + bzp1) * bc(nu+1)  
+     >                     + (bx + by + bz) * bc(nu)
+     >                     + (bxp1 + byp1 + bzp1) * bc(nu+1)
+
+            nu = nu + 2
           enddo
         enddo
 c
@@ -333,7 +335,7 @@ c
           ik = il+1
 c          
           bx =  ddlf(ik) * dr
-          bz = -dlf(ik) * dr * dble(ik)
+          bz = -dlf(ik)  * dr * dble(ik)
 c
           be = (bex*bx + bez*bz)
 c
@@ -365,7 +367,7 @@ c
             bx   = dw*dc
             bxp1 = dw*ds
 c            
-            dw   = (dlf(ik)/rs) * dr * dble(im) 
+            dw   = (dlf(ik)/rs) * dr * dble(im)
             by   =  dw*ds
             byp1 = -dw*dc
 c            
@@ -374,7 +376,7 @@ c
             bzp1 = -dw*ds
 c
             be   = bex*bx + bey*by + bez*bz
-            bep1 = bex*bxp1 + bey*byp1 + bez*bzp1 
+            bep1 = bex*bxp1 + bey*byp1 + bez*bzp1
 c
 #if defined(OMP_OFFLOAD_SSQGH)
 !$OMP ATOMIC UPDATE
@@ -392,7 +394,7 @@ c
             dh(nu+1) = dh(nu+1) + dw_dh*(bep1**2)
 #endif
 c
-            nu = nu+2
+            nu = nu + 2
           enddo
         enddo
 c
