@@ -21,18 +21,17 @@ c         ddlf          derivative of legendre function from im to nl
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine mk_lf_dlf(im, shdeg, rs, rc, 
-     >                       d2a_im, dalpha, dbeta,
-     >                       dlf, ddlf)
+     >                       d2a_im, dlf, ddlf)
 c
         implicit none
 c
         integer im, shdeg
         real*8 rs, rc, d2a_im
-        real*8 dalpha(0:shdeg), dbeta(0:shdeg)
         real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
 c
         integer d0, il, jl
         real*8 d1, d2
+        real*8 dalpha, dbeta
 c
 c
 #if defined(OMP_OFFLOAD_CPTP) || defined(OMP_OFFLOAD_SSQGH)
@@ -55,13 +54,12 @@ c
           d0 = il+2*im
           d1 = dble((il-1) * (d0-1))
           d2 = dble(il * d0)
-          dbeta(il) = dsqrt(d1/d2)
-          d1 = dble(2*(il+im)-1)
-          dalpha(il) = d1/dsqrt(d2)
-        enddo
+          dbeta = dsqrt(d1/d2)*dlf(il-1)
 c
-        do il = 2,shdeg-im
-          dlf(il+1) = dalpha(il)*dlf(il)*rc - dbeta(il)*dlf(il-1)
+          d1 = dble(2*(il+im)-1)
+          dalpha = (d1/dsqrt(d2))*dlf(il)*rc
+c
+          dlf(il+1) = dalpha - dbeta
         enddo
 c
 c

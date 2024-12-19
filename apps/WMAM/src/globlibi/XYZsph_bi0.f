@@ -7,12 +7,10 @@ c
 c       input:
 c          shdeg  INTEGER       max SH degree value
 c          nb     INTEGER       number of coefficients
-c          d2a    REAL*8        pre-computed array for mk_lf_dlf() subroutine
-c          dra    REAL*8        pre-allocated array used in this subroutine
-c          dalpha REAL*8        pre-allocated array used in mk_lf_dlf() subroutine
-c          dbeta  REAL*8        "
-c          dlf    REAL*8        "
-c          ddlf   REAL*8        "
+c          d2a    REAL*8        pre-computed array used by mk_lf_dlf() subroutine
+c          dra    REAL*8        pre-allocated array used within this subroutine
+c          (d)dlf REAL*8        pre-allocated arrays computed by mk_lf_dlf() and
+c                               used within this subroutine
 c          bc     REAL*8        coefficient array
 c          p1     REAL*8        co-latitude
 c          p2     REAL*8        longitude
@@ -25,8 +23,7 @@ c          bez    REAL*8        z component of magnetic field
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine XYZsph_bi0_sample(shdeg, nb, d2a,
-     >                               dra, dalpha, dbeta,
-     >                               dlf, ddlf, bc,
+     >                               dra, dlf, ddlf, bc,
      >                               p1, p2, ra,
      >                               bex, bey, bez)
 c
@@ -34,7 +31,6 @@ c
 c
         integer shdeg, nb
         real*8 d2a(0:shdeg), dra(1:shdeg)
-        real*8 dalpha(0:shdeg), dbeta(0:shdeg)
         real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
         real*8 bc(1:nb)
         real*8 p1, p2, ra
@@ -72,8 +68,7 @@ c
         rs = dsin(p1)
 c
         call mk_lf_dlf(0, shdeg, rs, rc,
-     >                 d2a(0), dalpha, dbeta,
-     >                 dlf, ddlf)
+     >                 d2a(0), dlf, ddlf)
         do il = 1,shdeg
           dr = ra**(il+2)
           dra(il) = dr
@@ -91,8 +86,7 @@ c
         nu = shdeg + 1
         do im = 1,shdeg
           call mk_lf_dlf(im, shdeg, rs, rc,
-     >                   d2a(im), dalpha, dbeta,
-     >                   dlf, ddlf)
+     >                   d2a(im), dlf, ddlf)
           dc = dcos(im*p2)
           ds = dsin(im*p2)
           do il = im,shdeg
@@ -158,12 +152,10 @@ c
 c       input:
 c          shdeg  INTEGER     max SH degree value
 c          nb     INTEGER     number of coefficients
-c          d2a    REAL*8      pre-computed array for mk_lf_dlf() subroutine
-c          dra    REAL*8      pre-allocated array used in this subroutine
-c          dalpha REAL*8      pre-allocated array used in mk_lf_dlf() subroutine
-c          dbeta  REAL*8      "
-c          dlf    REAL*8      "
-c          ddlf   REAL*8      "
+c          d2a    REAL*8      pre-computed array used by mk_lf_dlf() subroutine
+c          dra    REAL*8      pre-allocated array used in this function
+c          (d)dlf REAL*8      pre-allocated arrays computed by mk_lf_dlf() and
+c                             used within this function
 c          bc     REAL*8      coefficient array
 c          p1     REAL*8      co-latitude
 c          p2     REAL*8      longitude
@@ -177,8 +169,7 @@ c          YZsph_bi0_fun  REAL*8
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         real*8 function XYZsph_bi0_fun(shdeg, nb, d2a,
-     >                                 dra, dalpha, dbeta,
-     >                                 dlf, ddlf, bc,
+     >                                 dra, dlf, ddlf, bc,
      >                                 p1, p2, ra,
      >                                 bex, bey, bez)
 c
@@ -186,7 +177,6 @@ c
 c
         integer shdeg, nb
         real*8 d2a(0:shdeg), dra(1:shdeg)
-        real*8 dalpha(0:shdeg), dbeta(0:shdeg)
         real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
         real*8 bc(1:nb)
         real*8 p1, p2, ra
@@ -210,8 +200,7 @@ c
         rs = dsin(p1)
 c
         call mk_lf_dlf(0, shdeg, rs, rc,
-     >                 d2a(0), dalpha, dbeta,
-     >                 dlf, ddlf)
+     >                 d2a(0), dlf, ddlf)
         do il = 1,shdeg
           dr = ra**(il+2)
           dra(il) = dr
@@ -229,8 +218,7 @@ c
         nu = shdeg + 1
         do im = 1,shdeg
           call mk_lf_dlf(im, shdeg, rs, rc,
-     >                   d2a(im), dalpha, dbeta,
-     >                   dlf, ddlf)
+     >                   d2a(im), dlf, ddlf)
           dc = dcos(im*p2)
           ds = dsin(im*p2)
           do il = im,shdeg
@@ -270,12 +258,10 @@ c
 c       input:
 c          shdeg    INTEGER     max SH degree value
 c          nb       INTEGER     number of coefficients
-c          d2a      REAL*8      pre-computed array for mk_lf_dlf() subroutine
-c          dra      REAL*8      pre-allocated array used in this subroutine
-c          dalpha   REAL*8      pre-allocated array used in mk_lf_dlf() subroutine
-c          dbeta    REAL*8      "
-c          dlf      REAL*8      "
-c          ddlf     REAL*8      "
+c          d2a      REAL*8      pre-computed array used by mk_lf_dlf() subroutine
+c          dra      REAL*8      pre-allocated array used within this subroutine
+c          (d)dlf   REAL*8      pre-allocated arrays computed by mk_lf_dlf() and
+c                               used within this subroutine
 c          p1       REAL*8      co-latitude
 c          p2       REAL*8      longitude
 c          ra       REAL*8      radius
@@ -291,8 +277,7 @@ c          dh       REAL*8      diagonal of the Hessian (nb)
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine XYZsph_bi0_sub(shdeg, nb, d2a,
-     >                            dra, dalpha, dbeta,
-     >                            dlf, ddlf,
+     >                            dra, dlf, ddlf,
      >                            p1, p2, ra,
      >                            bex, bey, bez,
      >                            dw_gj, dw_dh,
@@ -302,7 +287,6 @@ c
 c
         integer shdeg, nb
         real*8 d2a(0:shdeg), dra(1:shdeg)
-        real*8 dalpha(0:shdeg), dbeta(0:shdeg)
         real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
         real*8 p1, p2, ra
         real*8 bex, bey, bez 
@@ -326,8 +310,7 @@ c
         rs = dsin(p1)
 c
         call mk_lf_dlf(0, shdeg, rs, rc,
-     >                 d2a(0), dalpha, dbeta,
-     >                 dlf, ddlf)
+     >                 d2a(0), dlf, ddlf)
         do il = 1,shdeg
           dr = ra**(il+2)
           dra(il) = dr
@@ -355,8 +338,7 @@ c
         nu = shdeg + 1
         do im = 1,shdeg
           call mk_lf_dlf(im, shdeg, rs, rc,
-     >                   d2a(im), dalpha, dbeta,
-     >                   dlf, ddlf)
+     >                   d2a(im), dlf, ddlf)
           dc = dcos(im*p2)
           ds = dsin(im*p2)
           do il = im,shdeg

@@ -105,7 +105,6 @@ c  variables for populating d2a array
 c
 c  declare arrays used within "XYZsph_bi0.f"
         real*8, allocatable :: d2a(:), dra(:)
-        real*8, allocatable :: dalpha(:), dbeta(:)
         real*8, allocatable :: dlf(:), ddlf(:)
 c
 c  declare arrays used to handle output from ssqgh_dp() subroutine
@@ -176,7 +175,6 @@ c
 c
 c  Allocate private arrays used within "XYZshp_bi0.f"
         allocate(d2a(0:shdeg), dra(1:shdeg))
-        allocate(dalpha(0:shdeg), dbeta(0:shdeg))
         allocate(dlf(1:shdeg+1), ddlf(1:shdeg+1))
 c 
 c  Initialize d2a array used within mk_lf_dlf() subroutine
@@ -208,7 +206,6 @@ c
 c
 !$OMP TARGET ENTER DATA
 !$omp& map(alloc: dra(1:shdeg))
-!$omp& map(alloc: dalpha(0:shdeg), dbeta(0:shdeg))
 !$omp& map(alloc: dlf(1:shdeg+1), ddlf(1:shdeg+1))
 c
 c
@@ -219,7 +216,7 @@ c All: do their part in forward modelling
             if (inv_stat%yon(2:2) .eq. 'y') then
 c               if(rank.eq.0)write(*,*)'opt_pr_p3: 1'           
                 call cpt_dat_vals_p(shdeg, nb, nd, nlocpts, nlocdatpts,
-     >                              d2a, dra, dalpha, dbeta, dlf, ddlf,
+     >                              d2a, dra, dlf, ddlf,
      >                              inv_stat%bc, ppos, xyzf)
 c
                 call cptstd_dp(npts, nlocpts, cov, jcov,
@@ -237,7 +234,7 @@ c
                 if ((itmax(1) .ge. 0) .or. (it .ne. 1)) then
 c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 2'
                     call ssqgh_dp(shdeg, nb, nd, nlocpts, nlocdatpts,
-     >                            d2a, dra, dalpha, dbeta, dlf, ddlf,
+     >                            d2a, dra, dlf, ddlf,
      >                            inv_stat%bc, ppos,
      >                            cov, jcov, ddat, xyzf,
      >                            gj, dh)
@@ -326,7 +323,7 @@ c ALL: search minimum in descent direction
 c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 4'
                         call gc_step_p(iunit, shdeg, nb, nd,
      >                                 npts, nlocpts, nlocdatpts,
-     >                                 d2a, dra, dalpha, dbeta,
+     >                                 d2a, dra,
      >                                 dlf, ddlf, inv_stat%bc,
      >                                 ppos, ddat,
      >                                 cov, jcov, std,
@@ -335,7 +332,7 @@ c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 4'
 c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 5'
                         call lsearch_p(iunit, itm_l, shdeg, nb, nd, 
      >                                 npts, nlocpts, nlocdatpts,
-     >                                 d2a, dra, dalpha, dbeta,
+     >                                 d2a, dra,
      >                                 dlf, ddlf, inv_stat%bc,
      >                                 ppos, ddat,
      >                                 src_stat, MPI_SEARCH_STATUS,
@@ -346,7 +343,7 @@ c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 5'
 c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 6'
                     call lsearch_p(iunit, itm_l, shdeg, nb, nd,
      >                             npts, nlocpts, nlocdatpts,
-     >                             d2a, dra, dalpha, dbeta,
+     >                             d2a, dra,
      >                             dlf, ddlf, inv_stat%bc,
      >                             ppos, ddat,
      >                             src_stat, MPI_SEARCH_STATUS,
@@ -469,7 +466,6 @@ c
 c
 !$OMP TARGET EXIT DATA
 !$omp& map(delete: dra)
-!$omp& map(delete: dalpha, dbeta)
 !$omp& map(delete: dlf, ddlf)
 c
 !$OMP END TARGET DATA
@@ -479,7 +475,6 @@ c
         if (rank .eq. 0) close(iunit)
 c
         deallocate(d2a, dra)
-        deallocate(dalpha, dbeta)
         deallocate(dlf, ddlf)
 c
         deallocate(ddat, ds, gj, ghj)
