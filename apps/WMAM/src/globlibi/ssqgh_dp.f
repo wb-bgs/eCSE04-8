@@ -41,8 +41,6 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >                      cov, jcov, ddat, xyzf,
      >                      gj, dh)
 c
-        use coeff_map
-c
         implicit none
 c
         include 'mpif.h'
@@ -196,10 +194,6 @@ c
         call MPI_ALLREDUCE(MPI_IN_PLACE, dh, nb,
      >                     MPI_DOUBLE_PRECISION,
      >                     MPI_SUM, MPI_COMM_WORLD, ierr)
-c
-c
-        call desequentialise(gj)
-        call desequentialise(dh)
 c
 c
         return
