@@ -29,7 +29,7 @@ environments provided by the CPE release.
 
 The build type can be `release`, `debug`, `craypat`, `armmap` or `scalasca`; the last three
 build types refer to profiling tools, [Cray PAT](https://docs.archer2.ac.uk/user-guide/profile/#craypat), \
-[Arm MAP](https://docs.archer2.ac.uk/data-tools/arm-forge/) and [Scalasca](https://www.archer2.ac.uk/training/courses/230822-scalasca/).
+[Linaro MAP](https://docs.archer2.ac.uk/data-tools/forge/#using-map) and [Scalasca](https://www.archer2.ac.uk/training/courses/230822-scalasca/).
 
 Once the build has completed the executable file will be written to
 `${HOME/home/work}/apps/wmam/`.
