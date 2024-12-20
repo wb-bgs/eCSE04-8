@@ -123,8 +123,8 @@ if [[ "${BUILD}" == "scorep" ]]; then
   sed -i "s:FC = ftn:FC = scorep --user ftn:g" ./makefile
 fi
 
-rm -f ${WMAM_BUILD_ROOT}/*.o
-rm -f ${WMAM_BUILD_ROOT}/*.mod
+find ${WMAM_BUILD_ROOT} -name '*.o' -delete
+find ${WMAM_BUILD_ROOT} -name '*.mod' -delete
 make
 
 mkdir -p ${WMAM_INSTALL_PATH}/bin
@@ -137,6 +137,6 @@ else
 fi
 
 if [[ "${BUILD}" != "craypat" ]]; then
-  rm -f ${WMAM_BUILD_ROOT}/*.o
-  rm -f ${WMAM_BUILD_ROOT}/*.mod
+  find ${WMAM_BUILD_ROOT} -name '*.o' -delete
+  find ${WMAM_BUILD_ROOT} -name '*.mod' -delete
 fi

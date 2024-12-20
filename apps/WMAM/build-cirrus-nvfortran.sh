@@ -52,11 +52,11 @@ LIBS_MAKEFILE_LINE="${SLATEC_ROOT}/lib/libslatec.a"
 sed -i "s:LIBS =:LIBS = ${LIBS_MAKEFILE_LINE}:g" ./makefile
 
 
-rm -f ${WMAM_BUILD_ROOT}/*.o
-rm -f ${WMAM_BUILD_ROOT}/*.mod
+find ${WMAM_BUILD_ROOT} -name '*.o' -delete
+find ${WMAM_BUILD_ROOT} -name '*.mod' -delete
 make
-rm -f ${WMAM_BUILD_ROOT}/*.o
-rm -f ${WMAM_BUILD_ROOT}/*.mod
+find ${WMAM_BUILD_ROOT} -name '*.o' -delete
+find ${WMAM_BUILD_ROOT} -name '*.mod' -delete
 
 mkdir -p ${WMAM_INSTALL_PATH}/bin
 
