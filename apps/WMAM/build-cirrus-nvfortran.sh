@@ -7,6 +7,8 @@ function set_compile_options {
     sed -i "s:FFLAGS =:FFLAGS = -I${MPI_HOME}/include -O3 -cpp -r8 -DOMP_OFFLOAD -DOMP_OFFLOAD_CPTP -DOMP_OFFLOAD_SSQGH -tp=cascadelake -target=gpu -mp=gpu -Minfo=mp -gpu=cuda12.4,cc70 -cuda:g" ${MAKEFILE}
   elif [[ "${BUILD}" == "debug" ]]; then
     sed -i "s:FFLAGS =:FFLAGS = -I${MPI_HOME}/include -g -O0 -cpp -r8 -DOMP_OFFLOAD -DOMP_OFFLOAD_CPTP -DOMP_OFFLOAD_SSQGH -tp=cascadelake -target=gpu -mp=gpu -Minfo=mp -gpu=cuda12.4,cc70 -cuda -C -Mnobounds -ffpe-trap=invalid,zero,overflow,underflow,inexact -Ktrap=divz,denorm,inexact,inv,ovf,unf:g" ${MAKEFILE}
+  elif [[ "${BUILD}" == "cpu" ]]; then
+    sed -i "s:FFLAGS =:FFLAGS = -I${MPI_HOME}/include -O3 -cpp -fopenmp -r8 -tp=cascadelake -Minfo=mp:g" ${MAKEFILE}
   fi
   sed -i "s:LIBS =:LIBS = -L${MPI_HOME}/lib -lmpi_mpifh:g" ${MAKEFILE}
 }
@@ -17,10 +19,10 @@ VERSION=5.0
 SLATEC_VERSION=4.1
 GCC_VERSION=10.2.0
 NVHPC_VERSION=24.5
-ERRMSG="Invalid syntax: build-cirrus-nvfortran.sh release|debug"
+ERRMSG="Invalid syntax: build-cirrus-nvfortran.sh release|debug|cpu"
 
 
-if [[ "${BUILD}" != "release" && "${BUILD}" != "debug" ]]; then
+if [[ "${BUILD}" != "release" && "${BUILD}" != "debug" && "${BUILD}" != "cpu" ]]; then
   echo ${ERRMSG}
   exit
 fi
@@ -40,8 +42,11 @@ WMAM_INSTALL_PATH=${WMAM_INSTALL_ROOT}/${BUILD}
 
 echo -e "\n\nBuilding ${WMAM_LABEL} ${WMAM_VERSION} (${BUILD}) using GNU ${GCC_VERSION}-nvfortran...\n\n"
   
-
-SLATEC_ROOT=${PRFX}/libs/slatec/${SLATEC_VERSION}/GNU/${GCC_VERSION}-nvfortran/${BUILD}
+SLATEC_BUILD=${BUILD}
+if [[ "${BUILD}" == "cpu" ]]; then
+  SLATEC_BUILD=release
+fi
+SLATEC_ROOT=${PRFX}/libs/slatec/${SLATEC_VERSION}/GNU/${GCC_VERSION}-nvfortran/${SLATEC_BUILD}
 
 cd ${WMAM_BUILD_ROOT}
 
