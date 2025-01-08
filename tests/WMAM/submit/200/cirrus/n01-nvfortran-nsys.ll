@@ -63,8 +63,6 @@ APP_PARAMS="${DEGREE} ${RESOLUTION} ${SCHEME} ${DAMPFAC} ${SERIALRD}"
 SRUN_PARAMS="--ntasks=${NTASKS} --tasks-per-node=${NTASKSPN} --cpus-per-task=${NCORESPT} --hint=nomultithread --unbuffered --chdir=${APP_RUN_PATH}"
 
 
-
-
 # setup app run directory and input folder
 mkdir -p ${APP_RUN_PATH}/Data
 
@@ -96,5 +94,5 @@ echo -e "\nsrun time: ${RUN_TIME}"
 mkdir ${APP_RUN_PATH}/${SLURM_JOB_ID}
 mv ./slurm-${SLURM_JOB_ID}.out ${APP_RUN_PATH}/${SLURM_JOB_ID}/${APP_NAME}.o
 mv ${APP_RUN_PATH}/Results ${APP_RUN_PATH}/${SLURM_JOB_ID}/
-mv ${APP_RUN_PATH}/wmam-baseline.nsys-rep ${APP_RUN_PATH}/${SLURM_JOB_ID}/
+mv ${APP_RUN_PATH}/wmam-baseline*.nsys-rep ${APP_RUN_PATH}/${SLURM_JOB_ID}/
 rm -rf ${APP_RUN_PATH}/Data

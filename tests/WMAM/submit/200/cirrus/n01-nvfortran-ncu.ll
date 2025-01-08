@@ -63,8 +63,6 @@ APP_PARAMS="${DEGREE} ${RESOLUTION} ${SCHEME} ${DAMPFAC} ${SERIALRD}"
 SRUN_PARAMS="--ntasks=${NTASKS} --tasks-per-node=${NTASKSPN} --cpus-per-task=${NCORESPT} --hint=nomultithread --unbuffered --chdir=${APP_RUN_PATH}"
 
 
-
-
 # setup app run directory and input folder
 mkdir -p ${APP_RUN_PATH}/Data
 
