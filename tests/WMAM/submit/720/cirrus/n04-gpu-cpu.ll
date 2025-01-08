@@ -57,6 +57,7 @@ SRUN_PARAMS="--ntasks=${NTASKS} --tasks-per-node=${NTASKSPN} --cpus-per-task=${N
 export OMP_NUM_THREADS=${NCORESPT}
 #export OMP_NUM_THREADS=1
 export OMP_PLACES=cores
+export OMP_STACKSIZE=4G
 
 
 # setup app run directory and input folder
