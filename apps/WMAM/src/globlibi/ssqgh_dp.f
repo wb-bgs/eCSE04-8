@@ -55,7 +55,7 @@ c
         real*8, parameter :: RAG = 6371.2d0
         real*8, parameter :: D2R = 4.d0*datan(1.d0)/180.d0
 c
-        integer i, j, nu, ierr
+        integer i, ierr
         real*8 p1, p2, ra
         real*8 bex, bey, bez
 c
