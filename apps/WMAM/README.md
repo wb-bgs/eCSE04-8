@@ -16,20 +16,10 @@ The WMAM code takes as input, WDMAM anomaly data and infers a magnetic field in 
 of a spherical harmonic model. The code implements the conjugate gradient iterative
 inversion scheme, one that incorporates the Polak-Ribière formula.
 
-The [build-archer2.sh](build-archer2.sh) script builds WMAM for [ARCHER2](https://www.archer2.ac.uk/)
+The [build-cirrus-nvfortran.sh](build-cirrus-nvfortran.sh) script builds WMAM for use on
+the [Cirrus](https://www.cirrus.ac.uk/) NVIDIA V100 GPUs.
 
-Simply run `./build-archer2.sh <CPE release> <compiler environment> <build type>` to build the WMAM code.
-
-As of July 2023, the Cray Programming Environment (CPE) release installed on ARCHER2 is `22.12`.
-The CPE release version may change in the future - this can be checked by running `module avail cpe`.
-If the chosen CPE release is not installed on ARCHER2, the default CPE release will be used instead.
-
-The compiler environment can be `cray`, `gnu` or `aocc`; these are the three compiler
-environments provided by the CPE release.
-
-The build type can be `release`, `debug`, `craypat`, `armmap` or `scalasca`; the last three
-build types refer to profiling tools, [Cray PAT](https://docs.archer2.ac.uk/user-guide/profile/#craypat), \
-[Linaro MAP](https://docs.archer2.ac.uk/data-tools/forge/#using-map) and [Scalasca](https://www.archer2.ac.uk/training/courses/230822-scalasca/).
+Simply run `./build-cirrus-nvfortran.sh <release|debug>` to build the WMAM code.
 
 Once the build has completed the executable file will be written to
 `${HOME/home/work}/apps/wmam/`.

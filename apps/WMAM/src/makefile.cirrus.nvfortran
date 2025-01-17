@@ -20,7 +20,6 @@ VPATH=.:io:globlibi
 OBJ=\
 mklf_F.o\
 mkdlf_F.o\
-mk_lf_dlf.o\
 Xsph_bi.o\
 Ysph_bi.o\
 Zsph_bi.o\
