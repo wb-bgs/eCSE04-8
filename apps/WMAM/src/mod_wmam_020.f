@@ -20,7 +20,6 @@ c
         end subroutine prepare_cm4_components
 c
 c
-#if defined(OMP_OFFLOAD)    
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c    function node_num()
 c
@@ -66,7 +65,6 @@ c
         endif
 c
         end function node_num
-#endif
 c
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -79,10 +77,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         program mod_wmam
 c
         use coeff_map
-c
-#if defined(OMP_OFFLOAD)
-        use omp_lib
-#endif
+        use cudafor
 c
         implicit none
 c
@@ -131,12 +126,10 @@ c  variables for populating d2a array
 c
 c  MPI-related variables
         integer ierr, nranks, rank
-#if defined(OMP_OFFLOAD)
         integer node_num
         integer mpi_comm_local
         integer nranks_local, rank_local
         integer ndevices
-#endif
 c
 c
 c  Initialize MPI, determine rank
@@ -144,7 +137,6 @@ c  Initialize MPI, determine rank
         call MPI_Comm_size(MPI_COMM_WORLD, nranks, ierr)
         call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
 c
-#if defined(OMP_OFFLOAD)
 c
 c  Assign the MPI rank to a GPU
         call MPI_Comm_split(MPI_COMM_WORLD, node_num(),
@@ -152,10 +144,9 @@ c  Assign the MPI rank to a GPU
         call MPI_Comm_size(mpi_comm_local, nranks_local, ierr)
         rank_local = MOD(rank,nranks_local)
 c
-        ndevices = omp_get_num_devices()
-        call omp_set_default_device(MOD(rank_local,ndevices))
+        ierr = cudaGetDeviceCount(ndevices)
+        ierr = cudaSetDevice(MOD(rank_local,ndevices))
 c
-#endif
 c
 c  Read in command line arguments
         cmdcnt = COMMAND_ARGUMENT_COUNT()
