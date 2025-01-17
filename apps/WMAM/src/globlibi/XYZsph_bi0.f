@@ -1,3 +1,19 @@
+        module XYZsph_bi0
+c
+          implicit none
+c
+          public
+     >      XYZsph_bi0_sample,
+     >      XYZsph_bi0_fun,
+     >      XYZsph_bi0_sub
+
+          private
+     >      mk_lf_dlf
+c
+c
+        contains
+c
+c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c	subroutine XYZsph_bi0_sample
 c		
@@ -21,7 +37,8 @@ c          bey    REAL*8        y component of magnetic field
 c          bez    REAL*8        z component of magnetic field
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine XYZsph_bi0_sample(shdeg, nb, d2a,
+        attributes(device)
+     >  subroutine XYZsph_bi0_sample(shdeg, nb, d2a,
      >                               dlf, ddlf, bc,
      >                               p1, p2, ra,
      >                               bex, bey, bez)
@@ -29,36 +46,31 @@ c
         implicit none
 c
         integer shdeg, nb
-        real*8 d2a(0:shdeg)
-        real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
-        real*8 bc(1:nb)
-        real*8 p1, p2, ra
-        real*8 bex, bey, bez 
+        real(8) d2a(0:shdeg)
+        real(8) dlf(1:shdeg+1), ddlf(1:shdeg+1)
+        real(8) bc(1:nb)
+        real(8) p1, p2, ra
+        real(8) bex, bey, bez 
 c
         integer nu, il, im, ik
-        real*8 rc, rs
-        real*8 ds, dc, dr, dw
-        real*8 bx, by, bz
-        real*8 bxp1, byp1, bzp1
-        real*8 bc_nu, bc_nup1
+        real(8) rc, rs
+        real(8) ds, dc, dr, dw
+        real(8) bx, by, bz
+        real(8) bxp1, byp1, bzp1
+        real(8) bc_nu, bc_nup1
 c
-        real*8 dx, dy, dz, dd
-        real*8 dxbey, dxbez
-        real*8 dybex, dybez
-        real*8 dzbex, dzbey
+        real(8) dx, dy, dz, dd
+        real(8) dxbey, dxbez
+        real(8) dybex, dybez
+        real(8) dzbex, dzbey
 c
-        real*8 xy_c, xz_c
-        real*8 yx_c, yz_c
-        real*8 zx_c, zy_c
+        real(8) xy_c, xz_c
+        real(8) yx_c, yz_c
+        real(8) zx_c, zy_c
 c
-        real*8 bex2, bey2, bez2
+        real(8) bex2, bey2, bez2
 c        
 c 
-#if defined(OMP_OFFLOAD_CPTP) || defined(OMP_OFFLOAD_SSQGH)
-!$omp declare target
-#endif
-c
-c
         dx = 0.0d0
         dy = 0.0d0 
         dz = 0.0d0 
@@ -137,10 +149,9 @@ c
         bey = bey2
         bez = bez2
 c
-        return
         end subroutine XYZsph_bi0_sample
-
-      
+c
+c     
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c	function XYZsph_bi0_fun
 c		
@@ -165,7 +176,8 @@ c       output:
 c          YZsph_bi0_fun  REAL*8
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        real*8 function XYZsph_bi0_fun(shdeg, nb, d2a,
+        attributes(device)
+     >  real*8 function XYZsph_bi0_fun(shdeg, nb, d2a,
      >                                 dlf, ddlf, bc,
      >                                 p1, p2, ra,
      >                                 bex, bey, bez)
@@ -173,23 +185,18 @@ c
         implicit none
 c
         integer shdeg, nb
-        real*8 d2a(0:shdeg)
-        real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
-        real*8 bc(1:nb)
-        real*8 p1, p2, ra
-        real*8 bex, bey, bez 
+        real(8) d2a(0:shdeg)
+        real(8) dlf(1:shdeg+1), ddlf(1:shdeg+1)
+        real(8) bc(1:nb)
+        real(8) p1, p2, ra
+        real(8) bex, bey, bez 
 c
         integer nu, il, im, ik
-        real*8 rc, rs
-        real*8 ds, dc, dr, dw
-        real*8 bx, by, bz
-        real*8 bxp1, byp1, bzp1
+        real(8) rc, rs
+        real(8) ds, dc, dr, dw
+        real(8) bx, by, bz
+        real(8) bxp1, byp1, bzp1
 c 
-c
-#if defined(OMP_OFFLOAD_CPTP)
-!$omp declare target
-#endif
-c
 c
         XYZsph_bi0_fun = 0.0d0 
 c        
@@ -241,10 +248,9 @@ c
           enddo
         enddo
 c
-        return
         end function XYZsph_bi0_fun
-
-
+c
+c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c	subroutine XYZsph_bi0_sub
 c		
@@ -271,35 +277,34 @@ c          gj       REAL*8      gradient of the weighted sum of squares (nb)
 c          dh       REAL*8      diagonal of the Hessian (nb)
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine XYZsph_bi0_sub(shdeg, nb, d2a,
+        attributes(device)
+     >  subroutine XYZsph_bi0_sub(shdeg, nb, d2a,
      >                            dlf, ddlf,
      >                            p1, p2, ra,
      >                            bex, bey, bez,
      >                            dw_gj, dw_dh,
      >                            gj, dh)
 c
+        use cudafor
+c
         implicit none
 c
         integer shdeg, nb
-        real*8 d2a(0:shdeg)
-        real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
-        real*8 p1, p2, ra
-        real*8 bex, bey, bez 
-        real*8 dw_gj, dw_dh
-        real*8 gj(1:nb), dh(1:nb) 
+        real(8) d2a(0:shdeg)
+        real(8) dlf(1:shdeg+1), ddlf(1:shdeg+1)
+        real(8) p1, p2, ra
+        real(8) bex, bey, bez 
+        real(8) dw_gj, dw_dh
+        real(8) gj(1:nb), dh(1:nb) 
 c
         integer nu, il, im, ik
-        real*8 rc, rs
-        real*8 ds, dc, dr, dw
-        real*8 bx, by, bz
-        real*8 bxp1, byp1, bzp1
-        real*8 be, bep1
+        real(8) rc, rs
+        real(8) ds, dc, dr, dw
+        real(8) bx, by, bz
+        real(8) bxp1, byp1, bzp1
+        real(8) be, bep1
+        real(8) oldval
 c 
-c
-#if defined(OMP_OFFLOAD_SSQGH)
-!$omp declare target
-#endif
-c
 c
         rc = dcos(p1)
         rs = dsin(p1)
@@ -316,15 +321,8 @@ c
 c
           be = (bex*bx + bez*bz)
 c
-#if defined(OMP_OFFLOAD_SSQGH)
-!$OMP ATOMIC UPDATE
-          gj(il) = gj(il) + dw_gj*be
-!$OMP ATOMIC UPDATE
-          dh(il) = dh(il) + dw_dh*(be**2)
-#else
-          gj(il) = gj(il) + dw_gj*be
-          dh(il) = dh(il) + dw_dh*(be**2)
-#endif
+          oldval = atomicadd(gj(il), dw_gj*be)
+          oldval = atomicadd(dh(il), dw_dh*(be**2))
 c
         enddo
 c
@@ -354,25 +352,109 @@ c
             be   = bex*bx + bey*by + bez*bz
             bep1 = bex*bxp1 + bey*byp1 + bez*bzp1
 c
-#if defined(OMP_OFFLOAD_SSQGH)
-!$OMP ATOMIC UPDATE
-            gj(nu)   = gj(nu)   + dw_gj*be
-!$OMP ATOMIC UPDATE
-            gj(nu+1) = gj(nu+1) + dw_gj*bep1
-!$OMP ATOMIC UPDATE
-            dh(nu)   = dh(nu)   + dw_dh*(be**2)
-!$OMP ATOMIC UPDATE
-            dh(nu+1) = dh(nu+1) + dw_dh*(bep1**2)
-#else
-            gj(nu)   = gj(nu)   + dw_gj*be
-            gj(nu+1) = gj(nu+1) + dw_gj*bep1
-            dh(nu)   = dh(nu)   + dw_dh*(be**2)
-            dh(nu+1) = dh(nu+1) + dw_dh*(bep1**2)
-#endif
+            oldval = atomicadd(gj(nu), dw_gj*be)
+            oldval = atomicadd(gj(nu+1), dw_gj*bep1)
+c
+            oldval = atomicadd(dh(nu), dw_dh*(be**2))
+            oldval = atomicadd(dh(nu+1), dw_dh*(bep1**2))
 c
             nu = nu + 2
           enddo
         enddo
 c
-        return
         end subroutine XYZsph_bi0_sub
+c
+c
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c 	subroutine mk_lf_dlf
+c               V. Lesur 19 June 2005
+c
+c       Computes legendre Functions and their derivatives along theta
+c
+c       CALLED: mklf_F.f
+c
+c       limitations of mklf_F apply
+c
+c       Fast version: tests reduced to minimum
+c       test in loop in else branch eliminated  
+c
+c       input:
+c         im/shdeg      order and degree max
+c         rc/rs         cos(colatitude)/sin(colatitude)
+c         d2a_im        element at position im from d2a array
+c       output:
+c         dlf           legendre function from im to nl
+c         ddlf          derivative of legendre function from im to nl
+c
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+        attributes(device)
+     >  subroutine mk_lf_dlf(im, shdeg, rs, rc, 
+     >                       d2a_im, dlf, ddlf)
+c
+        implicit none
+c
+        integer im, shdeg
+        real(8) rs, rc, d2a_im
+        real(8) dlf(1:shdeg+1), ddlf(1:shdeg+1)
+c
+        integer d0, il, jl
+        real(8) d1, d2
+        real(8) dalpha, dbeta
+c
+c
+c  Initialise dlf array
+        d1 = rs
+        if (d1 .ne. 0.0d0) then
+          d1 = d1**im
+        else
+          if (im .eq. 0) d1 = 1.d0
+        endif
+c
+        dlf(1) = d1*d2a_im
+        dlf(2) = dlf(1) * rc * dsqrt(dble(2*im+1))
+c
+        do il = 2,shdeg-im
+          d0 = il+2*im
+          d1 = dble((il-1) * (d0-1))
+          d2 = dble(il * d0)
+          dbeta = dsqrt(d1/d2)*dlf(il-1)
+c
+          d1 = dble(2*(il+im)-1)
+          dalpha = (d1/dsqrt(d2))*dlf(il)*rc
+c
+          dlf(il+1) = dalpha - dbeta
+        enddo
+c
+c
+c  Initialise ddlf array
+        if (rs .eq. 0.0d0) then
+c
+          if (im .ne. 1) then 
+            ddlf(1:shdeg+1) = 0.0d0
+          else
+            ddlf(1) = -1.0d0
+            ddlf(2) = -dsqrt(3.0d0) 
+            do il = 3,shdeg+1
+              jl = (il**2)-1
+              d1 = (2*il-1)/dsqrt(dble(jl))
+              d2 = dsqrt(dble((il-1)**2-1)/jl)
+              ddlf(il) = d1*ddlf(il-1) - d2*ddlf(il-2)
+            enddo
+          endif
+c
+        else
+c
+          do il = shdeg,im+1,-1
+            jl = il - im + 1
+            d1 = dsqrt(dble((il-im)*(il+im)))
+            d2 = dble(il) 
+            ddlf(jl) = (d2*rc*dlf(jl) - d1*dlf(jl-1)) / rs
+          enddo
+          ddlf(1) = im * rc * dlf(1)/rs
+c
+        endif
+c
+        end
+c
+c
+        end module XYZsph_bi0

@@ -196,20 +196,6 @@ c
         enddo
 c
 c
-#if defined(OMP_OFFLOAD_CPTP) || defined(OMP_OFFLOAD_SSQGH)
-!$OMP TARGET DATA
-!$omp& map(to: nb, nd)
-!$omp& map(to: nlocpts, nlocdatpts, shdeg)
-!$omp& map(to: d2a(0:shdeg))
-!$omp& map(to: ppos(1:nd+1,1:nlocpts))
-!$omp& map(to: cov(1:nlocpts))
-!$omp& map(to: jcov(1:nlocpts+2))
-c
-!$OMP TARGET ENTER DATA
-!$omp& map(alloc: dlf(1:shdeg+1), ddlf(1:shdeg+1))
-#endif
-c
-c
 c All start iteration
         do while (inv_stat%yon(1:1) .eq. 'y')
             it = it+1
@@ -457,14 +443,6 @@ c           if(rank.eq.0)write(*,*)'opt_pr_p3: 7'
         
 c end of <do while (inv_stat%yon(1:1).eq.'y')> loop
         enddo
-c
-c
-#if defined(OMP_OFFLOAD_CPTP) || defined(OMP_OFFLOAD_SSQGH)
-!$OMP TARGET EXIT DATA
-!$omp& map(delete: dlf, ddlf)
-c
-!$OMP END TARGET DATA
-#endif
 c
 c
         stdt = std
