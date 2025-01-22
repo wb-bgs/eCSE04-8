@@ -124,11 +124,6 @@ c
         real*8 diff(4)
         real*8 ryg
 c
-c  variables for populating d2a array 
-        integer nm
-        real*8  dnm, d1, d2
-        real*8, allocatable :: d2a(:)
-c
 c  MPI-related variables
         integer ierr, nranks, rank
 #if defined(OMP_OFFLOAD)
