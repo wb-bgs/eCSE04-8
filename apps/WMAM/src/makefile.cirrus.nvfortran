@@ -24,7 +24,7 @@ Xsph_bi.o\
 Ysph_bi.o\
 Zsph_bi.o\
 sph_bi.o\
-XYZsph_bi0.o\
+kernels.o\
 dy2mjd.o\
 gauleg.o\
 misc.o\
