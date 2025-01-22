@@ -13,8 +13,6 @@ c         nd            Space dimension
 c         nlocpts       number of data+sampling points local to rank
 c         nlocdatpts    number of data points local to rank
 c         d2a           pre-computed array used by mk_lf_dlf()
-c         (d)dlf        pre-allocated arrays computed by mk_lf_dlf() and
-c                       used within XYZsph_bi0
 c         bc            base coefficients
 c         ppos(nd+1,*)  point position in nd
 c
@@ -23,137 +21,99 @@ c         XYZF(*)       X,Y,Z or F value at point position
 c        
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine cpt_dat_vals_p(shdeg, nb, nd, nlocpts, nlocdatpts,
-     >                            d2a, dlf, ddlf, bc, ppos, xyzf)
+     >                            d2a, bc, ppos, xyzf)
+c
+        use cudafor
+        use kernels
 c
         implicit none
 c
-        integer, unified :: shdeg, nb, nd, nlocpts, nlocdatpts
-        real(8), unified :: d2a(0:shdeg)
-        real(8), unified :: dlf(1:shdeg+1), ddlf(1:shdeg+1)
-        real(8), unified :: bc(1:nb), ppos(nd+1,nlocpts)
-        real(8), unified :: xyzf(1:nlocpts)
+        include 'mpif.h'
 c
-        integer n_threads, n_blocks
+        integer shdeg, nb, nd
+        integer nlocpts, nlocdatpts
+c
+        real*8 d2a(0:shdeg)
+        real*8 bc(1:nb)
+        real*8 ppos(1:nd+1,1:nlocpts)
+        real*8 xyzf(1:nlocpts)
+c
+        real(8), allocatable, device :: d_d2a(:)
+        real(8), allocatable, device :: d_bc(:)
+        real(8), allocatable, device :: d_ppos(:,:)
+        real(8), allocatable, device :: d_xyzf(:)
+c
+        integer nthreads, nblocks, nlocsampts
+        integer rank, istat, ierr     
 c
 c
-        n_threads = 128
+        call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
 c
-        n_blocks = nlocdatpts / n_threads
-        call cpt_dat_vals_p_dat<<<n_blocks,n_threads>>>
+c
+        allocate(d_d2a(0:shdeg))
+        allocate(d_bc(1:nb))
+        allocate(d_ppos(1:nd+1,1:nlocpts))
+        allocate(d_xyzf(1:nlocpts))
+c
+        d_d2a  = d2a
+        d_bc   = bc
+        d_ppos = ppos
+c
+c
+        nthreads = 128
+        nblocks = nlocdatpts / nthreads
+        if (MOD(nlocdatpts,nthreads) .gt. 0) then
+          nblocks = nblocks + 1
+        endif
+c
+        call cpt_dat_vals_p_dat<<<nblocks,nthreads>>>
      >    (shdeg, nb, nd, nlocpts, nlocdatpts,
-     >     d2a, dlf, ddlf, bc, ppos, xyzf)
+     >     d_d2a, d_bc, d_ppos, d_xyzf)
 c
-        n_blocks = (nlocpts - nlocdatpts) / n_threads
-        call cpt_dat_vals_p_smp<<<n_blocks,n_threads>>>
+        istat = cudaDeviceSynchronize()
+c
+#if defined(CUDA_DEBUG)
+        ierr = cudaGetLastError()
+        if (ierr .gt. 0) then
+          write(*,*) rank,
+     >        ': Error, cpt_dat_vals_p_dat kernel failure: ',
+     >        ierr, ', ', cudaGetErrorString(ierr)
+          stop
+        endif
+#endif
+c
+c
+        nthreads = 128
+        nlocsampts = nlocpts - nlocdatpts
+        nblocks = nlocsampts / nthreads
+        if (MOD(nlocsampts,nthreads) .gt. 0) then
+          nblocks = nblocks + 1
+        endif
+c
+        call cpt_dat_vals_p_smp<<<nblocks,nthreads>>>
      >    (shdeg, nb, nd, nlocpts, nlocdatpts,
-     >     d2a, dlf, ddlf, bc, ppos, xyzf)
+     >     d_d2a, d_bc, d_ppos, d_xyzf)
+
+        istat = cudaDeviceSynchronize()
+c
+#if defined(CUDA_DEBUG)
+        ierr = cudaGetLastError()
+        if (ierr .gt. 0) then
+          write(*,*) rank,
+     >        ': Error, cpt_dat_vals_p_smp kernel failure: ',
+     >        ierr, ', ', cudaGetErrorString(ierr)
+          stop
+        endif
+#endif
+c
+c
+        xyzf = d_xyzf
+c
+c
+        deallocate(d_d2a)
+        deallocate(d_bc)
+        deallocate(d_ppos)
+        deallocate(d_xyzf)
+c
 c
         end subroutine cpt_dat_vals_p
-c
-c
-c
-        attributes(global)
-     >  subroutine cpt_dat_vals_p_dat(shdeg, nb, nd,
-     >                                nlocpts, nlocdatpts,
-     >                                d2a, dlf, ddlf,
-     >                                bc, ppos, xyzf)
-c
-        use XYZsph_bi0
-c
-        implicit none
-c
-        integer shdeg, nb, nd
-        integer nlocpts, nlocdatpts
-        real(8) d2a(0:shdeg)
-        real(8) dlf(1:shdeg+1), ddlf(1:shdeg+1)
-        real(8) bc(1:nb), ppos(nd+1,nlocpts)
-        real(8) xyzf(1:nlocpts)
-c
-        real(8), parameter :: RAG = 6371.2d0
-        real(8), parameter :: D2R = 4.d0*datan(1.d0)/180.d0
-c
-        integer i
-c
-        real(8) p1, p2, ra
-        real(8) bex, bey, bez
-c
-c
-        i = (blockidx%x-1) * blockdim%x
-     >      + threadidx%x
-c
-        if (i .ge. 1 .and.
-     >      i .le. nlocdatpts) then
-c
-          p1 = ppos(1,i)*D2R
-          p2 = ppos(2,i)*D2R
-          ra = RAG / ppos(3,i)
-c
-          bex = ppos(5,i)
-          bey = ppos(6,i)
-          bez = ppos(7,i)
-c
-          xyzf(i) = XYZsph_bi0_fun(shdeg, nb, d2a,
-     >                             dlf, ddlf,
-     >                             bc, p1, p2, ra,
-     >                             bex, bey, bez)
-c
-        endif
-c
-        end subroutine cpt_dat_vals_p_dat
-   
-   
-        attributes(global)
-     >  subroutine cpt_dat_vals_p_smp(shdeg, nb, nd,
-     >                                nlocpts, nlocdatpts,
-     >                                d2a, dlf, ddlf,
-     >                                bc, ppos, xyzf)
-c
-        use XYZsph_bi0
-c 
-        implicit none
-c
-        integer shdeg, nb, nd
-        integer nlocpts, nlocdatpts
-c
-        real(8) d2a(0:shdeg)
-        real(8) dlf(1:shdeg+1), ddlf(1:shdeg+1)
-        real(8) bc(1:nb), ppos(nd+1,nlocpts)
-        real(8) xyzf(1:nlocpts)
-c
-        real(8), parameter :: RAG = 6371.2d0
-        real(8), parameter :: D2R = 4.d0*datan(1.d0)/180.d0
-c
-        integer i
-c
-        real(8) p1, p2, ra
-        real(8) bex, bey, bez
-c
-c   
-        i = (blockidx%x-1) * blockdim%x
-     >      + threadidx%x
-     >      + nlocdatpts
-c
-        if (i .gt. nlocdatpts .and. 
-     >      i .le. nlocpts) then
-
-          p1 = ppos(1,i)*D2R
-          p2 = ppos(2,i)*D2R
-          ra = RAG / ppos(3,i)
-c
-          bex = ppos(5,i)
-          bey = ppos(6,i)
-          bez = ppos(7,i)
-c
-          call XYZsph_bi0_sample(shdeg, nb, d2a,
-     >                           dlf, ddlf, bc,
-     >                           p1, p2, ra, 
-     >                           bex, bey, bez)
-c
-          xyzf(i) = XYZsph_bi0_fun(shdeg, nb, d2a,
-     >                             dlf, ddlf, bc,
-     >                             p1, p2, ra,
-     >                             bex, bey, bez)
-c
-        endif
-c
-        end subroutine cpt_dat_vals_p_smp

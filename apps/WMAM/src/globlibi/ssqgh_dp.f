@@ -17,8 +17,6 @@ c          nd             space dimension
 c          nlocpts        number of data+sampling points local to rank
 c          nlocdatpts     number of data points assigned to rank
 c          d2a            pre-computed array used by mk_lf_dlf()
-c          (d)dlf         pre-allocated arrays computed by mk_lf_dlf() and
-c                         used within XYZsph_bi0
 c          bc             Estimation of Base function coefficients
 c          ppos           data point position
 c          cov            Covariance matrix in SLAP column format
@@ -33,47 +31,131 @@ c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine ssqgh_dp(shdeg, nb, nd,
      >                      nlocpts, nlocdatpts,
-     >                      d2a, dlf, ddlf, bc, ppos,
+     >                      d2a, bc, ppos,
      >                      cov, jcov, ddat, xyzf,
      >                      gj, dh)
+c
+        use cudafor
+        use kernels
 c
         implicit none
 c
         include 'mpif.h'
 c
-        integer, unified :: shdeg, nb, nd, nlocpts, nlocdatpts
-        real*8, unified :: d2a(0:shdeg)
-        real*8, unified :: dlf(1:shdeg+1), ddlf(1:shdeg+1)
-        real*8, unified :: bc(1:nb)
-        real*8, unified :: ppos(1:nd+1,1:nlocpts)
-        real*8, unified :: cov(1:nlocpts)
-        integer, unified :: jcov(1:nlocpts+2)
-        real*8, unified :: ddat(1:nlocpts)
-        real*8, unified :: xyzf(1:nlocpts)
-        real*8, unified :: gj(1:nb), dh(1:nb)
+        integer shdeg, nb, nd
+        integer nlocpts, nlocdatpts
 c
-        integer n_threads, n_blocks, ierr  
+        real*8 d2a(0:shdeg)
+        real*8 bc(1:nb)
+        real*8 ppos(1:nd+1,1:nlocpts)
+        real*8 cov(1:nlocpts)
+        integer jcov(1:nlocpts+2)
+        real*8 ddat(1:nlocpts)
+        real*8 xyzf(1:nlocpts)
+        real*8 gj(1:nb), dh(1:nb)
+c
+        real(8), allocatable, device :: d_d2a(:)
+        real(8), allocatable, device :: d_bc(:)
+        real(8), allocatable, device :: d_ppos(:,:)
+        real(8), allocatable, device :: d_cov(:)
+        integer, allocatable, device :: d_jcov(:)
+        real(8), allocatable, device :: d_ddat(:)
+        real(8), allocatable, device :: d_xyzf(:) 
+        real(8), allocatable, device :: d_gj(:)
+        real(8), allocatable, device :: d_dh(:)   
+c
+        integer nthreads, nblocks, nlocsampts
+        integer rank, istat, ierr 
 c
 c
-        gj(1:nb) = 0.0d0
-        dh(1:nb) = 0.0d0
+        call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
 c
 c
-        n_threads = 128
+        allocate(d_d2a(0:shdeg))
+        allocate(d_bc(1:nb))
+        allocate(d_ppos(1:nd+1,1:nlocpts))
+        allocate(d_cov(1:nlocpts))
+        allocate(d_jcov(1:nlocpts+2))
+        allocate(d_ddat(1:nlocpts))
+        allocate(d_xyzf(1:nlocpts))
+        allocate(d_gj(1:nb))
+        allocate(d_dh(1:nb))
 c
-        n_blocks = nlocdatpts / n_threads
-        call ssqgh_dp_dat<<<n_blocks,n_threads>>>
+        d_d2a  = d2a
+        d_bc   = bc
+        d_ppos = ppos
+        d_cov  = cov
+        d_jcov = jcov
+        d_xyzf = xyzf
+        d_ddat = ddat
+        d_gj(1:nb) = 0.0d0
+        d_dh(1:nb) = 0.0d0
+c
+c
+        nthreads = 128
+        nblocks = nlocdatpts / nthreads
+        if (MOD(nlocdatpts,nthreads) .gt. 0) then
+          nblocks = nblocks + 1
+        endif
+c
+        call ssqgh_dp_dat<<<nblocks,nthreads>>>
      >    (shdeg, nb, nd, nlocpts, nlocdatpts,
-     >     d2a, dlf, ddlf, bc, ppos,
-     >     cov, jcov, ddat, xyzf,
-     >     gj, dh)
+     >     d_d2a, d_ppos,
+     >     d_cov, d_jcov, d_ddat, d_xyzf,
+     >     d_gj, d_dh)
 c
-        n_blocks = (nlocpts - nlocdatpts) / n_threads
-        call ssqgh_dp_smp<<<n_blocks,n_threads>>>
+        istat = cudaDeviceSynchronize()
+c
+#if defined(CUDA_DEBUG)
+        ierr = cudaGetLastError()
+        if (ierr .gt. 0) then
+          write(*,*) rank,
+     >        ': Error, ssqgh_dp_dat kernel failure: ',
+     >        ierr, ', ', cudaGetErrorString(ierr)
+          stop
+        endif
+#endif
+c
+c
+        nthreads = 128
+        nlocsampts = nlocpts - nlocdatpts
+        nblocks = nlocsampts / nthreads
+        if (MOD(nlocsampts,nthreads) .gt. 0) then
+          nblocks = nblocks + 1
+        endif
+c
+        call ssqgh_dp_smp<<<nblocks,nthreads>>>
      >    (shdeg, nb, nd, nlocpts, nlocdatpts,
-     >     d2a, dlf, ddlf, bc, ppos,
-     >     cov, jcov, ddat, xyzf,
-     >     gj, dh)
+     >     d_d2a, d_bc, d_ppos,
+     >     d_cov, d_jcov, d_ddat, d_xyzf,
+     >     d_gj, d_dh)
+c
+        istat = cudaDeviceSynchronize()
+c
+#if defined(CUDA_DEBUG)
+        ierr = cudaGetLastError()
+        if (ierr .gt. 0) then
+          write(*,*) rank,
+     >        'Error, ssqgh_dp_smp kernel failure: ',
+     >        ierr, ', ', cudaGetErrorString(ierr)
+          stop
+        endif
+#endif
+c
+c
+        gj = d_gj
+        dh = d_dh
+c
+c
+        deallocate(d_d2a)
+        deallocate(d_bc)
+        deallocate(d_ppos)
+        deallocate(d_cov)
+        deallocate(d_jcov)
+        deallocate(d_ddat)
+        deallocate(d_xyzf)
+        deallocate(d_gj)
+        deallocate(d_dh)
 c
 c
         call MPI_ALLREDUCE(MPI_IN_PLACE, gj, nb,
@@ -86,141 +168,3 @@ c
 c
 c
         end subroutine ssqgh_dp
-c
-c
-c
-        attributes(global)
-     >  subroutine ssqgh_dp_dat(shdeg, nb, nd,
-     >                          nlocpts, nlocdatpts,
-     >                          d2a, dlf, ddlf, bc, ppos,
-     >                          cov, jcov, ddat, xyzf,
-     >                          gj, dh)
-c
-        use XYZsph_bi0
-c
-        implicit none
-c
-        integer shdeg, nb, nd, nlocpts, nlocdatpts
-        real(8) d2a(0:shdeg)
-        real(8) dlf(1:shdeg+1), ddlf(1:shdeg+1)
-        real(8) bc(1:nb)
-        real(8) ppos(1:nd+1,1:nlocpts)
-        real(8) cov(1:nlocpts)
-        integer jcov(1:nlocpts+2)
-        real(8) ddat(1:nlocpts)
-        real(8) xyzf(1:nlocpts)
-        real(8) gj(1:nb), dh(1:nb)
-c
-        real(8), parameter :: RAG = 6371.2d0
-        real(8), parameter :: D2R = 4.d0*datan(1.d0)/180.d0
-c
-        integer i
-c
-        real(8) p1, p2, ra
-        real(8) bex, bey, bez
-c
-        real(8) dw_dh, dw_gj
-c
-c
-        i = (blockidx%x-1) * blockdim%x
-     >      + threadidx%x
-c
-        if (i .ge. 1 .and.
-     >      i .le. nlocdatpts) then
-c        
-          p1 = ppos(1,i)*D2R
-          p2 = ppos(2,i)*D2R
-          ra = RAG / ppos(3,i)
-c
-          bex = ppos(5,i)
-          bey = ppos(6,i)
-          bez = ppos(7,i)
-
-c  calculate the equations of condition   
-c  and update the G matrix and B vector 
-c
-          dw_dh = 2.d0*(1.d0/cov(jcov(i)))
-          dw_gj = dw_dh*(ddat(i)-xyzf(i))
-c      
-          call XYZsph_bi0_sub(shdeg, nb, d2a,
-     >                        dlf, ddlf,
-     >                        p1, p2, ra,
-     >                        bex, bey, bez,
-     >                        dw_gj, dw_dh,
-     >                        gj, dh)
-c
-        endif
-c
-        end subroutine ssqgh_dp_dat
-c
-c
-c
-        attributes(global)
-     >  subroutine ssqgh_dp_smp(shdeg, nb, nd,
-     >                          nlocpts, nlocdatpts,
-     >                          d2a, dlf, ddlf, bc, ppos,
-     >                          cov, jcov, ddat, xyzf,
-     >                          gj, dh)
-c
-        use XYZsph_bi0
-c
-        implicit none
-c
-        integer shdeg, nb, nd, nlocpts, nlocdatpts
-        real(8) d2a(0:shdeg)
-        real(8) dlf(1:shdeg+1), ddlf(1:shdeg+1)
-        real(8) bc(1:nb)
-        real(8) ppos(1:nd+1,1:nlocpts)
-        real(8) cov(1:nlocpts)
-        integer jcov(1:nlocpts+2)
-        real(8) ddat(1:nlocpts)
-        real(8) xyzf(1:nlocpts)
-        real(8) gj(1:nb), dh(1:nb)
-c
-        real(8), parameter :: RAG = 6371.2d0
-        real(8), parameter :: D2R = 4.d0*datan(1.d0)/180.d0
-c
-        integer i
-c
-        real(8) p1, p2, ra
-        real(8) bex, bey, bez
-c
-        real(8) dw_dh, dw_gj
-c
-c
-        i = (blockidx%x-1) * blockdim%x
-     >      + threadidx%x
-     >      + nlocdatpts
-
-        if (i .gt. nlocdatpts .and. 
-     >      i .le. nlocpts) then
-c
-          p1 = ppos(1,i)*D2R
-          p2 = ppos(2,i)*D2R
-          ra = RAG / ppos(3,i)
-c
-          bex = ppos(5,i)
-          bey = ppos(6,i)
-          bez = ppos(7,i)
-
-          call XYZsph_bi0_sample(shdeg, nb, d2a,
-     >                           dlf, ddlf, bc,
-     >                           p1, p2, ra, 
-     >                           bex, bey, bez)
-c
-c  calculate the equations of condition   
-c  and update the G matrix and B vector 
-c
-          dw_dh = 2.d0*(1.d0/cov(jcov(i)))
-          dw_gj = dw_dh*(ddat(i)-xyzf(i))
-c      
-          call XYZsph_bi0_sub(shdeg, nb, d2a,
-     >                        dlf, ddlf,
-     >                        p1, p2, ra,
-     >                        bex, bey, bez,
-     >                        dw_gj, dw_dh,
-     >                        gj, dh)
-c
-        endif
-c
-        end subroutine ssqgh_dp_smp
