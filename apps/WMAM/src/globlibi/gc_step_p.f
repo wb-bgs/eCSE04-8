@@ -28,8 +28,6 @@ c         npts          Total number of points (data + sampling) for all ranks
 c         nlocpts       Total number of points for this rank
 c         nlocdatpts    number of data points assigned to rank
 c         d2a           pre-computed array used by mk_lf_dlf()
-c         (d)dlf        pre-allocated arrays computed by mk_lf_dlf() and
-c                       used within XYZsph_bi0
 c         bc            Estimate of Base function coefficients
 c         ppos          data point position in ndD
 c         ddat          data values
@@ -47,8 +45,7 @@ c         xyzf          Forward modelling for given BC+stp*DS
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine gc_step_p(iunit, shdeg, nb, nd, npts,
      >                       nlocpts, nlocdatpts,
-     >                       d2a, dlf, ddlf,
-     >                       bc, ppos, ddat,
+     >                       d2a, bc, ppos, ddat,
      >                       cov, jcov,
      >                       std, gj, ghj,
      >                       ds, stp, xyzf)
@@ -57,17 +54,18 @@ c
 c
         include 'mpif.h'
 c
-        integer iunit, shdeg, nb, nd
-        integer npts, nlocpts, nlocdatpts
+        integer iunit, npts
+        integer shdeg, nb, nd
+        integer nlocpts, nlocdatpts
         real*8 d2a(0:shdeg)
-        real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
         real*8 bc(1:nb)
         real*8 ppos(1:nd+1,1:nlocpts)
+        real*8 xyzf(1:nlocpts)
         real*8 ddat(1:nlocpts)
         real*8 cov(1:nlocpts)
         integer jcov(1:nlocpts+2)
         real*8 std, gj(1:nb), ghj(1:nb)
-        real*8 ds(1:nb), stp, xyzf(1:nlocpts)
+        real*8 ds(1:nb), stp
 c
         integer i
         integer ierr, rank 
@@ -82,7 +80,7 @@ c All: Calculate  sqrt(w).A.DS
         allocate(zz(1:nlocpts))
         zz(1:nlocpts) = 0.0d0
         call cpt_dat_vals_p(shdeg, nb, nlocpts, nlocdatpts,
-     >                      d2a, dlf, ddlf, ds, ppos, zz)
+     >                      d2a, ds, ppos, zz)
 c
         do i = 1,nlocpts
           zz(i) = zz(i)/dsqrt(cov(jcov(i)))
@@ -112,7 +110,7 @@ c
 c ALL: Do the forward modelling
         xyzf(1:nlocpts) = 0.0d0
         call cpt_dat_vals_p(shdeg, nb, nd, nlocpts, nlocdatpts,
-     >                      d2a, dlf, ddlf, bcn, ppos, xyzf)
+     >                      d2a, bcn, ppos, xyzf)
 c
         call cptstd_dp(npts, nlocpts,
      >                 cov, jcov, ddat,
