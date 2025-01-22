@@ -28,7 +28,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >                              nlocdatpts, nlocsampts, nlocpts,
      >                              imin_locpts, imin_locsampts,
      >                              ryg, dampfac, bc,
-     >                              cov, ijcov, ppos)
+     >                              cov, icov, jcov, ppos)
 c
         implicit none
 c
@@ -41,7 +41,8 @@ c
         integer imin_locpts, imin_locsampts
         real*8  ryg, dampfac
         real*8  bc(1:nparams), cov(1:nlocpts)
-        integer ijcov(1:nlocpts+2,1:2)
+        integer icov(1:nlocpts+2)
+        integer jcov(1:nlocpts+2)
         real*8  ppos(1:nd+1,1:nlocpts)
         
         real*8, allocatable :: vrt(:,:)
@@ -94,8 +95,8 @@ c  For each data point define the covariance
           ppos(1:nd,j) = vrt(1:nd,i)
           ppos(nd+1,j) = 0.0d0
 c
-          ijcov(j,1) = k
-          ijcov(j,2) = k
+          icov(j) = k
+          jcov(j) = k
           cov(j) = 1.d0/glw(i)
           cov(j) = cov(j)/dampfac
 
