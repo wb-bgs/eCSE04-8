@@ -74,13 +74,18 @@ c
         include 'mpi_status_types.h'
 c
         character path*100 
-        integer itmax(1:3), shdeg, nb, nd
-        integer npts, nlocpts, nlocdatpts
+        integer itmax(1:3), npts
+c
+        integer shdeg, nb, nd
+        integer nlocpts, nlocdatpts
+c
+        integer jcov(1:nlocpts+2)
+        real*8 cov(1:nlocpts)
         real*8 bc(1:nb)
         real*8 ppos(1:nd+1,1:nlocpts)
-        real*8 dl(1:3), cov(1:nlocpts)
-        integer jcov(1:nlocpts+2)
-        real*8 stdt, xyzf(1:nlocpts)
+        real*8 xyzf(1:nlocpts)
+c
+        real*8 stdt, dl(1:3)
 c
         integer i, j, k
         integer ip, it, itm, iunit
@@ -105,12 +110,15 @@ c  variables for populating d2a array
 c
 c  declare arrays used within "XYZsph_bi0.f"
         real*8, allocatable :: d2a(:)
-        real*8, allocatable :: dlf(:), ddlf(:)
 c
 c  declare arrays used to handle output from ssqgh_dp() subroutine
-        real*8, allocatable :: ds(:), dh(:), ddat(:)
-        real*8, allocatable :: gj(:), gj0(:)
-        real*8, allocatable :: ghj(:), ghj0(:)
+        real*8, allocatable :: dh(:)
+        real*8, allocatable :: gj(:)
+        real*8, allocatable :: ddat(:)
+        real*8, allocatable :: ds(:)
+        real*8, allocatable :: gj0(:)
+        real*8, allocatable :: ghj(:)
+        real*8, allocatable :: ghj0(:)
 c
 c  slatec subroutine
         real*8 dgamln
@@ -158,7 +166,7 @@ c
 c  Allocate and initialise arrays used to handle output from ssqgh_dp() subroutine
         allocate(ddat(1:nlocpts))
         do ip = 1,nlocpts
-            ddat(ip) = ppos(nd+1,ip)
+          ddat(ip) = ppos(nd+1,ip)
         enddo
 c
         allocate(ds(1:nb))
@@ -175,7 +183,6 @@ c
 c
 c  Allocate private arrays used within "XYZshp_bi0.f"
         allocate(d2a(0:shdeg))
-        allocate(dlf(1:shdeg+1), ddlf(1:shdeg+1))
 c 
 c  Initialize d2a array used within mk_lf_dlf() subroutine
         do nm = 0,shdeg
@@ -203,8 +210,7 @@ c All: do their part in forward modelling
             if (inv_stat%yon(2:2) .eq. 'y') then
 c               if(rank.eq.0)write(*,*)'opt_pr_p3: 1'           
                 call cpt_dat_vals_p(shdeg, nb, nd, nlocpts, nlocdatpts,
-     >                              d2a, dlf, ddlf,
-     >                              inv_stat%bc, ppos, xyzf)
+     >                              d2a, inv_stat%bc, ppos, xyzf)
 c
                 call cptstd_dp(npts, nlocpts, cov, jcov,
      >                         ddat, xyzf, std)
@@ -221,7 +227,7 @@ c
                 if ((itmax(1) .ge. 0) .or. (it .ne. 1)) then
 c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 2'
                     call ssqgh_dp(shdeg, nb, nd, nlocpts, nlocdatpts,
-     >                            d2a, dlf, ddlf, inv_stat%bc, ppos,
+     >                            d2a, inv_stat%bc, ppos,
      >                            cov, jcov, ddat, xyzf, gj, dh)
                 else
                     if (rank .eq. 0) then
@@ -308,14 +314,14 @@ c ALL: search minimum in descent direction
 c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 4'
                         call gc_step_p(iunit, shdeg, nb, nd,
      >                                 npts, nlocpts, nlocdatpts,
-     >                                 d2a, dlf, ddlf, inv_stat%bc,
+     >                                 d2a, inv_stat%bc,
      >                                 ppos, ddat, cov, jcov, std,
      >                                 gj, ghj, ds, stp, xyzf)
                     else
 c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 5'
                         call lsearch_p(iunit, itm_l, shdeg, nb, nd, 
      >                                 npts, nlocpts, nlocdatpts,
-     >                                 d2a, dlf, ddlf, inv_stat%bc,
+     >                                 d2a, inv_stat%bc,
      >                                 ppos, ddat, src_stat,
      >                                 MPI_SEARCH_STATUS,
      >                                 dl, cov, jcov,
@@ -325,7 +331,7 @@ c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 5'
 c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 6'
                     call lsearch_p(iunit, itm_l, shdeg, nb, nd,
      >                             npts, nlocpts, nlocdatpts,
-     >                             d2a, dlf, ddlf, inv_stat%bc,
+     >                             d2a, inv_stat%bc,
      >                             ppos, ddat, src_stat,
      >                             MPI_SEARCH_STATUS,
      >                             dl, cov, jcov,
@@ -449,7 +455,6 @@ c
         if (rank .eq. 0) close(iunit)
 c
         deallocate(d2a)
-        deallocate(dlf, ddlf)
 c
         deallocate(ddat, ds, gj, ghj)
         if (rank .eq. 0) then
