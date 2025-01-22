@@ -83,10 +83,9 @@ c
 c
         include 'mpif.h'
 c
-        character(len=*), parameter :: VERSION = "5.0.0"
+        character(len=*), parameter :: VERSION = "5.0.0.cuda"
 c
         integer, parameter :: POLAK_RIBIERE = 1
-        integer, parameter :: ND = 7
 c
         real*8, parameter :: D2R = 4.d0*datan(1.d0)/180.d0
 c
@@ -98,12 +97,12 @@ c
         integer itmax(3), nub
         real*8  std, stdt, dd, dl(3), dampfac
         real*8  resdeg
-        integer cmdcnt, shdeg, scheme, serialrd
-        integer ncoeffs, nparams
+        integer cmdcnt, scheme, serialrd
+        integer ncoeffs
         integer ndatpts, nsampts, npts
-        integer nlocdatpts, imin_locdatpts
+        integer imin_locdatpts
         integer nlocsampts, imin_locsampts
-        integer nlocpts, imin_locpts
+        integer imin_locpts
 c
         character(100) :: argstr
 c
@@ -111,18 +110,19 @@ c
         integer, allocatable :: proc_nsp(:), proc_isp(:)
         integer, allocatable :: proc_np(:), proc_ip(:)
 c
-        integer, allocatable :: ijcov(:,:)
-        real*8, allocatable :: ppos(:,:), cov(:)
+        integer shdeg, nb, nd
+        integer nlocpts, nlocdatpts
+c
+        integer, allocatable :: icov(:)
+        integer, allocatable :: jcov(:)
+        real*8, allocatable :: cov(:)
         real*8, allocatable :: bc(:)
-        real*8, allocatable :: dw(:), cm(:)
-        real*8, allocatable :: err(:)
+        real*8, allocatable :: ppos(:,:)
+        real*8, allocatable :: xyzf(:)
+c
+        real*8, allocatable :: cm(:), err(:)
         real*8 diff(4)
         real*8 ryg
-c
-c  variables for populating d2a array 
-        integer nm
-        real*8  dnm, d1, d2
-        real*8, allocatable :: d2a(:)
 c
 c  MPI-related variables
         integer ierr, nranks, rank
@@ -130,6 +130,8 @@ c  MPI-related variables
         integer mpi_comm_local
         integer nranks_local, rank_local
         integer ndevices
+        integer(kind=cuda_count_kind) cuda_cnt
+        type(cudaDeviceProp) :: cuda_prop
 c
 c
 c  Initialize MPI, determine rank
@@ -146,6 +148,45 @@ c  Assign the MPI rank to a GPU
 c
         ierr = cudaGetDeviceCount(ndevices)
         ierr = cudaSetDevice(MOD(rank_local,ndevices))
+c
+c  Set CUDA Malloc Heap Size to 1 GB
+        cuda_cnt = 1024*(1024**2)
+        ierr = cudaDeviceSetLimit(cudaLimitMallocHeapSize, cuda_cnt)
+c
+#if defined(CUDA_DEBUG)
+        if (rank .eq. 0) then  
+          ierr = cudaGetDeviceProperties(cuda_prop, 0)
+          write(*,*)
+          write(*,*) 'GPU Device Properties'
+          write(*,*) cuda_prop%name
+          write(*,*) 'computeMode: ', cuda_prop%computeMode
+          write(*,*) 'clockRate: ', cuda_prop%clockRate
+          write(*,*) 'totalConstMem: ', cuda_prop%totalConstMem
+          write(*,*) 'totalGlobalMem: ', cuda_prop%totalGlobalMem
+          write(*,*) 'managedMemory: ', cuda_prop%managedMemory
+          write(*,*) 'unifiedAddressing: ',
+     >        cuda_prop%unifiedAddressing
+          write(*,*) 'multiProcessorCount: ',
+     >        cuda_prop%multiProcessorCount
+          write(*,*) 'maxBlocksPerMultiProcessor: ',
+     >        cuda_prop%maxBlocksPerMultiProcessor
+          write(*,*) 'maxThreadsPerMultiProcessor: ',
+     >        cuda_prop%maxThreadsPerMultiProcessor
+          write(*,*) 'regsPerMultiprocessor: ',
+     >        cuda_prop%regsPerMultiprocessor
+          write(*,*) 'maxThreadsPerBlock: ',
+     >        cuda_prop%maxThreadsPerBlock
+          write(*,*) 'regsPerBlock: ', cuda_prop%regsPerBlock
+          write(*,*) 'maxGridSize: ', cuda_prop%maxGridSize
+          write(*,*) 'maxThreadsDim: ', cuda_prop%maxThreadsDim
+          write(*,*) 'warpSize: ', cuda_prop%warpSize
+          write(*,*) ''
+          ierr = cudaDeviceGetLimit(cuda_cnt, cudaLimitMallocHeapSize)
+          write(*,*) 'cudaLimitMallocHeapSize: ', cuda_cnt
+          write(*,*) ''
+          write(*,*) ''
+        endif
+#endif
 c
 c
 c  Read in command line arguments
@@ -202,7 +243,8 @@ c  Read in command line arguments
 
 c
 c  Settings
-        nparams = shdeg*(shdeg+2)
+        nb = shdeg*(shdeg+2)
+        nd = 7
         nx = nint(1.0/resdeg)*180-1
         ny = nint(1.0/resdeg)*360
         ndatpts = nx*ny
@@ -212,7 +254,7 @@ c  Settings
 
         if (rank.eq.0) then
           write(*,*) 'MPI Ranks:', nranks
-          write(*,*) 'Parameters: ', nparams
+          write(*,*) 'Parameters: ', nb
           write(*,*) 'nx: ', nx
           write(*,*) 'ny: ', ny
           write(*,*) 'Data points: ', ndatpts
@@ -247,11 +289,12 @@ c  Partition workload
 
 c
 c  Array allocations
-        allocate(bc(1:nparams))
-        allocate(ppos(1:ND+1,1:nlocpts))
+        allocate(bc(1:nb))
+        allocate(ppos(1:nd+1,1:nlocpts))
         allocate(cov(1:nlocpts))
-        allocate(ijcov(1:nlocpts+2,1:2))
-        allocate(dw(1:nlocpts))
+        allocate(icov(1:nlocpts+2))
+        allocate(jcov(1:nlocpts+2))
+        allocate(xyzf(1:nlocpts))
 
 c
 c  Output array sizes
@@ -276,14 +319,14 @@ c  Output array sizes
 
 c
 c  Read in reference model
-        bc(1:nparams) = 1.0d0
+        bc(1:nb) = 1.0d0
         fname = './Data/coef_1990_15.dat.bin'
         if (rank .eq. 0) write(*,*)
      >    'Reading in reference model, ', fname
         if (serialrd .gt. 0) then
-          call mpi_read_ref_model(fname, ncoeffs, nparams, ryg, bc)
+          call mpi_read_ref_model(fname, ncoeffs, nb, ryg, bc)
         else
-          call mpi_read_all_ref_model(fname, ncoeffs, nparams, ryg, bc)
+          call mpi_read_all_ref_model(fname, ncoeffs, nb, ryg, bc)
         endif
         if (rank .eq. 0) then
           write(*,*) 'Coefficients: ', ncoeffs
@@ -296,7 +339,7 @@ c  Read in data
         fname = './Data/wdmam_geocentric.dat.bin'
         if (rank .eq. 0) write(*,*)
      >    'Reading in data, ', fname
-        call mpi_read_all_data(fname, ND, nlocpts, ndatpts,
+        call mpi_read_all_data(fname, nd, nlocpts, ndatpts,
      >                         nlocdatpts, imin_locdatpts,
      >                         ryg, ppos)
         if (nlocdatpts .eq. 0) stop
@@ -308,7 +351,7 @@ c  Calculate CM4 components
         do i = 1,3
           j = 4+i 
           do k = 1,nlocdatpts
-            call sph_bi('f', i, ND, ncoeffs, nparams,
+            call sph_bi('f', i, nd, ncoeffs, nb,
      >                  bc, ppos(1,k), cm)
             ppos(j,k) = cm(1)
           enddo
@@ -326,29 +369,29 @@ c  Define covariance matrix: sin(colat) weight
         do i = 1,nlocdatpts
           cov(i) = dsin(ppos(1,i)*D2R)
           cov(i) = 1.d0/cov(i)
-          ijcov(i,1) = j
-          ijcov(i,2) = j
+          icov(i) = j
+          jcov(i) = j
           j = j+1
         enddo
 
 c
 c  Add smoothing equations
         if (rank .eq. 0) write(*,*) 'Define regularisation'
-        call build_damp_space(shdeg, ncoeffs, nparams, ND,
+        call build_damp_space(shdeg, ncoeffs, nb, nd,
      >                        nlocdatpts, nlocsampts, nlocpts,
      >                        imin_locpts, imin_locsampts,
      >                        ryg, dampfac, bc,
-     >                        cov, ijcov, ppos)
+     >                        cov, icov, jcov, ppos)
 
 c
 c  Prepare the CM4 components for use within XYZsph_bi0 source
         do i = 1,nlocpts
-          call prepare_cm4_components(ND, ppos(1,i))
+          call prepare_cm4_components(nd, ppos(1,i))
         enddo
         
 c
 c  Finalise covariance matrix
-        call DS2Y(nlocpts, nlocpts, ijcov(1,1), ijcov(1,2), cov, 0)
+        call DS2Y(nlocpts, nlocpts, icov, jcov, cov, 0)
 
 c
 c  Read in starting model
@@ -356,11 +399,11 @@ c  Read in starting model
         if (rank .eq. 0) write(*,*)
      >    'Reading in starting model, ', fname
         if (serialrd .gt. 1) then
-          call mpi_read_ini_model(fname, nparams, bc)
+          call mpi_read_ini_model(fname, nb, bc)
         else
-          call mpi_read_all_ini_model(fname, nparams, bc)
+          call mpi_read_all_ini_model(fname, nb, bc)
         endif
-        if (nparams .eq. 0) stop
+        if (nb .eq. 0) stop
 
 c
 c  Invert data
@@ -372,7 +415,7 @@ c  Invert data
         dl(2) = 0.0d0
         dl(3) = 1.d14
 c
-        dw = 1.d0
+        xyzf = 1.d0
 c 
         if (rank .eq. 0) then
           write(*,*) 'Start Inversion'
@@ -387,11 +430,12 @@ c
 c
         fname = './Results/'
 c
-        call opt_pr_p3(fname, itmax, shdeg, nparams,
-     >                 ND, npts, nlocpts, nlocdatpts,
+        if(rank.eq.0)write(*,*) 'Entering opt_pr_p3()...'
+        call opt_pr_p3(fname, itmax, shdeg, nb, nd,
+     >                 npts, nlocpts, nlocdatpts,
      >                 bc, ppos, dl,
-     >                 cov, ijcov(1,2),
-     >                 stdt, dw)
+     >                 cov, jcov,
+     >                 stdt, xyzf)
 c
 c
         call desequentialise(bc)
@@ -406,16 +450,16 @@ c
 c
 c
         fname = './Results/fit_No_P.out.bin'
-        call mpi_write_all_fit_data(fname, ND, nlocpts,
+        call mpi_write_all_fit_data(fname, nd, nlocpts,
      >                              ndatpts, imin_locdatpts,
      >                              1, nlocdatpts,
-     >                              ppos, dw, diff(1:2))
+     >                              ppos, xyzf, diff(1:2))
 
         fname = './Results/fit_damp.out.bin'
-        call mpi_write_all_fit_data(fname, ND, nlocpts,
+        call mpi_write_all_fit_data(fname, nd, nlocpts,
      >                              nsampts, imin_locsampts,
      >                              nlocdatpts+1, nlocpts,
-     >                              ppos, dw, diff(3:4))
+     >                              ppos, xyzf, diff(3:4))
 c
         if (rank .eq. 0) then
           call MPI_Reduce(MPI_IN_PLACE, diff, 4,
@@ -442,9 +486,9 @@ c
      >                          ,' with L2 std : ',diff(4)
 
 c
-          std = stdt*npts/(npts-nparams)
-          allocate(err(1:nparams))
-          err(1:nparams) = std
+          std = stdt*npts/(npts-nb)
+          allocate(err(1:nb))
+          err(1:nb) = std
 c
 c  Saving update base coefficients
           fname = './Results/model_No_P.out'
@@ -469,10 +513,11 @@ c  Saving update base coefficients
 
           deallocate(err)
         endif
+
 c
 c  Deallocate arrays
-        deallocate(dw)
-        deallocate(ijcov)
+        deallocate(xyzf)
+        deallocate(icov,jcov)
         deallocate(cov)
         deallocate(ppos)
         deallocate(bc)
