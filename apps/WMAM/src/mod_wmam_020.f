@@ -131,7 +131,9 @@ c  MPI-related variables
         integer nranks_local, rank_local
         integer ndevices
         integer(kind=cuda_count_kind) cuda_cnt
+#if defined(CUDA_DEBUG)
         type(cudaDeviceProp) :: cuda_prop
+#endif
 c
 c
 c  Initialize MPI, determine rank
@@ -430,11 +432,9 @@ c
 c
         fname = './Results/'
 c
-        if(rank.eq.0)write(*,*) 'Entering opt_pr_p3()...'
         call opt_pr_p3(fname, itmax, shdeg, nb, nd,
      >                 npts, nlocpts, nlocdatpts,
-     >                 bc, ppos, dl,
-     >                 cov, jcov,
+     >                 bc, ppos, dl, cov, jcov,
      >                 stdt, xyzf)
 c
 c
