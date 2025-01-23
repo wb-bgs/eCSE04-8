@@ -23,13 +23,10 @@ c     input:
 c         iunit         integer unit number for I/O
 c         shdeg         max SH degree value
 c         nb            Number or base function to use
-c         nd            space dimension
 c         npts          Total number of points (data + sampling) for all ranks
 c         nlocpts       Total number of points for this rank
 c         nlocdatpts    number of data points assigned to rank
-c         d2a           pre-computed array used by mk_lf_dlf()
 c         bc            Estimate of Base function coefficients
-c         ppos          data point position in ndD
 c         ddat          data values
 c         cov           covariance matrix in SLAP Column format
 c         jcov          Integer vector describing cov format
@@ -43,9 +40,9 @@ c         stp           recommended step in direction ds(*)
 c         std           STD value for given BC+stp*DS
 c         xyzf          Forward modelling for given BC+stp*DS
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine gc_step_p(iunit, shdeg, nb, nd, npts,
+        subroutine gc_step_p(iunit, shdeg, nb, npts,
      >                       nlocpts, nlocdatpts,
-     >                       d2a, bc, ppos, ddat,
+     >                       bc, ddat,
      >                       cov, jcov,
      >                       std, gj, ghj,
      >                       ds, stp, xyzf)
@@ -55,11 +52,9 @@ c
         include 'mpif.h'
 c
         integer iunit, npts
-        integer shdeg, nb, nd
+        integer shdeg, nb
         integer nlocpts, nlocdatpts
-        real*8 d2a(0:shdeg)
         real*8 bc(1:nb)
-        real*8 ppos(1:nd+1,1:nlocpts)
         real*8 xyzf(1:nlocpts)
         real*8 ddat(1:nlocpts)
         real*8 cov(1:nlocpts)
@@ -80,7 +75,7 @@ c All: Calculate  sqrt(w).A.DS
         allocate(zz(1:nlocpts))
         zz(1:nlocpts) = 0.0d0
         call cpt_dat_vals_p(shdeg, nb, nlocpts, nlocdatpts,
-     >                      d2a, ds, ppos, zz)
+     >                      ds, zz)
 c
         do i = 1,nlocpts
           zz(i) = zz(i)/dsqrt(cov(jcov(i)))
@@ -109,8 +104,8 @@ c ALL: Estimate the new set of parameter for a step stp in direction ds
 c
 c ALL: Do the forward modelling
         xyzf(1:nlocpts) = 0.0d0
-        call cpt_dat_vals_p(shdeg, nb, nd, nlocpts, nlocdatpts,
-     >                      d2a, bcn, ppos, xyzf)
+        call cpt_dat_vals_p(shdeg, nb, nlocpts, nlocdatpts,
+     >                      bcn, xyzf)
 c
         call cptstd_dp(npts, nlocpts,
      >                 cov, jcov, ddat,

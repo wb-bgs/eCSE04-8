@@ -23,13 +23,10 @@ c         iunit         unit to write outputs
 c         itm           Maximum number of iterations
 c         shdeg         max SH degree value
 c         nb            Number or base function to use
-c         nd            space dimension
 c         npts          Total number of points (data + sampling) for all ranks
 c         nlocpts       Total number of points for this rank
 c         nlocdatpts    number of data points assigned to rank
-c         d2a           pre-computed array used by mk_lf_dlf()
 c         bc            Estimate of Base function coefficients
-c         ppos          data point position in ndD
 c         ddat          data values
 c         src_stat      MPI gradient search status
 c         dl(3)         control lsearch process & damping
@@ -43,9 +40,9 @@ c         stp           recommended step in direction ds(*)
 c         std           STD value for given BC+stp*DS
 c         xyzf          Forward modelling for given BC+stp*DS
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine lsearch_p(iunit, itm, shdeg, nb, nd,
+        subroutine lsearch_p(iunit, itm, shdeg, nb,
      >                       npts, nlocpts, nlocdatpts,
-     >                       d2a, bc, ppos, ddat,
+     >                       bc, ddat,
      >                       src_stat, MPI_SEARCH_STATUS,
      >                       dl, cov, jcov,
      >                       std, ds, stp, xyzf)
@@ -56,11 +53,9 @@ c
         include 'mpi_status_types.h'
 c
         integer iunit, itm, npts
-        integer shdeg, nb, nd
+        integer shdeg, nb
         integer nlocpts, nlocdatpts
-        real*8 d2a(0:shdeg)
         real*8 bc(1:nb)
-        real*8 ppos(1:nd+1,1:nlocpts)
         real*8 xyzf(1:nlocpts)
         real*8 ddat(1:nlocpts)
         type(search_status) src_stat
@@ -118,9 +113,9 @@ c               write(*,*)'lsearch_p: 1'
 c
                 bcn(1:nb) = bc(1:nb)+src_stat%stp*ds(1:nb)
 c
-                call cpt_dat_vals_p(shdeg, nb, nd,
+                call cpt_dat_vals_p(shdeg, nb,
      >                              nlocpts, nlocdatpts,
-     >                              d2a, bcn, ppos, xyzf)
+     >                              bcn, xyzf)
 c
                 call cptstd_dp(npts, nlocpts,
      >                         cov, jcov, ddat,
@@ -156,9 +151,9 @@ c                       write(*,*)'lsearch_p: 2'
 c
                         bcn(1:nb) = bc(1:nb)+src_stat%stp*ds(1:nb)
 c
-                        call cpt_dat_vals_p(shdeg, nb, nd,
+                        call cpt_dat_vals_p(shdeg, nb,
      >                                      nlocpts, nlocdatpts,
-     >                                      d2a, bcn, ppos, xyzf)
+     >                                      bcn, xyzf)
 c
                         call cptstd_dp(npts, nlocpts,
      >                                 cov, jcov, ddat,
@@ -192,9 +187,9 @@ c                       write(*,*)'lsearch_p: 3'
 c
                         bcn(1:nb) = bc(1:nb)+src_stat%stp*ds(1:nb)
 c
-                        call cpt_dat_vals_p(shdeg, nb, nd,
+                        call cpt_dat_vals_p(shdeg, nb,
      >                                      nlocpts, nlocdatpts,
-     >                                      d2a, bcn, ppos, xyzf)
+     >                                      bcn, xyzf)
 c
                         call cptstd_dp(npts, nlocpts,
      >                                 cov, jcov, ddat,
@@ -278,9 +273,9 @@ c                   write(*,*)'lsearch_p: 4'
 c
                     bcn(1:nb) = bc(1:nb)+src_stat%stp*ds(1:nb)
 c
-                    call cpt_dat_vals_p(shdeg, nb, nd,
+                    call cpt_dat_vals_p(shdeg, nb,
      >                                  nlocpts, nlocdatpts,
-     >                                  d2a, bcn, ppos, xyzf)
+     >                                  bcn, xyzf)
 c
                     call cptstd_dp(npts, nlocpts,
      >                             cov, jcov, ddat,
@@ -344,9 +339,9 @@ c           write(*,*)'lsearch_p: 5'
 c
             bcn(1:nb) = bc(1:nb)+src_stat%stp*ds(1:nb)
 c
-            call cpt_dat_vals_p(shdeg, nb, nd,
+            call cpt_dat_vals_p(shdeg, nb,
      >                          nlocpts, nlocdatpts,
-     >                          d2a, bcn, ppos, xyzf)
+     >                          bcn, xyzf)
 c
             call cptstd_dp(npts, nlocpts,
      >                     cov, jcov, ddat,
@@ -366,9 +361,9 @@ c  SP  Receive bcn value from master
 c  SP do the work
                 bcn(1:nb) = bc(1:nb)+src_stat%stp*ds(1:nb)
 c
-                call cpt_dat_vals_p(shdeg, nb, nd,
+                call cpt_dat_vals_p(shdeg, nb,
      >                              nlocpts, nlocdatpts,
-     >                              d2a, bcn, ppos, xyzf)
+     >                              bcn, xyzf)
 c
                 call cptstd_dp(npts, nlocpts,
      >                         cov, jcov, ddat,
@@ -382,9 +377,9 @@ c  SP wait for info on next iteration
 c  SP receive final stp from master & does the final piece of work 
             bcn(1:nb) = bc(1:nb)+src_stat%stp*ds(1:nb)
 c
-            call cpt_dat_vals_p(shdeg, nb, nd,
+            call cpt_dat_vals_p(shdeg, nb,
      >                          nlocpts, nlocdatpts,
-     >                          d2a, bcn, ppos, xyzf)
+     >                          bcn, xyzf)
 c
             call cptstd_dp(npts, nlocpts,
      >                     cov, jcov, ddat,
