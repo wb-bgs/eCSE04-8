@@ -81,7 +81,7 @@ c
 c All: Calculate  sqrt(w).A.DS 
         allocate(zz(1:nlocpts))
         zz(1:nlocpts) = 0.0d0
-        call cpt_dat_vals_p(shdeg, nb, nlocpts, nlocdatpts,
+        call cpt_dat_vals_p(shdeg, nb, nd, nlocpts, nlocdatpts,
      >                      d2a, dlf, ddlf, ds, ppos, zz)
 c
         do i = 1,nlocpts
