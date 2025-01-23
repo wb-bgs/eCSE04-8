@@ -2,12 +2,20 @@
 c
           implicit none
 c
+c
           public
+     >      allocate_device_arrays,
+     >      deallocate_device_arrays,
+     >      init_device_arrays,
+     >      init_cpt_device_arrays,
+     >      init_ssqgh_device_arrays,
+     >      get_cpt_device_arrays,
+     >      get_ssqgh_device_arrays, 
      >      cpt_dat_vals_p_dat,
      >      cpt_dat_vals_p_smp,
      >      ssqgh_dp_dat,
      >      ssqgh_dp_smp
-
+c
           private
      >      XYZsph_bi0_sample,
      >      XYZsph_bi0_fun,
@@ -15,36 +23,176 @@ c
      >      mk_lf_dlf
 c
 c
+          private
+            real(8), parameter :: RAG = 6371.2d0
+            real(8), parameter :: D2R = 4.d0*datan(1.d0)/180.d0
+c
+            real(8), allocatable, device :: d_d2a(:)
+            real(8), allocatable, device :: d_ppos(:,:)
+            real(8), allocatable, device :: d_cov(:)
+            integer, allocatable, device :: d_jcov(:)       
+c
+            real(8), allocatable, device :: d_bc(:)
+            real(8), allocatable, device :: d_ddat(:)
+            real(8), allocatable, device :: d_xyzf(:) 
+            real(8), allocatable, device :: d_gj(:)
+            real(8), allocatable, device :: d_dh(:)   
+c
+c
         contains
 c
 c
+          attributes(host)
+     >    subroutine allocate_device_arrays(shdeg, nb, nd, nlocpts)
+c
+          implicit none
+c
+          integer, value :: shdeg, nb, nd, nlocpts
+c
+c
+          allocate(d_d2a(0:shdeg))
+          allocate(d_ppos(1:nd+1,1:nlocpts))
+          allocate(d_cov(1:nlocpts))
+          allocate(d_jcov(1:nlocpts+2))
+c
+          allocate(d_bc(1:nb))
+          allocate(d_ddat(1:nlocpts))
+          allocate(d_xyzf(1:nlocpts))
+          allocate(d_gj(1:nb))
+          allocate(d_dh(1:nb))
+c
+          end subroutine allocate_device_arrays
+c
+c
+c
+          attributes(host)
+     >    subroutine deallocate_device_arrays()
+c
+          implicit none
+c
+c
+          deallocate(d_d2a, d_ppos)
+          deallocate(d_cov, d_jcov)
+c
+          deallocate(d_bc, d_ddat, d_xyzf)
+          deallocate(d_gj, d_dh)
+c     
+          end subroutine deallocate_device_arrays
+c
+c
+c
+          attributes(host)
+     >    subroutine init_device_arrays(shdeg, nd, nlocpts,
+     >                                  d2a, ppos, cov, jcov)
+c          
+          implicit none
+c
+          integer shdeg, nd
+          integer nlocpts, nlocdatpts
+c
+          real*8 d2a(0:shdeg)
+          real*8 ppos(1:nd+1,1:nlocpts)
+          real*8 cov(1:nlocpts)
+          integer jcov(1:nlocpts+2)
+c
+c
+          d_d2a  = d2a
+          d_ppos = ppos
+          d_cov  = cov
+          d_jcov = jcov
+c
+          end subroutine init_device_arrays
+c
+c
+c
+          attributes(host)
+     >    subroutine init_cpt_device_arrays(nb, bc)
+c          
+          implicit none
+c
+          integer, value :: nb
+c
+          real*8 bc(1:nb)
+c
+c
+          d_bc = bc
+c
+          end subroutine init_cpt_device_arrays
+c
+c
+c
+          attributes(host)
+     >    subroutine init_ssqgh_device_arrays(nb, nlocpts,
+     >                                        bc, ddat, xyzf)
+c          
+          implicit none
+c
+          integer, value :: nb, nlocpts
+c
+          real*8 bc(1:nb)
+          real*8 ddat(1:nlocpts)
+          real*8 xyzf(1:nlocpts)
+c
+c
+          d_bc   = bc
+          d_ddat = ddat
+          d_xyzf = xyzf
+c
+          d_gj   = 0.0d0
+          d_dh   = 0.0d0
+c
+          end subroutine init_ssqgh_device_arrays
+c
+c
+c
+          attributes(host)
+     >    subroutine get_cpt_device_arrays(nlocpts, xyzf)
+c          
+          implicit none
+c
+          integer, value :: nlocpts
+c
+          real*8 xyzf(1:nlocpts)
+c
+c
+          xyzf = d_xyzf
+c
+          end subroutine get_cpt_device_arrays
+c
+c           
+c
+          attributes(host)              
+     >    subroutine get_ssqgh_device_arrays(nb, gj, dh)
+c          
+          implicit none
+c
+          integer, value :: nb
+c
+          real*8 gj(1:nb)
+          real*8 dh(1:nb)
+c
+c
+          gj = d_gj
+          dh = d_dh
+c
+          end subroutine get_ssqgh_device_arrays
+c
+c
+c
           attributes(global)
-     >    subroutine cpt_dat_vals_p_dat(shdeg, nb, nd,
-     >                                  nlocpts, nlocdatpts,
-     >                                  d2a, bc, ppos, xyzf)
+     >    subroutine cpt_dat_vals_p_dat(shdeg, nlocpts, nlocdatpts)
 c
           use cudafor
 c
           implicit none
 c
-          integer, value :: shdeg, nb, nd
+          integer, value :: shdeg
           integer, value :: nlocpts, nlocdatpts
-c
-          real(8) d2a(0:shdeg) 
-          real(8) bc(1:nb)
-          real(8) ppos(1:nd+1,1:nlocpts)
-          real(8) xyzf(1:nlocpts)
-c
-          real(8), parameter :: RAG = 6371.2d0
-          real(8), parameter :: D2R = 4.d0*datan(1.d0)/180.d0
 c
           integer i
 c
           real(8) p1, p2, ra
           real(8) bex, bey, bez
-c
-          real(8) dlf(1:shdeg+1)
-          real(8) ddlf(1:shdeg+1)
 c
 c
           i = (blockidx%x-1) * blockdim%x
@@ -53,18 +201,16 @@ c
           if (i .ge. 1 .and.
      >        i .le. nlocdatpts) then
 c
-            p1 = ppos(1,i)*D2R
-            p2 = ppos(2,i)*D2R
-            ra = RAG / ppos(3,i)
+            p1 = d_ppos(1,i)*D2R
+            p2 = d_ppos(2,i)*D2R
+            ra = RAG / d_ppos(3,i)
 c
-            bex = ppos(5,i)
-            bey = ppos(6,i)
-            bez = ppos(7,i)
+            bex = d_ppos(5,i)
+            bey = d_ppos(6,i)
+            bez = d_ppos(7,i)
 c
-            xyzf(i) = XYZsph_bi0_fun(shdeg, nb, d2a,
-     >                               dlf, ddlf,
-     >                               bc, p1, p2, ra,
-     >                               bex, bey, bez)
+            d_xyzf(i) = XYZsph_bi0_fun(shdeg, p1, p2, ra,
+     >                                 bex, bey, bez)
 c
           endif
 c
@@ -72,32 +218,19 @@ c
 c   
 c  
           attributes(global)
-     >    subroutine cpt_dat_vals_p_smp(shdeg, nb, nd,
-     >                                  nlocpts, nlocdatpts,
-     >                                  d2a, bc, ppos, xyzf)
+     >    subroutine cpt_dat_vals_p_smp(shdeg, nlocpts, nlocdatpts)
 c
           use cudafor
 c 
           implicit none
 c
-          integer, value :: shdeg, nb, nd
+          integer, value :: shdeg
           integer, value :: nlocpts, nlocdatpts
-c
-          real(8) d2a(0:shdeg)
-          real(8) bc(1:nb)
-          real(8) ppos(1:nd+1,1:nlocpts)
-          real(8) xyzf(1:nlocpts)
-c
-          real(8), parameter :: RAG = 6371.2d0
-          real(8), parameter :: D2R = 4.d0*datan(1.d0)/180.d0
 c
           integer i          
 c
           real(8) p1, p2, ra
           real(8) bex, bey, bez
-c
-          real(8) dlf(1:shdeg+1)
-          real(8) ddlf(1:shdeg+1)
 c
 c   
           i = (blockidx%x-1) * blockdim%x
@@ -107,23 +240,19 @@ c
           if (i .gt. nlocdatpts .and. 
      >        i .le. nlocpts) then
 c
-            p1 = ppos(1,i)*D2R
-            p2 = ppos(2,i)*D2R
-            ra = RAG / ppos(3,i)
+            p1 = d_ppos(1,i)*D2R
+            p2 = d_ppos(2,i)*D2R
+            ra = RAG / d_ppos(3,i)
 c
-            bex = ppos(5,i)
-            bey = ppos(6,i)
-            bez = ppos(7,i)
+            bex = d_ppos(5,i)
+            bey = d_ppos(6,i)
+            bez = d_ppos(7,i)
 c
-            call XYZsph_bi0_sample(shdeg, nb, d2a,
-     >                             dlf, ddlf, bc,
-     >                             p1, p2, ra, 
+            call XYZsph_bi0_sample(shdeg, p1, p2, ra, 
      >                             bex, bey, bez)
 c
-            xyzf(i) = XYZsph_bi0_fun(shdeg, nb, d2a,
-     >                               dlf, ddlf, bc,
-     >                               p1, p2, ra,
-     >                               bex, bey, bez)
+            d_xyzf(i) = XYZsph_bi0_fun(shdeg, p1, p2, ra,
+     >                                 bex, bey, bez)
 c
           endif
 c
@@ -131,38 +260,20 @@ c
 c
 c
           attributes(global)
-     >    subroutine ssqgh_dp_dat(shdeg, nb, nd,
-     >                            nlocpts, nlocdatpts,
-     >                            d2a, ppos,
-     >                            cov, jcov, ddat, xyzf,
-     >                            gj, dh)
+     >    subroutine ssqgh_dp_dat(shdeg, nlocpts, nlocdatpts)
 c
           use cudafor
 c
           implicit none
 c
-          integer, value :: shdeg, nb, nd
+          integer, value :: shdeg
           integer, value :: nlocpts, nlocdatpts
-c
-          real(8) d2a(0:shdeg)
-          real(8) ppos(1:nd+1,1:nlocpts)
-          real(8) cov(1:nlocpts)
-          integer jcov(1:nlocpts+2)
-          real(8) ddat(1:nlocpts)
-          real(8) xyzf(1:nlocpts)
-          real(8) gj(1:nb), dh(1:nb)
-c
-          real(8), parameter :: RAG = 6371.2d0
-          real(8), parameter :: D2R = 4.d0*datan(1.d0)/180.d0
 c
           integer i
 c
           real(8) p1, p2, ra
           real(8) bex, bey, bez
           real(8) dw_dh, dw_gj
-c
-          real(8) dlf(1:shdeg+1)
-          real(8) ddlf(1:shdeg+1)
 c
 c
           i = (blockidx%x-1) * blockdim%x
@@ -171,26 +282,23 @@ c
           if (i .ge. 1 .and.
      >        i .le. nlocdatpts) then
 c   
-            p1 = ppos(1,i)*D2R
-            p2 = ppos(2,i)*D2R
-            ra = RAG / ppos(3,i)
+            p1 = d_ppos(1,i)*D2R
+            p2 = d_ppos(2,i)*D2R
+            ra = RAG / d_ppos(3,i)
 c
-            bex = ppos(5,i)
-            bey = ppos(6,i)
-            bez = ppos(7,i)
+            bex = d_ppos(5,i)
+            bey = d_ppos(6,i)
+            bez = d_ppos(7,i)
 
 c  calculate the equations of condition   
 c  and update the G matrix and B vector 
 c
-            dw_dh = 2.d0*(1.d0/cov(jcov(i)))
-            dw_gj = dw_dh*(ddat(i)-xyzf(i))
+            dw_dh = 2.d0*(1.d0/d_cov(d_jcov(i)))
+            dw_gj = dw_dh*(d_ddat(i)-d_xyzf(i))
 c      
-            call XYZsph_bi0_sub(shdeg, nb, d2a,
-     >                          dlf, ddlf,
-     >                          p1, p2, ra,
+            call XYZsph_bi0_sub(shdeg, p1, p2, ra,
      >                          bex, bey, bez,
-     >                          dw_gj, dw_dh,
-     >                          gj, dh)
+     >                          dw_gj, dw_dh)
 c
           endif
 c
@@ -199,39 +307,20 @@ c
 c
 c
           attributes(global)
-     >    subroutine ssqgh_dp_smp(shdeg, nb, nd,
-     >                            nlocpts, nlocdatpts,
-     >                            d2a, bc, ppos,
-     >                            cov, jcov, ddat, xyzf,
-     >                            gj, dh)
+     >    subroutine ssqgh_dp_smp(shdeg, nlocpts, nlocdatpts)
 c
           use cudafor
 c
           implicit none
 c
-          integer, value :: shdeg, nb, nd
+          integer, value :: shdeg
           integer, value :: nlocpts, nlocdatpts
-c
-          real(8) d2a(0:shdeg)
-          real(8) bc(1:nb)
-          real(8) ppos(1:nd+1,1:nlocpts)
-          real(8) cov(1:nlocpts)
-          integer jcov(1:nlocpts+2)
-          real(8) ddat(1:nlocpts)
-          real(8) xyzf(1:nlocpts)
-          real(8) gj(1:nb), dh(1:nb)
-c
-          real(8), parameter :: RAG = 6371.2d0
-          real(8), parameter :: D2R = 4.d0*datan(1.d0)/180.d0
 c
           integer i
 c
           real(8) p1, p2, ra
           real(8) bex, bey, bez
           real(8) dw_dh, dw_gj
-c
-          real(8) dlf(1:shdeg+1)
-          real(8) ddlf(1:shdeg+1)
 c
 c
           i = (blockidx%x-1) * blockdim%x
@@ -241,35 +330,31 @@ c
           if (i .gt. nlocdatpts .and. 
      >        i .le. nlocpts) then
 c
-            p1 = ppos(1,i)*D2R
-            p2 = ppos(2,i)*D2R
-            ra = RAG / ppos(3,i)
+            p1 = d_ppos(1,i)*D2R
+            p2 = d_ppos(2,i)*D2R
+            ra = RAG / d_ppos(3,i)
 c
-            bex = ppos(5,i)
-            bey = ppos(6,i)
-            bez = ppos(7,i)
+            bex = d_ppos(5,i)
+            bey = d_ppos(6,i)
+            bez = d_ppos(7,i)
 
-            call XYZsph_bi0_sample(shdeg, nb, d2a,
-     >                             dlf, ddlf, bc,
-     >                             p1, p2, ra, 
+            call XYZsph_bi0_sample(shdeg, p1, p2, ra, 
      >                             bex, bey, bez)
 c
 c  calculate the equations of condition   
 c  and update the G matrix and B vector 
 c
-            dw_dh = 2.d0*(1.d0/cov(jcov(i)))
-            dw_gj = dw_dh*(ddat(i)-xyzf(i))
+            dw_dh = 2.d0*(1.d0/d_cov(d_jcov(i)))
+            dw_gj = dw_dh*(d_ddat(i)-d_xyzf(i))
 c      
-            call XYZsph_bi0_sub(shdeg, nb, d2a,
-     >                          dlf, ddlf,
-     >                          p1, p2, ra,
+            call XYZsph_bi0_sub(shdeg, p1, p2, ra,
      >                          bex, bey, bez,
-     >                          dw_gj, dw_dh,
-     >                          gj, dh)
+     >                          dw_gj, dw_dh)
 c
           endif
 c
           end subroutine ssqgh_dp_smp
+c
 c
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -280,11 +365,6 @@ c       This subroutine is called for sample points only.
 c             
 c       input:
 c          shdeg  INTEGER       max SH degree value
-c          nb     INTEGER       number of coefficients
-c          d2a    REAL(8)       pre-computed array used by mk_lf_dlf() subroutine
-c          (d)dlf REAL(8)       pre-allocated arrays computed by mk_lf_dlf() and
-c                               used within this subroutine
-c          bc     REAL(8)       coefficient array
 c          p1     REAL(8)       co-latitude
 c          p2     REAL(8)       longitude
 c          ra     REAL(8)       radius
@@ -296,19 +376,12 @@ c          bez    REAL(8)       z component of magnetic field
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
           attributes(device)
-     >    subroutine XYZsph_bi0_sample(shdeg, nb, d2a,
-     >                                 dlf, ddlf, bc,
-     >                                 p1, p2, ra,
+     >    subroutine XYZsph_bi0_sample(shdeg, p1, p2, ra,
      >                                 bex, bey, bez)
 c
           implicit none
 c
-          integer shdeg, nb
-c
-          real(8) d2a(0:shdeg)
-          real(8) dlf(1:shdeg+1)
-          real(8) ddlf(1:shdeg+1)
-          real(8) bc(1:nb)
+          integer shdeg
 c
           real(8) p1, p2, ra
           real(8) bex, bey, bez 
@@ -330,6 +403,9 @@ c
           real(8) zx_c, zy_c
 c
           real(8) bex2, bey2, bez2
+c
+          real(8) dlf(1:shdeg+1)
+          real(8) ddlf(1:shdeg+1)
 c        
 c 
           dx = 0.0d0
@@ -339,8 +415,7 @@ c
           rc = dcos(p1)
           rs = dsin(p1)
 c
-          call mk_lf_dlf(0, shdeg, rs, rc,
-     >                   d2a(0), dlf, ddlf)
+          call mk_lf_dlf(0, shdeg, rs, rc, dlf, ddlf)
           do il = 1,shdeg
             dr = ra**(il+2)
 c          
@@ -349,20 +424,19 @@ c
             bx =  ddlf(ik) * dr
             bz = -dlf(ik)  * dr * dble(ik)
 c
-            dx = dx + bx * bc(il)
-            dz = dz + bz * bc(il)
+            dx = dx + bx * d_bc(il)
+            dz = dz + bz * d_bc(il)
           enddo
 c
 c
           nu = shdeg + 1
           do im = 1,shdeg
-            call mk_lf_dlf(im, shdeg, rs, rc,
-     >                     d2a(im), dlf, ddlf)
+            call mk_lf_dlf(im, shdeg, rs, rc, dlf, ddlf)
             dc = dcos(im*p2)
             ds = dsin(im*p2)
             do il = im,shdeg
-              bc_nu   = bc(nu)
-              bc_nup1 = bc(nu+1)
+              bc_nu   = d_bc(nu)
+              bc_nup1 = d_bc(nu+1)
 
               ik = il-im+1
               dr = ra**(il+2)
@@ -412,6 +486,7 @@ c
 c
           end subroutine XYZsph_bi0_sample
 c
+c
 c     
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c	function XYZsph_bi0_fun
@@ -421,11 +496,6 @@ c       to store the entire contents of the 'be' coefficient array.
 c             
 c       input:
 c          shdeg  INTEGER     max SH degree value
-c          nb     INTEGER     number of coefficients
-c          d2a    REAL(8)     pre-computed array used by mk_lf_dlf() subroutine
-c          (d)dlf REAL(8)     pre-allocated arrays computed by mk_lf_dlf() and
-c                             used within this function
-c          bc     REAL(8)     coefficient array
 c          p1     REAL(8)     co-latitude
 c          p2     REAL(8)     longitude
 c          ra     REAL(8)     radius
@@ -439,19 +509,12 @@ c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
           real(8) 
      >    attributes(device)
-     >    function XYZsph_bi0_fun(shdeg, nb, d2a,
-     >                            dlf, ddlf, bc,
-     >                            p1, p2, ra,
+     >    function XYZsph_bi0_fun(shdeg, p1, p2, ra,
      >                            bex, bey, bez)
 c
           implicit none
 c
-          integer shdeg, nb
-c
-          real(8) d2a(0:shdeg)
-          real(8) dlf(1:shdeg+1)
-          real(8) ddlf(1:shdeg+1)
-          real(8) bc(1:nb)
+          integer shdeg
 c
           real(8) p1, p2, ra
           real(8) bex, bey, bez
@@ -461,6 +524,9 @@ c
           real(8) ds, dc, dr, dw
           real(8) bx, by, bz
           real(8) bxp1, byp1, bzp1
+c
+          real(8) dlf(1:shdeg+1)
+          real(8) ddlf(1:shdeg+1)
 c 
 c
           XYZsph_bi0_fun = 0.0d0 
@@ -468,8 +534,7 @@ c
           rc = dcos(p1)
           rs = dsin(p1)
 c
-          call mk_lf_dlf(0, shdeg, rs, rc,
-     >                   d2a(0), dlf, ddlf)
+          call mk_lf_dlf(0, shdeg, rs, rc, dlf, ddlf)
           do il = 1,shdeg
             dr = ra**(il+2)
 c          
@@ -479,14 +544,13 @@ c
             bz = -dlf(ik)  * dr * dble(ik)
 c
             XYZsph_bi0_fun = XYZsph_bi0_fun
-     >                     + (bex*bx + bez*bz) * bc(il)
+     >                     + (bex*bx + bez*bz) * d_bc(il)
           enddo
 c
 c
           nu = shdeg + 1
           do im = 1,shdeg
-            call mk_lf_dlf(im, shdeg, rs, rc,
-     >                     d2a(im), dlf, ddlf)
+            call mk_lf_dlf(im, shdeg, rs, rc, dlf, ddlf)
             dc = dcos(im*p2)
             ds = dsin(im*p2)
             do il = im,shdeg
@@ -506,14 +570,15 @@ c
               bzp1 = -dw*ds
 c
               XYZsph_bi0_fun = XYZsph_bi0_fun
-     >                       + (bx + by + bz) * bc(nu)
-     >                       + (bxp1 + byp1 + bzp1) * bc(nu+1)
+     >                       + (bx + by + bz) * d_bc(nu)
+     >                       + (bxp1 + byp1 + bzp1) * d_bc(nu+1)
 c
               nu = nu + 2
             enddo
           enddo
 c
           end function XYZsph_bi0_fun
+c
 c
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -524,10 +589,6 @@ c       the diagonal of the Hessian (hj).
 c
 c       input:
 c          shdeg    INTEGER     max SH degree value
-c          nb       INTEGER     number of coefficients
-c          d2a      REAL(8)     pre-computed array used by mk_lf_dlf() subroutine
-c          (d)dlf   REAL(8)     pre-allocated arrays computed by mk_lf_dlf() and
-c                               used within this subroutine
 c          p1       REAL(8)     co-latitude
 c          p2       REAL(8)     longitude
 c          ra       REAL(8)     radius
@@ -537,34 +598,21 @@ c          bez      REAL(8)     z component of magnetic field
 c          dw_gj    REAL(8)     multiplier for gj terms
 c          dw_dh    REAL(8)     multiplier for dh terms
 c
-c       output:
-c          gj       REAL(8)     gradient of the weighted sum of squares (nb)
-c          dh       REAL(8)     diagonal of the Hessian (nb)
-c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
           attributes(device)
-     >    subroutine XYZsph_bi0_sub(shdeg, nb, d2a,
-     >                              dlf, ddlf,
-     >                              p1, p2, ra,
+     >    subroutine XYZsph_bi0_sub(shdeg, p1, p2, ra,
      >                              bex, bey, bez,
-     >                              dw_gj, dw_dh,
-     >                              gj, dh)
+     >                              dw_gj, dw_dh)
 c
           use cudafor
 c
           implicit none
 c
-          integer shdeg, nb
-c
-          real(8) d2a(0:shdeg)
-          real(8) dlf(1:shdeg+1)
-          real(8) ddlf(1:shdeg+1)
+          integer shdeg         
 c
           real(8) p1, p2, ra
           real(8) bex, bey, bez 
           real(8) dw_gj, dw_dh
-          real(8) gj(1:nb)
-          real(8) dh(1:nb) 
 c
           integer nu, il, im, ik, istat
           real(8) rc, rs
@@ -572,13 +620,15 @@ c
           real(8) bx, by, bz
           real(8) bxp1, byp1, bzp1
           real(8) be, bep1
+c
+          real(8) dlf(1:shdeg+1)
+          real(8) ddlf(1:shdeg+1)
 c 
 c
           rc = dcos(p1)
           rs = dsin(p1)
 c
-          call mk_lf_dlf(0, shdeg, rs, rc,
-     >                   d2a(0), dlf, ddlf)
+          call mk_lf_dlf(0, shdeg, rs, rc, dlf, ddlf)
           do il = 1,shdeg
             dr = ra**(il+2)
 c          
@@ -589,16 +639,15 @@ c
 c
             be = (bex*bx + bez*bz)
 c
-            istat = atomicadd(gj(il), dw_gj*be)
-            istat = atomicadd(dh(il), dw_dh*(be**2))
+            istat = atomicadd(d_gj(il), dw_gj*be)
+            istat = atomicadd(d_dh(il), dw_dh*(be**2))
 c
           enddo
 c
 c
           nu = shdeg + 1
           do im = 1,shdeg
-            call mk_lf_dlf(im, shdeg, rs, rc,
-     >                     d2a(im), dlf, ddlf)
+            call mk_lf_dlf(im, shdeg, rs, rc, dlf, ddlf)
             dc = dcos(im*p2)
             ds = dsin(im*p2)
             do il = im,shdeg
@@ -620,17 +669,18 @@ c
               be   = bex*bx + bey*by + bez*bz
               bep1 = bex*bxp1 + bey*byp1 + bez*bzp1
 c
-              istat = atomicadd(gj(nu), dw_gj*be)
-              istat = atomicadd(gj(nu+1), dw_gj*bep1)
+              istat = atomicadd(d_gj(nu), dw_gj*be)
+              istat = atomicadd(d_gj(nu+1), dw_gj*bep1)
 c
-              istat = atomicadd(dh(nu), dw_dh*(be**2))
-              istat = atomicadd(dh(nu+1), dw_dh*(bep1**2))
+              istat = atomicadd(d_dh(nu), dw_dh*(be**2))
+              istat = atomicadd(d_dh(nu+1), dw_dh*(bep1**2))
 c
               nu = nu + 2
             enddo
           enddo
 c
           end subroutine XYZsph_bi0_sub
+c
 c
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -649,21 +699,19 @@ c
 c       input:
 c         im/shdeg      order and degree max
 c         rc/rs         cos(colatitude)/sin(colatitude)
-c         d2a_im        element at position im from d2a array
 c       output:
 c         dlf           legendre function from im to nl
 c         ddlf          derivative of legendre function from im to nl
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
           attributes(device)
-     >    subroutine mk_lf_dlf(im, shdeg, rs, rc, 
-     >                         d2a_im, dlf, ddlf)
+     >    subroutine mk_lf_dlf(im, shdeg, rs, rc, dlf, ddlf)
 c
           implicit none
 c
           integer im, shdeg
 c
-          real(8) rs, rc, d2a_im
+          real(8) rs, rc
 c
           real(8) dlf(1:shdeg+1)
           real(8) ddlf(1:shdeg+1)
@@ -681,7 +729,7 @@ c  Initialise dlf array
             if (im .eq. 0) d1 = 1.d0
           endif
 c
-          dlf(1) = d1*d2a_im
+          dlf(1) = d1*d_d2a(im)
           dlf(2) = dlf(1) * rc * dsqrt(dble(2*im+1))
 c
           do il = 2,shdeg-im

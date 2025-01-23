@@ -68,6 +68,8 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >                       bc, ppos, dl, cov, jcov,
      >                       stdt, xyzf)
 c
+        use kernels
+c
         implicit none
 c
         include 'mpif.h'
@@ -203,14 +205,20 @@ c
         enddo
 c
 c
+        call allocate_device_arrays(shdeg, nb, nd, nlocpts)
+c
+        call init_device_arrays(shdeg, nd, nlocpts,
+     >                          d2a, ppos, cov, jcov)
+c
+c
 c All start iteration
         do while (inv_stat%yon(1:1) .eq. 'y')
             it = it+1
 c All: do their part in forward modelling
             if (inv_stat%yon(2:2) .eq. 'y') then
 c               if(rank.eq.0)write(*,*)'opt_pr_p3: 1'           
-                call cpt_dat_vals_p(shdeg, nb, nd, nlocpts, nlocdatpts,
-     >                              d2a, inv_stat%bc, ppos, xyzf)
+                call cpt_dat_vals_p(shdeg, nb, nlocpts, nlocdatpts,
+     >                              inv_stat%bc, xyzf)
 c
                 call cptstd_dp(npts, nlocpts, cov, jcov,
      >                         ddat, xyzf, std)
@@ -226,9 +234,8 @@ c All: do their part in finding GJ, DH
 c
                 if ((itmax(1) .ge. 0) .or. (it .ne. 1)) then
 c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 2'
-                    call ssqgh_dp(shdeg, nb, nd, nlocpts, nlocdatpts,
-     >                            d2a, inv_stat%bc, ppos,
-     >                            cov, jcov, ddat, xyzf, gj, dh)
+                    call ssqgh_dp(shdeg, nb, nlocpts, nlocdatpts,
+     >                            inv_stat%bc, ddat, xyzf, gj, dh)
                 else
                     if (rank .eq. 0) then
                         write(*,*)
@@ -312,27 +319,27 @@ c ALL: search minimum in descent direction
      >              inv_stat%yon(5:5) .eq. 'r') then
                     if (itmax(3) .ge. 0) then
 c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 4'
-                        call gc_step_p(iunit, shdeg, nb, nd,
+                        call gc_step_p(iunit, shdeg, nb,
      >                                 npts, nlocpts, nlocdatpts,
-     >                                 d2a, inv_stat%bc,
-     >                                 ppos, ddat, cov, jcov, std,
+     >                                 inv_stat%bc,
+     >                                 ddat, cov, jcov, std,
      >                                 gj, ghj, ds, stp, xyzf)
                     else
 c                       if(rank.eq.0)write(*,*)'opt_pr_p3: 5'
-                        call lsearch_p(iunit, itm_l, shdeg, nb, nd, 
+                        call lsearch_p(iunit, itm_l, shdeg, nb, 
      >                                 npts, nlocpts, nlocdatpts,
-     >                                 d2a, inv_stat%bc,
-     >                                 ppos, ddat, src_stat,
+     >                                 inv_stat%bc,
+     >                                 ddat, src_stat,
      >                                 MPI_SEARCH_STATUS,
      >                                 dl, cov, jcov,
      >                                 std, ds, stp, xyzf)
                     endif
                 else
 c                   if(rank.eq.0)write(*,*)'opt_pr_p3: 6'
-                    call lsearch_p(iunit, itm_l, shdeg, nb, nd,
+                    call lsearch_p(iunit, itm_l, shdeg, nb,
      >                             npts, nlocpts, nlocdatpts,
-     >                             d2a, inv_stat%bc,
-     >                             ppos, ddat, src_stat,
+     >                             inv_stat%bc,
+     >                             ddat, src_stat,
      >                             MPI_SEARCH_STATUS,
      >                             dl, cov, jcov,
      >                             std, ds, stp, xyzf)
@@ -453,6 +460,9 @@ c
 c
         stdt = std
         if (rank .eq. 0) close(iunit)
+c
+c
+        call deallocate_device_arrays()
 c
         deallocate(d2a)
 c
