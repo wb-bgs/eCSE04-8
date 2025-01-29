@@ -6,26 +6,42 @@ c
           public
      >      allocate_device_arrays,
      >      deallocate_device_arrays,
+     >      init_nblocks_nthreads,
      >      init_device_arrays,
      >      init_cpt_device_arrays,
      >      init_ssqgh_device_arrays,
+     >      get_nblocks_dat,
+     >      get_nblocks_sam,
+     >      get_nthreads,
      >      get_cpt_device_arrays,
      >      get_ssqgh_device_arrays, 
-     >      cpt_dat_vals_p_dat,
-     >      cpt_dat_vals_p_smp,
-     >      ssqgh_dp_dat,
-     >      ssqgh_dp_smp
+     >      write_nblocks_nthreads,
+     >      cpt_dat_kernel,
+     >      cpt_sam_kernel,
+     >      ssqgh_dat_kernel,
+     >      ssqgh_sam_kernel,
+#if defined(CUDA_KERNEL_LOOP)
+     >      cpt_dat_loop,
+     >      cpt_sam_loop,
+     >      cpt_sam_loop_kernel,
+     >      ssqgh_dat_loop,
+     >      ssqgh_sam_loop,
+     >      ssqgh_sam_loop_kernel,
+#endif
+     >      check_for_cuda_error
 c
           private
      >      XYZsph_bi0_sample,
-     >      XYZsph_bi0_fun,
-     >      XYZsph_bi0_sub,
+     >      XYZsph_bi0_cpt,
+     >      XYZsph_bi0_ssqgh,
      >      mk_lf_dlf
 c
 c
           private
             real(8), parameter :: RAG = 6371.2d0
             real(8), parameter :: D2R = 4.d0*datan(1.d0)/180.d0
+c
+            integer nblocks_dat, nblocks_sam, nthreads
 c
             real(8), allocatable, device :: d_d2a(:)
             real(8), allocatable, device :: d_ppos(:,:)
@@ -78,6 +94,63 @@ c
           deallocate(d_gj, d_dh)
 c     
           end subroutine deallocate_device_arrays
+c
+c
+c
+          attributes(host)
+     >    subroutine init_nblocks_nthreads(cuda_nblocks_dat,
+     >                                     cuda_nblocks_sam,
+     >                                     cuda_nthreads,
+     >                                     nlocdatpts, nlocsampts)
+c
+          use cudafor
+c
+          implicit none
+c
+          integer cuda_nblocks_dat, cuda_nblocks_sam
+          integer cuda_nthreads
+          integer nlocdatpts, nlocsampts
+c         
+          type(cudaDeviceProp) :: cuda_prop
+c
+          integer ierr, maxblocks, maxthreads
+c
+c
+          ierr = cudaGetDeviceProperties(cuda_prop, 0)
+c
+          maxblocks = cuda_prop%multiProcessorCount
+     >              * cuda_prop%maxBlocksPerMultiProcessor
+c
+          maxthreads = cuda_prop%maxThreadsPerBlock
+c
+          if (cuda_nthreads .le. 0 .or.
+     >        cuda_nthreads .gt. maxthreads) then
+            nthreads = 128
+          else
+            nthreads = cuda_nthreads
+          endif
+c
+          if (cuda_nblocks_dat .le. 0 .or.
+     >        cuda_nblocks_dat .gt. maxblocks) then
+            nblocks_dat = nlocdatpts / nthreads
+            if (MOD(nlocdatpts, nthreads) .gt. 0) then
+              nblocks_dat = nblocks_dat + 1
+            endif
+          else
+            nblocks_dat = cuda_nblocks_dat
+          endif
+c
+          if (cuda_nblocks_sam .le. 0 .or.
+     >        cuda_nblocks_sam .gt. maxblocks) then
+            nblocks_sam = nlocsampts / nthreads
+            if (MOD(nlocsampts, nthreads) .gt. 0) then
+              nblocks_sam = nblocks_sam + 1
+            endif
+          else
+            nblocks_sam = cuda_nblocks_sam
+          endif
+c
+          end subroutine init_nblocks_nthreads
 c
 c
 c
@@ -145,6 +218,39 @@ c
 c
 c
 c
+          integer function get_nblocks_dat()
+c
+          implicit none
+c
+c
+          get_nblocks_dat = nblocks_dat
+c
+          end function get_nblocks_dat
+c
+c
+c
+          integer function get_nblocks_sam()
+c
+          implicit none
+c
+c
+          get_nblocks_sam = nblocks_sam
+c
+          end function get_nblocks_sam
+c
+c
+c
+          integer function get_nthreads()
+c
+          implicit none
+c
+c
+          get_nthreads = nthreads
+c
+          end function get_nthreads
+c
+c
+c
           attributes(host)
      >    subroutine get_cpt_device_arrays(nlocpts, xyzf)
 c          
@@ -179,15 +285,37 @@ c
 c
 c
 c
+          attributes(host)
+     >    subroutine write_nblocks_nthreads()
+c
+          implicit none
+c
+          write(*,*) ''
+#if defined(CUDA_KERNEL_LOOP) && !defined(CUDA_KERNEL_LOOP_USER)
+          write(*,*) 'cuda_nblocks_dat: *'
+          write(*,*) 'cuda_nblocks_sam: *'
+          write(*,*) 'cuda_nthreads: *'
+#else
+          write(*,*) 'cuda_nblocks_dat: ', nblocks_dat
+          write(*,*) 'cuda_nblocks_sam: ', nblocks_sam
+          write(*,*) 'cuda_nthreads: ', nthreads
+#endif
+          write(*,*) ''
+          write(*,*) ''
+c
+          end subroutine write_nblocks_nthreads
+c
+c
+c
           attributes(global)
-     >    subroutine cpt_dat_vals_p_dat(shdeg, nlocpts, nlocdatpts)
+     >    subroutine cpt_dat_kernel(shdeg, imin, imax, ioffset)
 c
           use cudafor
 c
           implicit none
 c
           integer, value :: shdeg
-          integer, value :: nlocpts, nlocdatpts
+          integer, value :: imin, imax, ioffset
 c
           integer i
 c
@@ -197,9 +325,10 @@ c
 c
           i = (blockidx%x-1) * blockdim%x
      >      + threadidx%x
+     >      + ioffset
 c
-          if (i .ge. 1 .and.
-     >        i .le. nlocdatpts) then
+          if (i .ge. imin .and.
+     >        i .le. imax) then
 c
             p1 = d_ppos(1,i)*D2R
             p2 = d_ppos(2,i)*D2R
@@ -209,36 +338,37 @@ c
             bey = d_ppos(6,i)
             bez = d_ppos(7,i)
 c
-            d_xyzf(i) = XYZsph_bi0_fun(shdeg, p1, p2, ra,
+            d_xyzf(i) = XYZsph_bi0_cpt(shdeg, p1, p2, ra,
      >                                 bex, bey, bez)
 c
           endif
 c
-          end subroutine cpt_dat_vals_p_dat
-c   
-c  
+          end subroutine cpt_dat_kernel
+c
+c
+c
           attributes(global)
-     >    subroutine cpt_dat_vals_p_smp(shdeg, nlocpts, nlocdatpts)
+     >    subroutine cpt_sam_kernel(shdeg, imin, imax, ioffset)
 c
           use cudafor
-c 
+c
           implicit none
 c
           integer, value :: shdeg
-          integer, value :: nlocpts, nlocdatpts
+          integer, value :: imin, imax, ioffset
 c
-          integer i          
+          integer i
 c
           real(8) p1, p2, ra
           real(8) bex, bey, bez
 c
-c   
+c
           i = (blockidx%x-1) * blockdim%x
      >      + threadidx%x
-     >      + nlocdatpts
+     >      + ioffset
 c
-          if (i .gt. nlocdatpts .and. 
-     >        i .le. nlocpts) then
+          if (i .ge. imin .and.
+     >        i .le. imax) then
 c
             p1 = d_ppos(1,i)*D2R
             p2 = d_ppos(2,i)*D2R
@@ -248,40 +378,41 @@ c
             bey = d_ppos(6,i)
             bez = d_ppos(7,i)
 c
-            call XYZsph_bi0_sample(shdeg, p1, p2, ra, 
+            call XYZsph_bi0_sample(shdeg, p1, p2, ra,
      >                             bex, bey, bez)
 c
-            d_xyzf(i) = XYZsph_bi0_fun(shdeg, p1, p2, ra,
+            d_xyzf(i) = XYZsph_bi0_cpt(shdeg, p1, p2, ra,
      >                                 bex, bey, bez)
 c
           endif
 c
-          end subroutine cpt_dat_vals_p_smp
+          end subroutine cpt_sam_kernel
+c
 c
 c
           attributes(global)
-     >    subroutine ssqgh_dp_dat(shdeg, nlocpts, nlocdatpts)
+     >    subroutine ssqgh_dat_kernel(shdeg, imin, imax, ioffset)
 c
           use cudafor
 c
           implicit none
 c
           integer, value :: shdeg
-          integer, value :: nlocpts, nlocdatpts
+          integer, value :: imin, imax, ioffset
 c
           integer i
 c
           real(8) p1, p2, ra
           real(8) bex, bey, bez
-          real(8) dw_dh, dw_gj
+          real(8) dw_gj, dw_dh
 c
 c
           i = (blockidx%x-1) * blockdim%x
      >      + threadidx%x
+     >      + ioffset
 c
-          if (i .ge. 1 .and.
-     >        i .le. nlocdatpts) then
-c   
+          if (i .ge. imin .and. i .le. imax) then
+c      
             p1 = d_ppos(1,i)*D2R
             p2 = d_ppos(2,i)*D2R
             ra = RAG / d_ppos(3,i)
@@ -289,47 +420,43 @@ c
             bex = d_ppos(5,i)
             bey = d_ppos(6,i)
             bez = d_ppos(7,i)
-
-c  calculate the equations of condition   
-c  and update the G matrix and B vector 
 c
             dw_dh = 2.d0*(1.d0/d_cov(d_jcov(i)))
             dw_gj = dw_dh*(d_ddat(i)-d_xyzf(i))
-c      
-            call XYZsph_bi0_sub(shdeg, p1, p2, ra,
-     >                          bex, bey, bez,
-     >                          dw_gj, dw_dh)
+c
+            call XYZsph_bi0_ssqgh(shdeg, p1, p2, ra,
+     >                            bex, bey, bez,
+     >                            dw_gj, dw_dh)
 c
           endif
 c
-          end subroutine ssqgh_dp_dat
+          end subroutine ssqgh_dat_kernel
 c
 c
 c
           attributes(global)
-     >    subroutine ssqgh_dp_smp(shdeg, nlocpts, nlocdatpts)
+     >    subroutine ssqgh_sam_kernel(shdeg, imin, imax, ioffset)
 c
           use cudafor
 c
           implicit none
 c
           integer, value :: shdeg
-          integer, value :: nlocpts, nlocdatpts
+          integer, value :: imin, imax, ioffset
 c
           integer i
 c
           real(8) p1, p2, ra
           real(8) bex, bey, bez
-          real(8) dw_dh, dw_gj
+          real(8) dw_gj, dw_dh
 c
 c
           i = (blockidx%x-1) * blockdim%x
      >      + threadidx%x
-     >      + nlocdatpts
-
-          if (i .gt. nlocdatpts .and. 
-     >        i .le. nlocpts) then
+     >      + ioffset
 c
+          if (i .ge. imin .and. i .le. imax) then
+c      
             p1 = d_ppos(1,i)*D2R
             p2 = d_ppos(2,i)*D2R
             ra = RAG / d_ppos(3,i)
@@ -337,23 +464,257 @@ c
             bex = d_ppos(5,i)
             bey = d_ppos(6,i)
             bez = d_ppos(7,i)
-
-            call XYZsph_bi0_sample(shdeg, p1, p2, ra, 
+c
+            dw_dh = 2.d0*(1.d0/d_cov(d_jcov(i)))
+            dw_gj = dw_dh*(d_ddat(i)-d_xyzf(i))
+c
+            call XYZsph_bi0_sample(shdeg, p1, p2, ra,
      >                             bex, bey, bez)
 c
-c  calculate the equations of condition   
-c  and update the G matrix and B vector 
-c
-            dw_dh = 2.d0*(1.d0/d_cov(d_jcov(i)))
-            dw_gj = dw_dh*(d_ddat(i)-d_xyzf(i))
-c      
-            call XYZsph_bi0_sub(shdeg, p1, p2, ra,
-     >                          bex, bey, bez,
-     >                          dw_gj, dw_dh)
+            call XYZsph_bi0_ssqgh(shdeg, p1, p2, ra,
+     >                            bex, bey, bez,
+     >                            dw_gj, dw_dh)
 c
           endif
 c
-          end subroutine ssqgh_dp_smp
+          end subroutine ssqgh_sam_kernel
+c
+c
+c
+#if defined(CUDA_KERNEL_LOOP)
+c
+c
+          attributes(host)
+     >    subroutine cpt_dat_loop(shdeg, imin, imax)
+c
+          use cudafor
+c
+          implicit none
+c
+          integer, value :: shdeg, imin, imax
+c
+          integer i
+c
+          real(8) p1, p2, ra
+          real(8) bex, bey, bez
+c
+c
+#if defined(CUDA_KERNEL_LOOP_USER)
+!$cuf kernel do <<< get_nblocks_dat(), get_nthreads() >>>
+#else
+!$cuf kernel do <<< *, * >>>
+#endif
+          do i = imin,imax
+c
+            p1 = d_ppos(1,i)*D2R
+            p2 = d_ppos(2,i)*D2R
+            ra = RAG / d_ppos(3,i)
+c
+            bex = d_ppos(5,i)
+            bey = d_ppos(6,i)
+            bez = d_ppos(7,i)
+c
+            d_xyzf(i) = XYZsph_bi0_cpt(shdeg, p1, p2, ra,
+     >                                 bex, bey, bez)
+c
+          enddo
+c
+          end subroutine cpt_dat_loop
+c
+c
+c
+          attributes(host)
+     >    subroutine cpt_sam_loop(shdeg, imin, imax)
+c
+          use cudafor
+c
+          implicit none
+c
+          integer, value :: shdeg, imin, imax
+c
+          integer i
+c
+c
+#if defined(CUDA_KERNEL_LOOP_USER)
+!$cuf kernel do <<< get_nblocks_sam(), get_nthreads() >>>
+#else
+!$cuf kernel do <<< *, * >>>
+#endif
+          do i = imin,imax
+c
+            call cpt_sam_loop_kernel(shdeg, i)
+c
+          enddo
+c
+          end subroutine cpt_sam_loop
+c
+c
+c
+          attributes(device)
+     >    subroutine cpt_sam_loop_kernel(shdeg, ip)
+c
+          implicit none
+c
+          integer, value :: shdeg, ip
+c
+          real(8) p1, p2, ra
+          real(8) bex, bey, bez
+c
+          p1 = d_ppos(1,ip)*D2R
+          p2 = d_ppos(2,ip)*D2R
+          ra = RAG / d_ppos(3,ip)
+c
+          bex = d_ppos(5,ip)
+          bey = d_ppos(6,ip)
+          bez = d_ppos(7,ip)
+c
+          call XYZsph_bi0_sample(shdeg, p1, p2, ra,
+     >                           bex, bey, bez)
+c
+          d_xyzf(ip) = XYZsph_bi0_cpt(shdeg, p1, p2, ra,
+     >                                bex, bey, bez)
+c
+          end subroutine cpt_sam_loop_kernel
+c
+c
+c
+          attributes(host)
+     >    subroutine ssqgh_dat_loop(shdeg, imin, imax)
+c
+          use cudafor
+c
+          implicit none
+c
+          integer, value :: shdeg, imin, imax
+c
+          integer i
+c
+          real(8) p1, p2, ra
+          real(8) bex, bey, bez
+          real(8) dw_gj, dw_dh
+c
+c
+#if defined(CUDA_KERNEL_LOOP_USER)
+!$cuf kernel do <<< get_nblocks_dat(), get_nthreads() >>>
+#else
+!$cuf kernel do <<< *, * >>>
+#endif
+          do i = imin,imax
+c
+            p1 = d_ppos(1,i)*D2R
+            p2 = d_ppos(2,i)*D2R
+            ra = RAG / d_ppos(3,i)
+c
+            bex = d_ppos(5,i)
+            bey = d_ppos(6,i)
+            bez = d_ppos(7,i)
+c
+            dw_dh = 2.d0*(1.d0/d_cov(d_jcov(i)))
+            dw_gj = dw_dh*(d_ddat(i)-d_xyzf(i))
+c
+            call XYZsph_bi0_ssqgh(shdeg, p1, p2, ra,
+     >                            bex, bey, bez,
+     >                            dw_gj, dw_dh)
+c
+          enddo
+c
+          end subroutine ssqgh_dat_loop
+c
+c
+c
+          attributes(host)
+     >    subroutine ssqgh_sam_loop(shdeg, imin, imax)
+c
+          use cudafor
+c
+          implicit none
+c
+          integer, value :: shdeg, imin, imax
+c
+          integer i
+c
+          real(8) p1, p2, ra
+          real(8) bex, bey, bez
+          real(8) dw_gj, dw_dh
+c
+c
+#if defined(CUDA_KERNEL_LOOP_USER)
+!$cuf kernel do <<< get_nblocks_sam(), get_nthreads() >>>
+#else
+!$cuf kernel do <<< *, * >>>
+#endif
+          do i = imin,imax
+c
+            call cpt_ssqgh_loop_kernel(shdeg, i)
+c
+          enddo
+c
+          end subroutine ssqgh_sam_loop
+c
+c
+c
+          attributes(device)
+     >    subroutine cpt_ssqgh_loop_kernel(shdeg, ip)
+c
+          implicit none
+c
+          integer, value :: shdeg, ip
+c
+          real(8) p1, p2, ra
+          real(8) bex, bey, bez
+          real(8) dw_gj, dw_dh
+c
+c
+          p1 = d_ppos(1,ip)*D2R
+          p2 = d_ppos(2,ip)*D2R
+          ra = RAG / d_ppos(3,ip)
+c
+          bex = d_ppos(5,ip)
+          bey = d_ppos(6,ip)
+          bez = d_ppos(7,ip)
+c
+          dw_dh = 2.d0*(1.d0/d_cov(d_jcov(ip)))
+          dw_gj = dw_dh*(d_ddat(ip)-d_xyzf(ip))
+c
+          call XYZsph_bi0_sample(shdeg, p1, p2, ra,
+     >                           bex, bey, bez)
+c
+          call XYZsph_bi0_ssqgh(shdeg, p1, p2, ra,
+     >                          bex, bey, bez,
+     >                          dw_gj, dw_dh)
+c
+          end subroutine cpt_ssqgh_loop_kernel
+c
+c
+c  end of <#if defined(CUDA_KERNEL_LOOP)> clause
+#endif
+c
+c
+c
+          attributes(host)
+     >    subroutine check_for_cuda_error(kernel_name)
+c
+          use cudafor
+c
+          implicit none
+c
+          include 'mpif.h'
+c
+          character(*) kernel_name
+c
+          integer rank, ierr
+c
+c
+          call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
+c
+          ierr = cudaGetLastError()
+          if (ierr .gt. 0) then
+            write(*,*) rank,
+     >        ': Error, ', kernel_name, ' kernel failure: ',
+     >        ierr, ', ', cudaGetErrorString(ierr)
+          endif
+c
+          end subroutine check_for_cuda_error
 c
 c
 c
@@ -369,7 +730,7 @@ c          p1     REAL(8)       co-latitude
 c          p2     REAL(8)       longitude
 c          ra     REAL(8)       radius
 c
-c       output:
+c       input/output:
 c          bex    REAL(8)       x component of magnetic field
 c          bey    REAL(8)       y component of magnetic field
 c          bez    REAL(8)       z component of magnetic field
@@ -381,10 +742,10 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
           implicit none
 c
-          integer shdeg
+          integer, value :: shdeg
 c
-          real(8) p1, p2, ra
-          real(8) bex, bey, bez 
+          real(8), value :: p1, p2, ra
+          real(8) bex, bey, bez
 c
           integer nu, il, im, ik
           real(8) rc, rs
@@ -485,11 +846,11 @@ c
           bez = bez2
 c
           end subroutine XYZsph_bi0_sample
-c
-c
 c     
+c
+c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c	function XYZsph_bi0_fun
+c	function XYZsph_bi0_cpt
 c		
 c       Computes the dot product of 'be' and 'bc', avoiding the need
 c       to store the entire contents of the 'be' coefficient array.
@@ -504,20 +865,20 @@ c          bey    REAL(8)     y component of magnetic field
 c          bez    REAL(8)     z component of magnetic field
 c
 c       output:
-c          XYZsph_bi0_fun  REAL(8)
+c          XYZsph_bi0_cpt  REAL(8)
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-          real(8) 
-     >    attributes(device)
-     >    function XYZsph_bi0_fun(shdeg, p1, p2, ra,
+          attributes(device)
+     >    real(8)
+     >    function XYZsph_bi0_cpt(shdeg, p1, p2, ra,
      >                            bex, bey, bez)
 c
           implicit none
 c
-          integer shdeg
+          integer, value :: shdeg
 c
-          real(8) p1, p2, ra
-          real(8) bex, bey, bez
+          real(8), value :: p1, p2, ra
+          real(8), value :: bex, bey, bez
 c
           integer nu, il, im, ik
           real(8) rc, rs
@@ -529,7 +890,7 @@ c
           real(8) ddlf(1:shdeg+1)
 c 
 c
-          XYZsph_bi0_fun = 0.0d0 
+          XYZsph_bi0_cpt = 0.0d0 
 c        
           rc = dcos(p1)
           rs = dsin(p1)
@@ -543,7 +904,7 @@ c
             bx =  ddlf(ik) * dr
             bz = -dlf(ik)  * dr * dble(ik)
 c
-            XYZsph_bi0_fun = XYZsph_bi0_fun
+            XYZsph_bi0_cpt = XYZsph_bi0_cpt
      >                     + (bex*bx + bez*bz) * d_bc(il)
           enddo
 c
@@ -569,7 +930,7 @@ c
               bz   = -dw*dc
               bzp1 = -dw*ds
 c
-              XYZsph_bi0_fun = XYZsph_bi0_fun
+              XYZsph_bi0_cpt = XYZsph_bi0_cpt
      >                       + (bx + by + bz) * d_bc(nu)
      >                       + (bxp1 + byp1 + bzp1) * d_bc(nu+1)
 c
@@ -577,12 +938,12 @@ c
             enddo
           enddo
 c
-          end function XYZsph_bi0_fun
+          end function XYZsph_bi0_cpt
 c
 c
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c	subroutine XYZsph_bi0_sub
+c	subroutine XYZsph_bi0_ssqgh
 c		
 c       Computes the gradient of the weighted sum of squares (gj) and
 c       the diagonal of the Hessian (hj). 
@@ -595,24 +956,22 @@ c          ra       REAL(8)     radius
 c          bex      REAL(8)     x component of magnetic field
 c          bey      REAL(8)     y component of magnetic field
 c          bez      REAL(8)     z component of magnetic field 
-c          dw_gj    REAL(8)     multiplier for gj terms
-c          dw_dh    REAL(8)     multiplier for dh terms
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
           attributes(device)
-     >    subroutine XYZsph_bi0_sub(shdeg, p1, p2, ra,
-     >                              bex, bey, bez,
-     >                              dw_gj, dw_dh)
+     >    subroutine XYZsph_bi0_ssqgh(shdeg, p1, p2, ra,
+     >                                bex, bey, bez,
+     >                                dw_gj, dw_dh)
 c
           use cudafor
 c
           implicit none
 c
-          integer shdeg         
+          integer, value :: shdeg      
 c
-          real(8) p1, p2, ra
-          real(8) bex, bey, bez 
-          real(8) dw_gj, dw_dh
+          real(8), value :: p1, p2, ra
+          real(8), value :: bex, bey, bez 
+          real(8), value :: dw_gj, dw_dh
 c
           integer nu, il, im, ik, istat
           real(8) rc, rs
@@ -641,7 +1000,6 @@ c
 c
             istat = atomicadd(d_gj(il), dw_gj*be)
             istat = atomicadd(d_dh(il), dw_dh*(be**2))
-c
           enddo
 c
 c
@@ -679,7 +1037,7 @@ c
             enddo
           enddo
 c
-          end subroutine XYZsph_bi0_sub
+          end subroutine XYZsph_bi0_ssqgh
 c
 c
 c

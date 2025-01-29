@@ -78,6 +78,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
         use coeff_map
         use cudafor
+        use kernels
 c
         implicit none
 c
@@ -85,9 +86,9 @@ c
 c
         character(len=*), parameter :: VERSION = "5.0.0.cuda"
 c
-        integer, parameter :: POLAK_RIBIERE = 1
+        real(8), parameter :: D2R = 4.d0*datan(1.d0)/180.d0
 c
-        real*8, parameter :: D2R = 4.d0*datan(1.d0)/180.d0
+        integer, parameter :: POLAK_RIBIERE = 1
 c
         character fname*100
         character buf*100
@@ -98,8 +99,9 @@ c
         real*8  std, stdt, dd, dl(3), dampfac
         real*8  resdeg
         integer cmdcnt, scheme, serialrd
-        integer ncoeffs
-        integer ndatpts, nsampts, npts
+        integer cuda_nblocks_dat, cuda_nblocks_sam
+        integer cuda_nthreads
+        integer ncoeffs, ndatpts, nsampts, npts
         integer imin_locdatpts
         integer nlocsampts, imin_locsampts
         integer imin_locpts
@@ -161,13 +163,21 @@ c
           write(*,*)
           write(*,*) 'GPU Device Properties'
           write(*,*) cuda_prop%name
+          write(*,*) 'major: ', cuda_prop%major
+          write(*,*) 'minor: ', cuda_prop%minor
           write(*,*) 'computeMode: ', cuda_prop%computeMode
           write(*,*) 'clockRate: ', cuda_prop%clockRate
           write(*,*) 'totalConstMem: ', cuda_prop%totalConstMem
           write(*,*) 'totalGlobalMem: ', cuda_prop%totalGlobalMem
           write(*,*) 'managedMemory: ', cuda_prop%managedMemory
+          write(*,*) 'concurrentKernels: ',
+     >        cuda_prop%concurrentKernels
+          write(*,*) 'concurrentManagedAccess: ',
+     >        cuda_prop%concurrentManagedAccess 
           write(*,*) 'unifiedAddressing: ',
      >        cuda_prop%unifiedAddressing
+          write(*,*) 'unifiedFunctionPointers: ',
+     >        cuda_prop%unifiedFunctionPointers
           write(*,*) 'multiProcessorCount: ',
      >        cuda_prop%multiProcessorCount
           write(*,*) 'maxBlocksPerMultiProcessor: ',
@@ -232,6 +242,24 @@ c  Read in command line arguments
         else
           serialrd = 0
         endif
+        if (cmdcnt .ge. 6) then
+          call GET_COMMAND_ARGUMENT(6,argstr)
+          read(argstr,*) cuda_nblocks_dat
+        else
+          cuda_nblocks_dat = 0
+        endif
+        if (cmdcnt .ge. 7) then
+          call GET_COMMAND_ARGUMENT(7,argstr)
+          read(argstr,*) cuda_nblocks_sam
+        else
+          cuda_nblocks_sam = 0
+        endif
+        if (cmdcnt .ge. 8) then
+          call GET_COMMAND_ARGUMENT(8,argstr)
+          read(argstr,*) cuda_nthreads
+        else
+          cuda_nthreads = 0
+        endif
         if (rank .eq. 0) then
           write(*,*) 'WMAM v', VERSION
           write(*,*) ''
@@ -240,6 +268,9 @@ c  Read in command line arguments
           write(*,*) 'scheme: ', scheme
           write(*,*) 'dampfac: ', dampfac
           write(*,*) 'serialrd: ', serialrd
+          write(*,*) 'cuda_nblocks_dat: ', cuda_nblocks_dat
+          write(*,*) 'cuda_nblocks_sam: ', cuda_nblocks_sam
+          write(*,*) 'cuda_nthreads: ', cuda_nthreads
           write(*,*) ''
         endif
 
@@ -268,12 +299,12 @@ c  Settings
 c
 c  Partition workload
         allocate(proc_ndp(1:nranks), proc_idp(1:nranks))
-        call thread_segmenter(nranks, ndatpts, proc_ndp, proc_idp)
+        call array_segmenter(nranks, ndatpts, proc_ndp, proc_idp)
         nlocdatpts = proc_ndp(rank+1)
         imin_locdatpts = proc_idp(rank+1)
         
         allocate(proc_nsp(1:nranks), proc_isp(1:nranks))        
-        call thread_segmenter(nranks, nsampts, proc_nsp, proc_isp)
+        call array_segmenter(nranks, nsampts, proc_nsp, proc_isp)
         nlocsampts = proc_nsp(rank+1)
         imin_locsampts = proc_isp(rank+1)
 
@@ -317,6 +348,16 @@ c  Output array sizes
      >               imin_locpts
           write(*,*) ''
           write(*,*) ''
+        endif
+
+c
+c  Initialise the number of blocks and threads used for cuda kernels
+        call init_nblocks_nthreads(cuda_nblocks_dat, cuda_nblocks_sam,
+     >                             cuda_nthreads,
+     >                             nlocdatpts, nlocsampts)
+c
+        if (rank .eq. 0) then
+           call write_nblocks_nthreads()
         endif
 
 c

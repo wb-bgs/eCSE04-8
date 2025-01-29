@@ -25,66 +25,58 @@ c
 c
         implicit none
 c
-        include 'mpif.h'
-c
         integer shdeg, nb
         integer nlocpts, nlocdatpts
 c
         real*8 bc(1:nb)
         real*8 xyzf(1:nlocpts)
 c
-        integer nthreads, nblocks, nlocsampts
-        integer rank, istat, ierr     
-c
-c
-        call MPI_Comm_rank(MPI_COMM_WORLD, rank, ierr)
+        integer istat
 c
 c
         call init_cpt_device_arrays(nb, bc)
 c
 c
-        nthreads = 128
-        nblocks = nlocdatpts / nthreads
-        if (MOD(nlocdatpts,nthreads) .gt. 0) then
-          nblocks = nblocks + 1
-        endif
+c  Offload data points
+c          
 c
-        call cpt_dat_vals_p_dat<<<nblocks,nthreads>>>
-     >    (shdeg, nlocpts, nlocdatpts)
+#if defined(CUDA_KERNEL_LOOP)
 c
+        call cpt_dat_loop(shdeg, 1, nlocdatpts)
+c      
+#else       
+c
+        call cpt_dat_kernel <<< get_nblocks_dat(), get_nthreads() >>>
+     >    (shdeg, 1, nlocdatpts, 0)
+c
+#endif
+c    
         istat = cudaDeviceSynchronize()
 c
 #if defined(CUDA_DEBUG)
-        ierr = cudaGetLastError()
-        if (ierr .gt. 0) then
-          write(*,*) rank,
-     >        ': Error, cpt_dat_vals_p_dat kernel failure: ',
-     >        ierr, ', ', cudaGetErrorString(ierr)
-          stop
-        endif
+        call check_for_cuda_error('cpt_dat')
 #endif
 c
 c
-        nthreads = 128
-        nlocsampts = nlocpts - nlocdatpts
-        nblocks = nlocsampts / nthreads
-        if (MOD(nlocsampts,nthreads) .gt. 0) then
-          nblocks = nblocks + 1
-        endif
+c  Offload sampling points
+c  Workload is higher due to cpt_sam_kernel_loop()/cpt_sam_kernel() calling XYZsph_bi0_sample()
 c
-        call cpt_dat_vals_p_smp<<<nblocks,nthreads>>>
-     >    (shdeg, nlocpts, nlocdatpts)
-
+c
+#if defined(CUDA_KERNEL_LOOP)
+c
+        call cpt_sam_loop(shdeg, nlocdatpts+1, nlocpts)
+c
+#else
+c
+        call cpt_sam_kernel <<< get_nblocks_sam(), get_nthreads() >>>
+     >    (shdeg, nlocdatpts+1, nlocpts, nlocdatpts)
+c
+#endif
+c    
         istat = cudaDeviceSynchronize()
 c
 #if defined(CUDA_DEBUG)
-        ierr = cudaGetLastError()
-        if (ierr .gt. 0) then
-          write(*,*) rank,
-     >        ': Error, cpt_dat_vals_p_smp kernel failure: ',
-     >        ierr, ', ', cudaGetErrorString(ierr)
-          stop
-        endif
+        call check_for_cuda_error('cpt_sam')
 #endif
 c
 c

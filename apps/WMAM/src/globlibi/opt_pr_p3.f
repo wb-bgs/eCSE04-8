@@ -183,10 +183,9 @@ c
             ghj0(1:nb) = 0.0d0
         endif
 c
-c  Allocate private arrays used within "XYZshp_bi0.f"
+c  Allocate and initialize d2a array used within mk_lf_dlf() subroutine
         allocate(d2a(0:shdeg))
 c 
-c  Initialize d2a array used within mk_lf_dlf() subroutine
         do nm = 0,shdeg
           dnm = dble(nm)
           d1 = dgamln(2*dnm+1.0d0, ierr)

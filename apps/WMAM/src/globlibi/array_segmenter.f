@@ -1,5 +1,5 @@
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c      subroutine thread_segmenter.f
+c      subroutine array_segmenter.f
 c                  M.Rother 2010-04-09          
 c
 c   modified 12.04.2010 to usual Lesur's format (V.Lesur)
@@ -21,7 +21,7 @@ c      1- no checks at 'proc_np' and 'proc_ip', content overwritten,
 c         correct dimension etc. is assumed.
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-        subroutine thread_segmenter(nranks, nelems, proc_np, proc_ip)
+        subroutine array_segmenter(nranks, nelems, proc_np, proc_ip)
 c
         implicit none
 c
@@ -50,4 +50,4 @@ c Set indexes
         enddo
 c
         return
-        end subroutine thread_segmenter
+        end subroutine array_segmenter

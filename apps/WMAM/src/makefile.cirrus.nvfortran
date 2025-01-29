@@ -31,7 +31,7 @@ misc.o\
 coeff_map.o\
 mpi_status_types.o\
 set_FG_sampling.o\
-thread_segmenter.o\
+array_segmenter.o\
 cpt_dat_vals_p.o\
 cptstd_dp.o\
 ssqgh_dp.o\
@@ -44,7 +44,7 @@ ini_model.o\
 point_data.o\
 ref_model.o\
 #--------------------------------------
-$(main) : $(OBJ) $(LALIB) $(main).o 
+$(main) : $(OBJ) $(main).o 
 	 $(FC) $(FFLAGS) -o $(main) $(main).o $(OBJ) $(LIBS)
 #	 rm *.o
 #	 rm *.mod
