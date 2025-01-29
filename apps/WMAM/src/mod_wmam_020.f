@@ -78,15 +78,14 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
         use coeff_map
         use cudafor
-        use kernels
+        use kernels, only : D2R,
+     >    init_nblocks_nthreads, write_nblocks_nthreads
 c
         implicit none
 c
         include 'mpif.h'
 c
         character(len=*), parameter :: VERSION = "5.0.0.cuda"
-c
-        real(8), parameter :: D2R = 4.d0*datan(1.d0)/180.d0
 c
         integer, parameter :: POLAK_RIBIERE = 1
 c

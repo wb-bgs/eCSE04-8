@@ -20,7 +20,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine cpt_dat_vals_p(shdeg, nb, nlocpts, nlocdatpts,
      >                            bc, xyzf)
 c
-        use cudafor
+        use cudafor, only : cudaDeviceSynchronize
         use kernels
 c
         implicit none

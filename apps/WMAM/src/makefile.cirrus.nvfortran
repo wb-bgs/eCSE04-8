@@ -20,11 +20,11 @@ VPATH=.:io:globlibi
 OBJ=\
 mklf_F.o\
 mkdlf_F.o\
+kernels.o\
 Xsph_bi.o\
 Ysph_bi.o\
 Zsph_bi.o\
 sph_bi.o\
-kernels.o\
 dy2mjd.o\
 gauleg.o\
 misc.o\

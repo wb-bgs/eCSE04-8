@@ -68,7 +68,9 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >                       bc, ppos, dl, cov, jcov,
      >                       stdt, xyzf)
 c
-        use kernels
+        use kernels, only : allocate_device_arrays,
+     >    deallocate_device_arrays,
+     >    init_device_arrays
 c
         implicit none
 c

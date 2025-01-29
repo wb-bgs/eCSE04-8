@@ -29,7 +29,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >                      bc, ddat, xyzf,
      >                      gj, dh)
 c
-        use cudafor
+        use cudafor, only : cudaDeviceSynchronize
         use kernels
 c
         implicit none

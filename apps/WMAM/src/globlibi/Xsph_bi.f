@@ -32,10 +32,9 @@ c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 	subroutine Xsph_bi(nd, nb, nlie, pos, be)
 c
-        implicit none
+        use kernels, only : RAG, D2R
 c
-        real*8, parameter :: RAG = 6371.2d0
-        real*8, parameter :: D2R = 4.d0*datan(1.d0)/180.d0
+        implicit none
 c
         integer nd, nb, nlie
         real*8 pos(1:nd+1), be(1:nb)

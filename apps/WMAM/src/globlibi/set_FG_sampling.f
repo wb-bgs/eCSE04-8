@@ -20,9 +20,9 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >                             imin_locsampts, imax_locsampts,
      >                             vrt, wght)
 c
-        implicit none
+        use kernels, only : D2R
 c
-        real*8, parameter :: D2R = 4.d0*datan(1.d0)/180.d0
+        implicit none
 c
         integer lmax, nlocsampts
         integer imin_locsampts, imax_locsampts

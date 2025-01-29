@@ -30,11 +30,11 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >                              ryg, dampfac, bc,
      >                              cov, icov, jcov, ppos)
 c
+        use kernels, only : RAG
+c
         implicit none
 c
         include 'mpif.h'
-c
-        real*8, parameter :: RAG = 6371.2d0
 c
         integer shdeg, ncoeffs, nparams, nd
         integer nlocdatpts, nlocsampts, nlocpts

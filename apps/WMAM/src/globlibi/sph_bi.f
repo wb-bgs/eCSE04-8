@@ -32,9 +32,9 @@ c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine sph_bi(iof, nub, nd, nb0, nb, bc, bp, be)
 c
-        implicit none
+        use kernels, only : D2R
 c
-        real*8, parameter :: D2R = 4.d0*datan(1.d0)/180.d0
+        implicit none
 c
         character iof
         integer nub, nb0, nb, nd

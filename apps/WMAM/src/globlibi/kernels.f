@@ -1,9 +1,39 @@
         module kernels
 c
-          implicit none
+          implicit none   
 c
 c
-          public
+          real(8), parameter :: RAG = 6371.2d0
+          real(8), parameter :: D2R = 4.d0*datan(1.d0)/180.d0
+c
+          integer nblocks_dat, nblocks_sam, nthreads
+c
+          real(8), allocatable, device :: d_d2a(:)
+          real(8), allocatable, device :: d_ppos(:,:)
+          real(8), allocatable, device :: d_cov(:)
+          integer, allocatable, device :: d_jcov(:)       
+c
+          real(8), allocatable, device :: d_bc(:)
+          real(8), allocatable, device :: d_ddat(:)
+          real(8), allocatable, device :: d_xyzf(:) 
+          real(8), allocatable, device :: d_gj(:)
+          real(8), allocatable, device :: d_dh(:) 
+c
+c
+          private :: nblocks_dat, nblocks_sam, nthreads
+          private :: d_d2a, d_ppos, d_cov, d_jcov
+          private :: d_bc, d_ddat, d_xyzf, d_gj, d_dh
+c
+          public :: RAG, D2R
+c
+c
+          private ::
+     >      XYZsph_bi0_sample,
+     >      XYZsph_bi0_cpt,
+     >      XYZsph_bi0_ssqgh,
+     >      mk_lf_dlf
+c
+          public ::
      >      allocate_device_arrays,
      >      deallocate_device_arrays,
      >      init_nblocks_nthreads,
@@ -29,30 +59,6 @@ c
      >      ssqgh_sam_loop_kernel,
 #endif
      >      check_for_cuda_error
-c
-          private
-     >      XYZsph_bi0_sample,
-     >      XYZsph_bi0_cpt,
-     >      XYZsph_bi0_ssqgh,
-     >      mk_lf_dlf
-c
-c
-          private
-            real(8), parameter :: RAG = 6371.2d0
-            real(8), parameter :: D2R = 4.d0*datan(1.d0)/180.d0
-c
-            integer nblocks_dat, nblocks_sam, nthreads
-c
-            real(8), allocatable, device :: d_d2a(:)
-            real(8), allocatable, device :: d_ppos(:,:)
-            real(8), allocatable, device :: d_cov(:)
-            integer, allocatable, device :: d_jcov(:)       
-c
-            real(8), allocatable, device :: d_bc(:)
-            real(8), allocatable, device :: d_ddat(:)
-            real(8), allocatable, device :: d_xyzf(:) 
-            real(8), allocatable, device :: d_gj(:)
-            real(8), allocatable, device :: d_dh(:)   
 c
 c
         contains
