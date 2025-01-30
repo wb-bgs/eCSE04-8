@@ -163,6 +163,7 @@ c  Allocate and initialise arrays used to handle output from ssqgh_dp() subrouti
 c
         allocate(ds(1:nb))
         allocate(gj(1:nb))
+        allocate(dh(1:nb))
         allocate(ghj(1:nb))
         gj(1:nb)  = 0.0d0
         ghj(1:nb) = 0.0d0
@@ -229,7 +230,6 @@ c All: do their part in finding next step length and direction
             if (inv_stat%yon(3:3) .eq. 'y') then
 c All: do their part in finding GJ, DH
                 ip = 1
-                allocate(dh(1:nb))
                 dh(1:nb) = 0.0d0
 c
                 if ((itmax(1) .ge. 0) .or. (it .ne. 1)) then
@@ -264,7 +264,6 @@ c All: update using inverse of "Hessien matrix diag"
                     ghj(i) = gj(i)/dh(i)
                 enddo
 c
-                deallocate(dh)
 c MP:  Set descent direction
                 if (rank .eq. 0) then
                     beta = 0.0d0
@@ -473,7 +472,7 @@ c
         deallocate(d2a)
         deallocate(dlf, ddlf)
 c
-        deallocate(ddat, ds, gj, ghj)
+        deallocate(ddat, ds, gj, dh, ghj)
         if (rank .eq. 0) then
             deallocate(gj0, ghj0)
         endif
