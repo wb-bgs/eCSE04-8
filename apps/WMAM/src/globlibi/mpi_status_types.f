@@ -10,7 +10,11 @@ c
 c
 	integer :: nb
 	real*8 :: bc(1:nb)
+#if defined(CUDA_PINNED_MEMORY)
+        type(inversion_status_pinned) :: inv_stat
+#else
         type(inversion_status) :: inv_stat
+#endif
         type(search_status) :: src_stat
         integer :: MPI_INVERSION_STATUS
         integer :: MPI_SEARCH_STATUS 
@@ -34,13 +38,25 @@ c
      >      :: src_stat_disps(STAT_NBLOCKS)
 
         integer :: ierr
+#if defined(CUDA_PINNED_MEMORY)
+        logical :: is_pinned
+        integer :: rank, ierr
+#endif
 	
 c  Commit MPI_INVERSION_STATUS type
         inv_stat_lens = (/ 5, nb /)
 
+#if defined(CUDA_PINNED_MEMORY)
+        call MPI_Comm_rank(MPI_COMM_WORLD,rank,ierr)
+
+        allocate(inv_stat%bc(nb), PINNED=is_pinned)
+        if (.not. is_pinned) then
+          write(*,*) rank, ': nv_stat%bc(nb) not pinned!'
+        endif
+#else
         allocate(inv_stat%bc(nb))
+#endif
         inv_stat%bc(1:nb)=bc(1:nb)
-c       deallocate(bc)
 
         call MPI_GET_ADDRESS(inv_stat%yon, inv_stat_disps(1), ierr) 
 	call MPI_GET_ADDRESS(inv_stat%bc, inv_stat_disps(2), ierr)
@@ -90,7 +106,6 @@ c
         call MPI_TYPE_FREE(MPI_INVERSION_STATUS, ierr)
 	call MPI_TYPE_FREE(MPI_SEARCH_STATUS, ierr)
 
-c       allocate(bc(1:nb))
         bc(1:nb)=inv_stat%bc(1:nb)
         deallocate(inv_stat%bc)
 	     

@@ -69,7 +69,12 @@ c
         real*8 dj(1:3), st(1:3)
         real*8 fct, fctt, fctl, fcts, dd, rt
         real*8 epss, stp1, stp2, gr, gl, numer, denom
+#if defined(CUDA_PINNED_MEMORY) 
+        real*8, allocatable, pinned :: bcn(:)
+        logical is_pinned
+#else
         real*8, allocatable :: bcn(:)
+#endif
         character yon_rf
 c
 c
@@ -78,7 +83,14 @@ c  All defining parallel enviroment
  
         src_stat%stp=stp
 c
+#if defined(CUDA_PINNED_MEMORY)
+        allocate(bcn(1:nb), PINNED=is_pinned)
+        if (.not. is_pinned) then
+          write(*,*) rank, ': lsearch_p(), bcn not pinned!'
+        endif
+#else
         allocate(bcn(1:nb))
+#endif
 c
 c MP: does the all lot
         if (rank .eq. 0) then

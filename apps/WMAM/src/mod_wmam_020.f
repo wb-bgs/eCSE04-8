@@ -115,11 +115,19 @@ c
         integer nlocpts, nlocdatpts
 c
         integer, allocatable :: icov(:)
+#if defined(CUDA_PINNED_MEMORY)
+        integer, allocatable, pinned :: jcov(:)
+        real*8, allocatable, pinned :: cov(:)
+        real*8, allocatable, pinned :: ppos(:,:)
+        real*8, allocatable, pinned :: xyzf(:)
+        logical is_pinned
+#else
         integer, allocatable :: jcov(:)
         real*8, allocatable :: cov(:)
-        real*8, allocatable :: bc(:)
         real*8, allocatable :: ppos(:,:)
         real*8, allocatable :: xyzf(:)
+#endif
+        real*8, allocatable :: bc(:)
 c
         real*8, allocatable :: cm(:), err(:)
         real*8 diff(4)
@@ -321,12 +329,31 @@ c  Partition workload
 
 c
 c  Array allocations
-        allocate(bc(1:nb))
-        allocate(ppos(1:nd+1,1:nlocpts))
-        allocate(cov(1:nlocpts))
         allocate(icov(1:nlocpts+2))
+#if defined(CUDA_PINNED_MEMORY)
+        allocate(jcov(1:nlocpts+2), PINNED=is_pinned)
+        if (.not. is_pinned) then
+          write(*,*) rank, ': jcov not pinned!'
+        endif
+        allocate(cov(1:nlocpts), PINNED=is_pinned)
+        if (.not. is_pinned) then
+          write(*,*) rank, ': cov not pinned!'
+        endif
+        allocate(xyzf(1:nlocpts), PINNED=is_pinned)
+        if (.not. is_pinned) then
+          write(*,*) rank, ': xyzf not pinned!'
+        endif
+        allocate(ppos(1:nd+1,1:nlocpts), PINNED=is_pinned)
+        if (.not. is_pinned) then
+          write(*,*) rank, ': ppos not pinned!'
+        endif
+#else
         allocate(jcov(1:nlocpts+2))
+        allocate(cov(1:nlocpts))
         allocate(xyzf(1:nlocpts))
+        allocate(ppos(1:nd+1,1:nlocpts))
+#endif
+        allocate(bc(1:nb))
 
 c
 c  Output array sizes
@@ -346,6 +373,24 @@ c  Output array sizes
           write(*,*) 'Global Index for Data+Sampling points: ',
      >               imin_locpts
           write(*,*) ''
+        endif
+
+c
+c  Write out which preprocessor defines are active
+        if (rank .eq. 0) then
+          write(*,*) ''
+#if defined(CUDA_KERNEL_LOOP)
+          write(*,*) 'CUDA_KERNEL_LOOP'
+#endif
+#if defined(CUDA_KERNEL_LOOP_USER)
+          write(*,*) 'CUDA_KERNEL_LOOP_USER'
+#endif
+#if defined(CUDA_PINNED_MEMORY)
+          write(*,*) 'CUDA_PINNED_MEMORY'
+#endif
+#if defined(CUDA_DEBUG)
+          write(*,*) 'CUDA_DEBUG'
+#endif
           write(*,*) ''
         endif
 

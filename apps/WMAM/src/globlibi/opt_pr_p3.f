@@ -98,7 +98,11 @@ c
         real*8 std0, stp, std
         real*8 epss, dd, cond, dm, beta
 c
+#if defined(CUDA_PINNED_MEMORY)
+        type(inversion_status_pinned) inv_stat
+#else
         type(inversion_status) inv_stat
+#endif
         type(search_status) src_stat
         integer MPI_INVERSION_STATUS, MPI_SEARCH_STATUS
 c
@@ -112,14 +116,24 @@ c  variables for populating d2a array
         integer nm
         real*8  dnm, d1, d2
 c
+#if defined(CUDA_PINNED_MEMORY)
 c  declare arrays used within "XYZsph_bi0.f"
-        real*8, allocatable :: d2a(:)
+        real*8, allocatable, pinned :: d2a(:)
 c
 c  declare arrays used to handle output from ssqgh_dp() subroutine
+        real*8, allocatable, pinned :: dh(:)
+        real*8, allocatable, pinned :: gj(:)
+        real*8, allocatable, pinned :: ddat(:)
+        real*8, allocatable, pinned :: ds(:)
+        logical is_pinned
+#else
+        real*8, allocatable :: d2a(:)
+c
         real*8, allocatable :: dh(:)
         real*8, allocatable :: gj(:)
         real*8, allocatable :: ddat(:)
         real*8, allocatable :: ds(:)
+#endif
         real*8, allocatable :: gj0(:)
         real*8, allocatable :: ghj(:)
         real*8, allocatable :: ghj0(:)
@@ -168,13 +182,36 @@ c Starting conditions
         if (itm .eq. 0) inv_stat%yon(3:4) = 'nn'
 c
 c  Allocate and initialise arrays used to handle output from ssqgh_dp() subroutine
+#if defined(CUDA_PINNED_MEMORY)
+        allocate(ddat(1:nlocpts), PINNED=is_pinned)
+        if (.not. is_pinned) then
+          write(*,*) rank, ': ddat not pinned!'
+        endif
+#else
         allocate(ddat(1:nlocpts))
+#endif
         do ip = 1,nlocpts
           ddat(ip) = ppos(nd+1,ip)
         enddo
 c
+#if defined(CUDA_PINNED_MEMORY)
+        allocate(ds(1:nb), PINNED=is_pinned)
+        if (.not. is_pinned) then
+          write(*,*) rank, ': ds not pinned!'
+        endif
+        allocate(gj(1:nb), PINNED=is_pinned)
+        if (.not. is_pinned) then
+          write(*,*) rank, ': gj not pinned!'
+        endif
+        allocate(dh(1:nb), PINNED=is_pinned)
+        if (.not. is_pinned) then
+          write(*,*) rank, ': dh not pinned!'
+        endif
+#else
         allocate(ds(1:nb))
         allocate(gj(1:nb))
+        allocate(dh(1:nb))
+#endif
         allocate(ghj(1:nb))
         gj(1:nb)  = 0.0d0
         ghj(1:nb) = 0.0d0
@@ -186,7 +223,14 @@ c
         endif
 c
 c  Allocate and initialize d2a array used within mk_lf_dlf() subroutine
+#if defined(CUDA_PINNED_MEMORY)
+        allocate(d2a(0:shdeg), PINNED=is_pinned)
+        if (.not. is_pinned) then
+          write(*,*) rank, ': d2a not pinned!'
+        endif
+#else
         allocate(d2a(0:shdeg))
+#endif
 c 
         do nm = 0,shdeg
           dnm = dble(nm)
@@ -230,7 +274,6 @@ c All: do their part in finding next step length and direction
             if (inv_stat%yon(3:3) .eq. 'y') then
 c All: do their part in finding GJ, DH
                 ip = 1
-                allocate(dh(1:nb))
                 dh(1:nb) = 0.0d0
 c
                 if ((itmax(1) .ge. 0) .or. (it .ne. 1)) then
@@ -264,7 +307,6 @@ c All: update using inverse of "Hessien matrix diag"
                     ghj(i) = gj(i)/dh(i)
                 enddo
 c
-                deallocate(dh)
 c MP:  Set descent direction
                 if (rank .eq. 0) then
                     beta = 0.0d0
@@ -467,7 +509,7 @@ c
 c
         deallocate(d2a)
 c
-        deallocate(ddat, ds, gj, ghj)
+        deallocate(ddat, ds, gj, dh, ghj)
         if (rank .eq. 0) then
             deallocate(gj0, ghj0)
         endif

@@ -63,16 +63,28 @@ c
         real*8 ds(1:nb), stp
 c
         integer i
-        integer ierr, rank 
+        integer ierr, rank
+#if defined(CUDA_PINNED_MEMORY) 
+        real*8, allocatable, pinned :: bcn(:), zz(:)
+        logical is_pinned
+#else
         real*8, allocatable :: bcn(:), zz(:)
+#endif
         real*8 zzs
 c        
 c
 c All: Defining parallel enviroment
         call MPI_Comm_rank(MPI_COMM_WORLD,rank,ierr)
 c
-c All: Calculate  sqrt(w).A.DS 
+c All: Calculate  sqrt(w).A.DS
+#if defined(CUDA_PINNED_MEMORY)
+        allocate(zz(1:nlocpts), PINNED=is_pinned)
+        if (.not. is_pinned) then
+          write(*,*) rank, ': gc_step_p(), zz not pinned!'
+        endif
+#else 
         allocate(zz(1:nlocpts))
+#endif
         zz(1:nlocpts) = 0.0d0
         call cpt_dat_vals_p(shdeg, nb, nlocpts, nlocdatpts,
      >                      ds, zz)
@@ -99,7 +111,14 @@ c
         endif
 c
 c ALL: Estimate the new set of parameter for a step stp in direction ds
+#if defined(CUDA_PINNED_MEMORY)
+        allocate(bcn(1:nb), PINNED=is_pinned)
+        if (.not. is_pinned) then
+          write(*,*) rank, ': gc_step_p(), bcn not pinned!'
+        endif
+#else
         allocate(bcn(1:nb))
+#endif
         bcn(1:nb) = bc(1:nb) + stp*ds(1:nb)
 c
 c ALL: Do the forward modelling
