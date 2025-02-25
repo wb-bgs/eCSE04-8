@@ -66,9 +66,9 @@ c
 #endif
 c    
 #if defined(CUDA_STREAMS)
-         istat = cudaStreamSynchronize(stream_id)
+        istat = cudaStreamSynchronize(stream_id)
 #else
-         istat = cudaDeviceSynchronize()
+        istat = cudaDeviceSynchronize()
 #endif
 c
 #if defined(CUDA_DEBUG)
