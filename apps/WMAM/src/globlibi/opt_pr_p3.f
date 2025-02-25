@@ -72,6 +72,11 @@ c
      >    deallocate_device_arrays,
      >    init_device_arrays
 c
+#if defined(CUDA_STREAMS)
+        use kernels, only : create_cuda_streams,
+     >    destroy_cuda_streams
+#endif
+c
         implicit none
 c
         include 'mpif.h'
@@ -254,6 +259,11 @@ c
 c
         call init_device_arrays(shdeg, nd, nlocpts,
      >                          d2a, ppos, cov, jcov)
+c
+c
+#if defined(CUDA_STREAMS)
+        call create_cuda_streams()
+#endif
 c
 c
 c All start iteration
@@ -503,6 +513,11 @@ c
 c
         stdt = std
         if (rank .eq. 0) close(iunit)
+c
+c
+#if defined(CUDA_STREAMS)
+        call destroy_cuda_streams()
+#endif
 c
 c
         call deallocate_device_arrays()

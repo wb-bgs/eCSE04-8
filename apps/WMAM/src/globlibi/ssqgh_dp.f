@@ -29,7 +29,11 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >                      bc, ddat, xyzf,
      >                      gj, dh)
 c
+#if defined(CUDA_STREAMS)
+        use cudafor, only : cudaStreamSynchronize
+#else
         use cudafor, only : cudaDeviceSynchronize
+#endif 
         use kernels
 c
         implicit none
@@ -44,7 +48,8 @@ c
         real*8 xyzf(1:nlocpts)
         real*8 gj(1:nb), dh(1:nb)
 c
-        integer ierr, istat
+        integer ierr, istat, stream_id
+        integer nthreads
 c
 c
         call init_ssqgh_device_arrays(nb, nlocpts, bc, ddat, xyzf)
@@ -53,18 +58,31 @@ c
 c  Offload data points
 c          
 c
+#if defined(CUDA_STREAMS)
+        stream_id = get_cuda_stream_dat_id()
+#else
+        stream_id = 0
+#endif
+c
+        nthreads = get_nthreads()
+c
 #if defined(CUDA_KERNEL_LOOP)
 c
-        call ssqgh_dat_loop(shdeg, 1, nlocdatpts)
+        call ssqgh_dat_loop(shdeg, nlocdatpts)
 c      
 #else       
 c
-        call ssqgh_dat_kernel <<< get_nblocks_dat(), get_nthreads() >>>
-     >    (shdeg, 1, nlocdatpts, 0)
+        call ssqgh_dat_kernel <<< get_nblocks_dat(), nthreads,
+     >                            0, stream_id >>>
+     >    (shdeg, nlocdatpts)
 c
 #endif
 c    
+#if defined(CUDA_STREAMS)
+        istat = cudaStreamSynchronize(stream_id)
+#else
         istat = cudaDeviceSynchronize()
+#endif
 c
 #if defined(CUDA_DEBUG)
         call check_for_cuda_error('ssqgh_dat')
@@ -75,18 +93,29 @@ c  Offload sampling points
 c  Workload is higher due to ssqgh_kernel_loop()/ssqgh_sam_kernel() calling XYZsph_bi0_sample()
 c
 c
+#if defined(CUDA_STREAMS)
+        stream_id = get_cuda_stream_sam_id()
+#else
+        stream_id = 0
+#endif
+c
 #if defined(CUDA_KERNEL_LOOP)
 c
-        call ssqgh_sam_loop(shdeg, nlocdatpts+1, nlocpts)
+        call ssqgh_sam_loop(shdeg, nlocdatpts, nlocpts-nlocdatpts)
 c 
 #else
 c
-        call ssqgh_sam_kernel <<< get_nblocks_sam(), get_nthreads() >>>
-     >    (shdeg, nlocdatpts+1, nlocpts, nlocdatpts)
+        call ssqgh_sam_kernel <<< get_nblocks_sam(), nthreads,
+     >                            0, stream_id >>>
+     >    (shdeg, nlocdatpts, nlocpts-nlocdatpts)
 c
 #endif
 c    
+#if defined(CUDA_STREAMS)
+        istat = cudaStreamSynchronize(stream_id)
+#else
         istat = cudaDeviceSynchronize()
+#endif
 c
 #if defined(CUDA_DEBUG)
         call check_for_cuda_error('ssqgh_sam')

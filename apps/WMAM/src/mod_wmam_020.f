@@ -138,7 +138,7 @@ c  MPI-related variables
         integer node_num
         integer mpi_comm_local
         integer nranks_local, rank_local
-        integer ndevices
+        integer ndevices, device_id
         integer(kind=cuda_count_kind) cuda_cnt
 #if defined(CUDA_DEBUG)
         type(cudaDeviceProp) :: cuda_prop
@@ -158,7 +158,9 @@ c  Assign the MPI rank to a GPU
         rank_local = MOD(rank,nranks_local)
 c
         ierr = cudaGetDeviceCount(ndevices)
-        ierr = cudaSetDevice(MOD(rank_local,ndevices))
+c
+        device_id = MOD(rank_local,ndevices)
+        ierr = cudaSetDevice(device_id)
 c
 c  Set CUDA Malloc Heap Size to 1 GB
         cuda_cnt = 1024*(1024**2)
@@ -166,7 +168,7 @@ c  Set CUDA Malloc Heap Size to 1 GB
 c
 #if defined(CUDA_DEBUG)
         if (rank .eq. 0) then  
-          ierr = cudaGetDeviceProperties(cuda_prop, 0)
+          ierr = cudaGetDeviceProperties(cuda_prop, device_id)
           write(*,*)
           write(*,*) 'GPU Device Properties'
           write(*,*) cuda_prop%name
@@ -388,6 +390,9 @@ c  Write out which preprocessor defines are active
 #if defined(CUDA_PINNED_MEMORY)
           write(*,*) 'CUDA_PINNED_MEMORY'
 #endif
+#if defined(CUDA_STREAMS)
+          write(*,*) 'CUDA_STREAMS'
+#endif
 #if defined(CUDA_DEBUG)
           write(*,*) 'CUDA_DEBUG'
 #endif
@@ -396,7 +401,9 @@ c  Write out which preprocessor defines are active
 
 c
 c  Initialise the number of blocks and threads used for cuda kernels
-        call init_nblocks_nthreads(cuda_nblocks_dat, cuda_nblocks_sam,
+        call init_nblocks_nthreads(device_id,
+     >                             cuda_nblocks_dat,
+     >                             cuda_nblocks_sam,
      >                             cuda_nthreads,
      >                             nlocdatpts, nlocsampts)
 c
