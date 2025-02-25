@@ -20,7 +20,7 @@ c       bc              real*8     array of initial parameters
 c
 c       output:
 c       cov(*)          real*8     array of cov matrix
-c       ijcov(*)        integer    array defining cov matrix
+c       icov(*),jcov(*) integer    arrays defining cov matrix
 c       ppos(*)         real*8     array of data values
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
