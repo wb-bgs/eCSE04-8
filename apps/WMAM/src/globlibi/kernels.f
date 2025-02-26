@@ -907,25 +907,25 @@ c
             do il = im,shdeg
               bc_nu   = d_bc(nu)
               bc_nup1 = d_bc(nu+1)
-
+c
               ik = il-im+1
               dr = ra**(il+2)
-
+c
               dw   = ddlf(ik) * dr
               bx   = dc * bc_nu
               bxp1 = ds * bc_nup1
               dx   = dx + dw*(bx + bxp1)
-
+c
               dw   = (dlf(ik)/rs) * dr * dble(im)
               by   =  ds * bc_nu
               byp1 = -dc * bc_nup1
               dy   =  dy + dw*(by + byp1)
-            
+c            
               dw   =  dlf(ik) * dr * dble(il+1)
               bz   = -dc * bc_nu
               bzp1 = -ds * bc_nup1
               dz   =  dz + dw*(bz + bzp1)
-
+c
               nu = nu + 2
             enddo
           enddo
