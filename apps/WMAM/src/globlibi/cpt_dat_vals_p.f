@@ -61,7 +61,7 @@ c
 c
         call cpt_dat_kernel <<< get_nblocks_dat(), nthreads,
      >                          0, stream_id >>>
-     >    (shdeg, nlocdatpts)
+     >     (shdeg, nlocdatpts)
 c
 #endif
 c    
