@@ -99,7 +99,7 @@ c
         real*8  resdeg
         integer cmdcnt, scheme, serialrd
         integer cuda_nblocks_dat, cuda_nblocks_sam
-        integer cuda_nthreads
+        integer cuda_nthreads, cuda_heap_limit
         integer ncoeffs, ndatpts, nsampts, npts
         integer imin_locdatpts
         integer nlocsampts, imin_locsampts
@@ -251,20 +251,31 @@ c  Read in command line arguments
         else
           serialrd = 0
         endif
+
+        cuda_heap_limit = 0
         if (cmdcnt .ge. 6) then
           call GET_COMMAND_ARGUMENT(6,argstr)
+          read(argstr,*) cuda_heap_limit
+        endif
+        if (cuda_heap_limit .le. 0) then
+c  Set CUDA heap limit to 1 GiB by default
+          cuda_heap_limit = 1024
+        endif  
+
+        if (cmdcnt .ge. 7) then
+          call GET_COMMAND_ARGUMENT(7,argstr)
           read(argstr,*) cuda_nblocks_dat
         else
           cuda_nblocks_dat = 0
         endif
-        if (cmdcnt .ge. 7) then
-          call GET_COMMAND_ARGUMENT(7,argstr)
+        if (cmdcnt .ge. 8) then
+          call GET_COMMAND_ARGUMENT(8,argstr)
           read(argstr,*) cuda_nblocks_sam
         else
           cuda_nblocks_sam = 0
         endif
-        if (cmdcnt .ge. 8) then
-          call GET_COMMAND_ARGUMENT(8,argstr)
+        if (cmdcnt .ge. 9) then
+          call GET_COMMAND_ARGUMENT(9,argstr)
           read(argstr,*) cuda_nthreads
         else
           cuda_nthreads = 0
@@ -277,6 +288,7 @@ c  Read in command line arguments
           write(*,*) 'scheme: ', scheme
           write(*,*) 'dampfac: ', dampfac
           write(*,*) 'serialrd: ', serialrd
+          write(*,*) 'cuda_heap_limit: ', cuda_heap_limit, ' MiB'
           write(*,*) 'cuda_nblocks_dat: ', cuda_nblocks_dat
           write(*,*) 'cuda_nblocks_sam: ', cuda_nblocks_sam
           write(*,*) 'cuda_nthreads: ', cuda_nthreads
@@ -399,6 +411,17 @@ c  Write out which preprocessor defines are active
           write(*,*) ''
         endif
 
+
+c  Set CUDA Malloc Heap Size to some multiple of 1 MiB
+        cuda_cnt = cuda_heap_limit*(1024**2)
+        ierr = cudaDeviceSetLimit(cudaLimitMallocHeapSize, cuda_cnt)
+#if defined(CUDA_DEBUG)
+        if (rank .eq. 0) then  
+          ierr = cudaDeviceGetLimit(cuda_cnt, cudaLimitMallocHeapSize)
+          write(*,*) 'cudaLimitMallocHeapSize: ', cuda_cnt
+          write(*,*) ''
+        endif
+#endif
 c
 c  Initialise the number of blocks and threads used for cuda kernels
         call init_nblocks_nthreads(device_id,
