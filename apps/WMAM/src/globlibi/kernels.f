@@ -23,6 +23,9 @@ c
           real(8), allocatable, device :: d_gj(:)
           real(8), allocatable, device :: d_dh(:)
 c
+          real(8), allocatable, device :: d_dlf(:,:)
+          real(8), allocatable, device :: d_ddlf(:,:)
+c
 c    
 #if defined(CUDA_STREAMS)
           private :: stream_dat_id, stream_sam_id
@@ -30,6 +33,7 @@ c
           private :: nblocks_dat, nblocks_sam, nthreads
           private :: d_d2a, d_ppos, d_cov, d_jcov
           private :: d_bc, d_ddat, d_xyzf, d_gj, d_dh
+          private :: d_dlf, d_ddlf
 c
           public :: RAG, D2R
 c
@@ -192,11 +196,15 @@ c
 c
 c
           attributes(host)
-     >    subroutine allocate_device_arrays(shdeg, nb, nd, nlocpts)
+     >    subroutine allocate_device_arrays(shdeg, nb, nd,
+     >                                      nlocpts, nlocdatpts)
 c
           implicit none
 c
-          integer, value :: shdeg, nb, nd, nlocpts
+          integer, value :: shdeg, nb, nd
+          integer, value :: nlocpts, nlocdatpts
+c
+          integer nlocsampts, ndlfarrs
 c
 c
           allocate(d_d2a(0:shdeg))
@@ -209,6 +217,16 @@ c
           allocate(d_xyzf(1:nlocpts))
           allocate(d_gj(1:nb))
           allocate(d_dh(1:nb))
+c
+          ndlfarrs = nlocdatpts
+c
+          nlocsampts = nlocpts - nlocdatpts
+          if (nlocsampts .gt. nlocdatpts) then
+            ndlfarrs = nlocsampts
+          endif
+c
+          allocate(d_dlf(1:shdeg+1,1:ndlfarrs))
+          allocate(d_ddlf(1:shdeg+1,1:ndlfarrs))
 c
           end subroutine allocate_device_arrays
 c
@@ -225,6 +243,8 @@ c
 c
           deallocate(d_bc, d_ddat, d_xyzf)
           deallocate(d_gj, d_dh)
+c
+          deallocate(d_dlf, d_ddlf)
 c     
           end subroutine deallocate_device_arrays
 c
@@ -423,7 +443,8 @@ c
             bez = d_ppos(7,i)
 c
             d_xyzf(i) = XYZsph_bi0_cpt(shdeg, p1, p2, ra,
-     >                                 bex, bey, bez)
+     >                                 bex, bey, bez,
+     >                                 d_dlf(1,i), d_ddlf(1,i))
 c
           endif
 c
@@ -463,10 +484,12 @@ c
             bez = d_ppos(7,j)
 c
             call XYZsph_bi0_sample(shdeg, p1, p2, ra,
-     >                             bex, bey, bez)
+     >                             bex, bey, bez,
+     >                             d_dlf(1,i), d_ddlf(1,i))
 c
             d_xyzf(j) = XYZsph_bi0_cpt(shdeg, p1, p2, ra,
-     >                                 bex, bey, bez)
+     >                                 bex, bey, bez,
+     >                                 d_dlf(1,i), d_ddlf(1,i))
 c
           endif
 c
@@ -509,7 +532,8 @@ c
 c
             call XYZsph_bi0_ssqgh(shdeg, p1, p2, ra,
      >                            bex, bey, bez,
-     >                            dw_gj, dw_dh)
+     >                            dw_gj, dw_dh,
+     >                            d_dlf(1,i), d_ddlf(1,i))
 c
           endif
 c
@@ -553,11 +577,13 @@ c
             dw_gj = dw_dh*(d_ddat(j)-d_xyzf(j))
 c
             call XYZsph_bi0_sample(shdeg, p1, p2, ra,
-     >                             bex, bey, bez)
+     >                             bex, bey, bez,
+     >                             d_dlf(1,i), d_ddlf(1,i))
 c
             call XYZsph_bi0_ssqgh(shdeg, p1, p2, ra,
      >                            bex, bey, bez,
-     >                            dw_gj, dw_dh)
+     >                            dw_gj, dw_dh,
+     >                            d_dlf(1,i), d_ddlf(1,i))
 c
           endif
 c
@@ -590,7 +616,7 @@ c
 #endif
 c
 #if defined(CUDA_KERNEL_LOOP_USER)
-!$cuf kernel do <<< get_nblocks_dat(), get_nthreads(), 0, stream_id >>>
+!$cuf kernel do <<< nblocks_dat, nthreads, 0, stream_id >>>
 #else
 !$cuf kernel do <<< *, *, 0, stream_id >>>
 #endif
@@ -605,7 +631,8 @@ c
             bez = d_ppos(7,i)
 c
             d_xyzf(i) = XYZsph_bi0_cpt(shdeg, p1, p2, ra,
-     >                                 bex, bey, bez)
+     >                                 bex, bey, bez,
+     >                                 d_dlf(1,i), d_ddlf(1,i))
 c
           enddo
 c
@@ -632,13 +659,13 @@ c
 #endif
 c
 #if defined(CUDA_KERNEL_LOOP_USER)
-!$cuf kernel do <<< get_nblocks_sam(), get_nthreads(), 0, stream_id >>>
+!$cuf kernel do <<< nblocks_sam, nthreads, 0, stream_id >>>
 #else
 !$cuf kernel do <<< *, *, 0, stream_id >>>
 #endif
           do i = 1,nlocsampts
 c
-            call cpt_sam_loop_kernel(shdeg, nlocdatpts+i)
+            call cpt_sam_loop_kernel(shdeg, i, nlocdatpts+i)
 c
           enddo
 c
@@ -647,11 +674,11 @@ c
 c
 c
           attributes(device)
-     >    subroutine cpt_sam_loop_kernel(shdeg, ip)
+     >    subroutine cpt_sam_loop_kernel(shdeg, i, ip)
 c
           implicit none
 c
-          integer, value :: shdeg, ip
+          integer, value :: shdeg, i, ip
 c
           real(8) p1, p2, ra
           real(8) bex, bey, bez
@@ -665,10 +692,12 @@ c
           bez = d_ppos(7,ip)
 c
           call XYZsph_bi0_sample(shdeg, p1, p2, ra,
-     >                           bex, bey, bez)
+     >                           bex, bey, bez,
+     >                           d_dlf(1,i), d_ddlf(1,i))
 c
           d_xyzf(ip) = XYZsph_bi0_cpt(shdeg, p1, p2, ra,
-     >                                bex, bey, bez)
+     >                                bex, bey, bez,
+     >                                d_dlf(1,i), d_ddlf(1,i))
 c
           end subroutine cpt_sam_loop_kernel
 c
@@ -697,7 +726,7 @@ c
 #endif
 c
 #if defined(CUDA_KERNEL_LOOP_USER)
-!$cuf kernel do <<< get_nblocks_dat(), get_nthreads(), 0, stream_id >>>
+!$cuf kernel do <<< nblocks_dat, nthreads, 0, stream_id >>>
 #else
 !$cuf kernel do <<< *, *, 0, stream_id >>>
 #endif
@@ -716,7 +745,8 @@ c
 c
             call XYZsph_bi0_ssqgh(shdeg, p1, p2, ra,
      >                            bex, bey, bez,
-     >                            dw_gj, dw_dh)
+     >                            dw_gj, dw_dh,
+     >                            d_dlf(1,i), d_ddlf(1,i))
 c
           enddo
 c
@@ -747,13 +777,13 @@ c
 #endif
 c
 #if defined(CUDA_KERNEL_LOOP_USER)
-!$cuf kernel do <<< get_nblocks_sam(), get_nthreads(), 0, stream_id >>>
+!$cuf kernel do <<< nblocks_sam, nthreads, 0, stream_id >>>
 #else
 !$cuf kernel do <<< *, *, 0, stream_id >>>
 #endif
           do i = 1,nlocsampts
 c
-            call cpt_ssqgh_loop_kernel(shdeg, nlocdatpts+i)
+            call ssqgh_sam_loop_kernel(shdeg, i, nlocdatpts+i)
 c
           enddo
 c
@@ -762,11 +792,11 @@ c
 c
 c
           attributes(device)
-     >    subroutine cpt_ssqgh_loop_kernel(shdeg, ip)
+     >    subroutine ssqgh_sam_loop_kernel(shdeg, i, ip)
 c
           implicit none
 c
-          integer, value :: shdeg, ip
+          integer, value :: shdeg, i, ip
 c
           real(8) p1, p2, ra
           real(8) bex, bey, bez
@@ -785,13 +815,15 @@ c
           dw_gj = dw_dh*(d_ddat(ip)-d_xyzf(ip))
 c
           call XYZsph_bi0_sample(shdeg, p1, p2, ra,
-     >                           bex, bey, bez)
+     >                           bex, bey, bez,
+     >                           d_dlf(1,i), d_ddlf(1,i))
 c
           call XYZsph_bi0_ssqgh(shdeg, p1, p2, ra,
      >                          bex, bey, bez,
-     >                          dw_gj, dw_dh)
+     >                          dw_gj, dw_dh,
+     >                          d_dlf(1,i), d_ddlf(1,i))
 c
-          end subroutine cpt_ssqgh_loop_kernel
+          end subroutine ssqgh_sam_loop_kernel
 c
 c
 c  end of <#if defined(CUDA_KERNEL_LOOP)> clause
@@ -842,18 +874,24 @@ c       input/output:
 c          bex    REAL(8)       x component of magnetic field
 c          bey    REAL(8)       y component of magnetic field
 c          bez    REAL(8)       z component of magnetic field
+c          dlf    REAL(8)(*)    legendre function from im to nl
+c          ddlf   REAL(8)(*)    derivative of legendre function from im to nl 
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
           attributes(device)
      >    subroutine XYZsph_bi0_sample(shdeg, p1, p2, ra,
-     >                                 bex, bey, bez)
+     >                                 bex, bey, bez,
+     >                                 dlf, ddlf)
 c
           implicit none
 c
           integer, value :: shdeg
 c
           real(8), value :: p1, p2, ra
-          real(8) bex, bey, bez         
+          real(8) bex, bey, bez
+c
+          real(8) dlf(1:shdeg+1)
+          real(8) ddlf(1:shdeg+1)         
 c
           integer nu, il, im, ik
 c
@@ -873,9 +911,6 @@ c
           real(8) zx_c, zy_c
 c
           real(8) bex2, bey2, bez2
-c
-          real(8) dlf(1:shdeg+1)
-          real(8) ddlf(1:shdeg+1)
 c        
 c 
           dx = 0.0d0
@@ -972,6 +1007,8 @@ c          ra     REAL(8)     radius
 c          bex    REAL(8)     x component of magnetic field
 c          bey    REAL(8)     y component of magnetic field
 c          bez    REAL(8)     z component of magnetic field
+c          dlf    REAL(8)(*)  legendre function from im to nl
+c          ddlf   REAL(8)(*)  derivative of legendre function from im to nl 
 c
 c       output:
 c          XYZsph_bi0_cpt  REAL(8)
@@ -980,7 +1017,8 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
           attributes(device)
      >    real(8)
      >    function XYZsph_bi0_cpt(shdeg, p1, p2, ra,
-     >                            bex, bey, bez)
+     >                            bex, bey, bez,
+     >                            dlf, ddlf)
 c
           implicit none
 c
@@ -988,6 +1026,8 @@ c
 c
           real(8), value :: p1, p2, ra
           real(8), value :: bex, bey, bez
+          real(8) dlf(1:shdeg+1)
+          real(8) ddlf(1:shdeg+1)
 c
           integer nu, il, im, ik
 c
@@ -995,9 +1035,6 @@ c
           real(8) ds, dc, dr, dw
           real(8) bx, by, bz
           real(8) bxp1, byp1, bzp1
-c
-          real(8) dlf(1:shdeg+1)
-          real(8) ddlf(1:shdeg+1)
 c 
 c
           XYZsph_bi0_cpt = 0.0d0 
@@ -1065,13 +1102,18 @@ c          p2       REAL(8)     longitude
 c          ra       REAL(8)     radius
 c          bex      REAL(8)     x component of magnetic field
 c          bey      REAL(8)     y component of magnetic field
-c          bez      REAL(8)     z component of magnetic field 
+c          bez      REAL(8)     z component of magnetic field
+c          dw_gj    REAL(8)
+c          dw_dh    REAL(8)
+c          dlf      REAL(8)(*)  legendre function from im to nl
+c          ddlf     REAL(8)(*)  derivative of legendre function from im to nl 
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
           attributes(device)
      >    subroutine XYZsph_bi0_ssqgh(shdeg, p1, p2, ra,
      >                                bex, bey, bez,
-     >                                dw_gj, dw_dh)
+     >                                dw_gj, dw_dh,
+     >                                dlf, ddlf)
 c
           use cudafor
 c
@@ -1082,6 +1124,8 @@ c
           real(8), value :: p1, p2, ra
           real(8), value :: bex, bey, bez
           real(8), value :: dw_gj, dw_dh
+          real(8) dlf(1:shdeg+1)
+          real(8) ddlf(1:shdeg+1)
 c
           integer nu, il, im, ik, istat
 c
@@ -1090,9 +1134,6 @@ c
           real(8) bx, by, bz
           real(8) bxp1, byp1, bzp1
           real(8) be, bep1
-c
-          real(8) dlf(1:shdeg+1)
-          real(8) ddlf(1:shdeg+1)
 c 
 c
           rc = dcos(p1)

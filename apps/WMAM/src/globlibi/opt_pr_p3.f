@@ -255,7 +255,8 @@ c
         enddo
 c
 c
-        call allocate_device_arrays(shdeg, nb, nd, nlocpts)
+        call allocate_device_arrays(shdeg, nb, nd,
+     >                              nlocpts, nlocdatpts)
 c
         call init_device_arrays(shdeg, nd, nlocpts,
      >                          d2a, ppos, cov, jcov)
