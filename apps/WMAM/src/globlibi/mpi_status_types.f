@@ -40,7 +40,7 @@ c
         integer :: ierr
 #if defined(CUDA_PINNED_MEMORY)
         logical :: is_pinned
-        integer :: rank, ierr
+        integer :: rank
 #endif
 	
 c  Commit MPI_INVERSION_STATUS type
