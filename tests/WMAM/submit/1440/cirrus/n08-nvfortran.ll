@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=WMAM
-#SBATCH --time=24:00:00
+#SBATCH --time=06:00:00
 #SBATCH --exclusive
 #SBATCH --nodes=8
 #SBATCH --account=z04
@@ -54,7 +54,7 @@ APP_MPI_LABEL=ompi4
 APP_COMMS_LABEL=ucx
 APP_COMPILER_LABEL=gnu10
 APP_RUN_ROOT=${ROOT}/tests/${APP_NAME}
-APP_RUN_PATH=${APP_RUN_ROOT}/results/${DEGREE}/${PE_RELEASE}/${APP_COMPILER_LABEL}/${APP_MPI_LABEL}-${APP_COMMS_LABEL}/n${NNODES}/tpn${NTASKSPN}/tpg${NTASKSPG}/tpt${OMP_NUM_THREADS}
+APP_RUN_PATH=${APP_RUN_ROOT}/results/${DEGREE}/${PE_RELEASE}/${APP_COMPILER_LABEL}/${APP_MPI_LABEL}-${APP_COMMS_LABEL}/n${NNODES}/tpn${NTASKSPN}/tpg${NTASKSPG}/tpt${OMP_NUM_THREADS}/${SLURM_JOB_ID}
 APP_PARAMS="${DEGREE} ${RESOLUTION} ${SCHEME} ${DAMPFAC} ${SERIALRD}"
 
 
@@ -79,6 +79,8 @@ echo -e "\n\nLaunching ${APP_EXE_NAME} ${APP_VERSION} (${PE_RELEASE},${APP_COMPI
 export HOME=${HOME/home/work}
 
 srun ${SRUN_PARAMS} ${APP_EXE} ${APP_PARAMS}
+#srun ${SRUN_PARAMS} \
+#    ${APP_RUN_ROOT}/submit/${DEGREE}/cirrus/wmam.sh ${NTASKSPN} 32 "${APP_RUN_PATH}" "${APP_EXE}" "${APP_PARAMS}"
 
 RUN_STOP=$(date +%s.%N)
 RUN_TIME=$(echo "${RUN_STOP} - ${RUN_START}" | bc)
@@ -86,7 +88,5 @@ echo -e "\nsrun time: ${RUN_TIME}"
 
 
 # tidy up
-mkdir ${APP_RUN_PATH}/${SLURM_JOB_ID}
-mv ./slurm-${SLURM_JOB_ID}.out ${APP_RUN_PATH}/${SLURM_JOB_ID}/${APP_NAME}.o
-mv ${APP_RUN_PATH}/Results ${APP_RUN_PATH}/${SLURM_JOB_ID}/
+mv ./slurm-${SLURM_JOB_ID}.out ${APP_RUN_PATH}/${APP_NAME}.o
 rm -rf ${APP_RUN_PATH}/Data
