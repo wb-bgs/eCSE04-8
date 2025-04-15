@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=WMAM
-#SBATCH --time=02:00:00
+#SBATCH --time=04:00:00
 #SBATCH --exclusive
 #SBATCH --nodes=4
 #SBATCH --account=z04
@@ -47,7 +47,7 @@ APP_MPI_LABEL=ompi4
 APP_COMMS_LABEL=ucx
 APP_COMPILER_LABEL=gnu10
 APP_RUN_ROOT=${ROOT}/tests/${APP_NAME}
-APP_RUN_PATH=${APP_RUN_ROOT}/results/${DEGREE}/${PE_RELEASE}/${APP_COMPILER_LABEL}/${APP_MPI_LABEL}-${APP_COMMS_LABEL}/n${NNODES}/tpn${NTASKSPN}/tpt${NCORESPT}
+APP_RUN_PATH=${APP_RUN_ROOT}/results/${DEGREE}/${PE_RELEASE}/${APP_COMPILER_LABEL}/${APP_MPI_LABEL}-${APP_COMMS_LABEL}/n${NNODES}/tpn${NTASKSPN}/tpt${NCORESPT}/${SLURM_JOB_ID}
 APP_PARAMS="${DEGREE} ${RESOLUTION} ${SCHEME} ${DAMPFAC} ${SERIALRD}"
 
 
@@ -57,7 +57,9 @@ SRUN_PARAMS="--ntasks=${NTASKS} --tasks-per-node=${NTASKSPN} --cpus-per-task=${N
 export OMP_NUM_THREADS=${NCORESPT}
 #export OMP_NUM_THREADS=1
 export OMP_PLACES=cores
+
 export OMP_STACKSIZE=4G
+#export OMP_DISPLAY_ENV=VERBOSE
 
 
 # setup app run directory and input folder
@@ -83,7 +85,5 @@ echo -e "\nsrun time: ${RUN_TIME}"
 
 
 # tidy up
-mkdir ${APP_RUN_PATH}/${SLURM_JOB_ID}
-mv ./slurm-${SLURM_JOB_ID}.out ${APP_RUN_PATH}/${SLURM_JOB_ID}/${APP_NAME}.o
-mv ${APP_RUN_PATH}/Results ${APP_RUN_PATH}/${SLURM_JOB_ID}/
+mv ./slurm-${SLURM_JOB_ID}.out ${APP_RUN_PATH}/${APP_NAME}.o
 rm -rf ${APP_RUN_PATH}/Data
