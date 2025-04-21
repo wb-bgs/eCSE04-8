@@ -3,7 +3,7 @@
 # ./verify_scaling_output.sh 22.12 cce15 3.6 200
 
 ROOT=${HOME/home/work}
-PYPP_HOME=${ROOT}/utils/pypp
+PYPP_HOME=${ROOT}/utils/pypp/py38
 SCRIPTS_HOME=${ROOT}/tests/WMAM/scripts
 
 CPE_RELEASE=$1

@@ -7,7 +7,7 @@
 
 
 ROOT=${HOME/home/work}
-PYPP_HOME=${ROOT}/utils/pypp
+PYPP_HOME=${ROOT}/utils/pypp/py38
 SCRIPTS_HOME=${ROOT}/tests/scripts
 
 DEGREE=$1
@@ -37,4 +37,4 @@ python ${SCRIPTS_HOME}/plot_results.py ${SUMMARY_DATA} 0 "Core Count" 1 "Runtime
 PLOT_NAME=${PLOTS_HOME}/wmam-${DEGREE}-efficiency
 python ${SCRIPTS_HOME}/plot_results.py ${SUMMARY_DATA} 0 "Core Count" 3 "Parallel Efficiency" 1.0 "${TITLE}" "${PLOT_NAME}" 0.5 "upper right" 0 0 "${DESC}" "0.6,0.94,-0.05"
 
-deactivate
+conda deactivate

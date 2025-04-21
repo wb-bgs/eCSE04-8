@@ -9,7 +9,7 @@ APP_LABEL=WMAM
 APP_VERSION=$2
 RESULTS_TYPE=$3
 TARGET_PATH=cce15/cmpich8-ofi
-PYPP_HOME=${ROOT}/utils/pypp
+PYPP_HOME=${ROOT}/utils/pypp/py38
 SCRIPTS_HOME=${ROOT}/tests/${APP_LABEL}/scripts/postprocessing
 RESULTS_HOME=${ROOT}/tests/${APP_LABEL}/results/${RESULTS_TYPE}/${APP_VERSION}/${DEGREE}
 
