@@ -52,6 +52,10 @@ c
         real*8 zx_c, zy_c
 c
         real*8 bex2, bey2, bez2
+c
+#if !(defined(OMP_OFFLOAD_CPTP) || defined(OMP_OFFLOAD_SSQGH))
+        real*8, allocatable :: dra(:)
+#endif
 c        
 c 
 #if defined(OMP_OFFLOAD_CPTP) || defined(OMP_OFFLOAD_SSQGH)
@@ -66,10 +70,17 @@ c
         rc = dcos(p1)
         rs = dsin(p1)
 c
+#if !(defined(OMP_OFFLOAD_CPTP) || defined(OMP_OFFLOAD_SSQGH))
+        allocate(dra(1:shdeg))
+#endif
+c
         call mk_lf_dlf(0, shdeg, rs, rc,
      >                 d2a(0), dlf, ddlf)
         do il = 1,shdeg
           dr = ra**(il+2)
+#if !(defined(OMP_OFFLOAD_CPTP) || defined(OMP_OFFLOAD_SSQGH))
+          dra(il) = dr
+#endif
 c          
           ik = il+1
 c          
@@ -90,28 +101,37 @@ c
           do il = im,shdeg
             bc_nu   = bc(nu)
             bc_nup1 = bc(nu+1)
-
+c
             ik = il-im+1
+c
+#if defined(OMP_OFFLOAD_CPTP) || defined(OMP_OFFLOAD_SSQGH)
             dr = ra**(il+2)
-
+#else
+            dr = dra(il)
+#endif
+c
             dw   = ddlf(ik) * dr
             bx   = dc * bc_nu
             bxp1 = ds * bc_nup1
             dx   = dx + dw*(bx + bxp1)
-
+c
             dw   = (dlf(ik)/rs) * dr * dble(im)
             by   =  ds * bc_nu
             byp1 = -dc * bc_nup1
             dy   =  dy + dw*(by + byp1)
-            
+c           
             dw   =  dlf(ik) * dr * dble(il+1)
             bz   = -dc * bc_nu
             bzp1 = -ds * bc_nup1
             dz   =  dz + dw*(bz + bzp1)
-
+c
             nu = nu + 2
           enddo
         enddo
+c
+#if !(defined(OMP_OFFLOAD_CPTP) || defined(OMP_OFFLOAD_SSQGH))
+        deallocate(dra)
+#endif
 c
         dxbey = dx*bey
         dxbez = dx*bez
@@ -184,6 +204,10 @@ c
         real*8 ds, dc, dr, dw
         real*8 bx, by, bz
         real*8 bxp1, byp1, bzp1
+c
+#if !defined(OMP_OFFLOAD_CPTP)
+        real*8, allocatable :: dra(:)
+#endif
 c 
 c
 #if defined(OMP_OFFLOAD_CPTP)
@@ -196,10 +220,17 @@ c
         rc = dcos(p1)
         rs = dsin(p1)
 c
+#if !defined(OMP_OFFLOAD_CPTP)
+        allocate(dra(1:shdeg))
+#endif
+c
         call mk_lf_dlf(0, shdeg, rs, rc,
      >                 d2a(0), dlf, ddlf)
         do il = 1,shdeg
           dr = ra**(il+2)
+#if !defined(OMP_OFFLOAD_CPTP)
+          dra(il) = dr
+#endif
 c          
           ik = il+1
 c          
@@ -219,7 +250,12 @@ c
           ds = dsin(im*p2)
           do il = im,shdeg
             ik = il-im+1
+c
+#if defined(OMP_OFFLOAD_CPTP)
             dr = ra**(il+2)
+#else
+            dr = dra(il)
+#endif
 c
             dw   = ddlf(ik) * dr * bex
             bx   = dw*dc
@@ -236,10 +272,14 @@ c
             XYZsph_bi0_fun = XYZsph_bi0_fun
      >                     + (bx + by + bz) * bc(nu)
      >                     + (bxp1 + byp1 + bzp1) * bc(nu+1)
-
+c
             nu = nu + 2
           enddo
         enddo
+c
+#if !defined(OMP_OFFLOAD_CPTP)
+        deallocate(dra)
+#endif
 c
         return
         end function XYZsph_bi0_fun
@@ -294,6 +334,10 @@ c
         real*8 bx, by, bz
         real*8 bxp1, byp1, bzp1
         real*8 be, bep1
+c
+#if !defined(OMP_OFFLOAD_SSQGH)
+        real*8, allocatable :: dra(:)
+#endif
 c 
 c
 #if defined(OMP_OFFLOAD_SSQGH)
@@ -304,10 +348,17 @@ c
         rc = dcos(p1)
         rs = dsin(p1)
 c
+#if !defined(OMP_OFFLOAD_SSQGH)
+        allocate(dra(1:shdeg))
+#endif
+c
         call mk_lf_dlf(0, shdeg, rs, rc,
      >                 d2a(0), dlf, ddlf)
         do il = 1,shdeg
           dr = ra**(il+2)
+#if !defined(OMP_OFFLOAD_SSQGH)
+          dra(il) = dr
+#endif
 c          
           ik = il+1
 c          
@@ -337,7 +388,12 @@ c
           ds = dsin(im*p2)
           do il = im,shdeg
             ik = il-im+1
+c
+#if defined(OMP_OFFLOAD_SSQGH)
             dr = ra**(il+2)
+#else
+            dr = dra(il)
+#endif
 c
             dw   = ddlf(ik) * dr
             bx   = dw*dc
@@ -373,6 +429,10 @@ c
             nu = nu + 2
           enddo
         enddo
+c
+#if !defined(OMP_OFFLOAD_SSQGH)
+        deallocate(dra)
+#endif
 c
         return
         end subroutine XYZsph_bi0_sub
