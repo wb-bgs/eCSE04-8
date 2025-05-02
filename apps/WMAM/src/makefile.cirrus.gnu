@@ -32,7 +32,7 @@ misc.o\
 coeff_map.o\
 mpi_status_types.o\
 set_FG_sampling.o\
-thread_segmenter.o\
+array_segmenter.o\
 cpt_dat_vals_p.o\
 cptstd_dp.o\
 ssqgh_dp.o\

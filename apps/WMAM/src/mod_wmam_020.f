@@ -228,12 +228,12 @@ c  Settings
 c
 c  Partition workload
         allocate(proc_ndp(1:nranks), proc_idp(1:nranks))
-        call thread_segmenter(nranks, ndatpts, proc_ndp, proc_idp)
+        call array_segmenter(nranks, ndatpts, proc_ndp, proc_idp)
         nlocdatpts = proc_ndp(rank+1)
         imin_locdatpts = proc_idp(rank+1)
         
         allocate(proc_nsp(1:nranks), proc_isp(1:nranks))        
-        call thread_segmenter(nranks, nsampts, proc_nsp, proc_isp)
+        call array_segmenter(nranks, nsampts, proc_nsp, proc_isp)
         nlocsampts = proc_nsp(rank+1)
         imin_locsampts = proc_isp(rank+1)
 
