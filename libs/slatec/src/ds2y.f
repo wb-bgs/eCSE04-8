@@ -127,7 +127,7 @@ C     .. Scalar Arguments ..
       INTEGER ISYM, N, NELT
 C     .. Array Arguments ..
       DOUBLE PRECISION A(NELT)
-      INTEGER IA(NELT), JA(NELT)
+      INTEGER IA(NELT+2), JA(NELT+2)
 C     .. Local Scalars ..
       DOUBLE PRECISION TEMP
       INTEGER I, IBGN, ICOL, IEND, ITEMP, J
