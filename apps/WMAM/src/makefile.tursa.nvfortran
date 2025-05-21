@@ -1,0 +1,52 @@
+# Makefile for iterative model fitting driver program.  This is based
+# on Vincent Lesur's original makefile.
+######################################################################
+main=mod_wmam_020
+
+# decide which compiler to use the library depending on the architecture
+FC = mpifort
+FFLAGS =
+LIBS =
+RANLIB = ranlib
+
+VPATH=.:io:globlibi
+#--------------------------------------
+# rule to make .o from .f and .F files
+.f.o:
+	$(FC) $(FFLAGS) $< -c
+.F.o:
+	$(FC) $(FFLAGS) $< -c
+#--------------------------------------
+OBJ=\
+mklf_F.o\
+mkdlf_F.o\
+mk_lf_dlf.o\
+Xsph_bi.o\
+Ysph_bi.o\
+Zsph_bi.o\
+sph_bi.o\
+XYZsph_bi0.o\
+dy2mjd.o\
+gauleg.o\
+misc.o\
+coeff_map.o\
+mpi_status_types.o\
+set_FG_sampling.o\
+array_segmenter.o\
+cpt_dat_vals_p.o\
+cptstd_dp.o\
+ssqgh_dp.o\
+gc_step_p.o\
+lsearch_p.o\
+opt_pr_p3.o\
+build_damp_space.o\
+fit_data.o\
+ini_model.o\
+point_data.o\
+ref_model.o\
+#--------------------------------------
+$(main) : $(OBJ) $(LALIB) $(main).o 
+	 $(FC) $(FFLAGS) -o $(main) $(main).o $(OBJ) $(LIBS)
+#	 rm *.o
+#	 rm *.mod
+#--------------------------------------
