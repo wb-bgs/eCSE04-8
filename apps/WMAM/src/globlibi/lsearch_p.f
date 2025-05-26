@@ -28,6 +28,7 @@ c         npts          Total number of points (data + sampling) for all ranks
 c         nlocpts       Total number of points for this rank
 c         nlocdatpts    number of data points assigned to rank
 c         d2a           pre-computed array used by mk_lf_dlf()
+c         dra           pre-allocated array used to cache powers of the radius
 c         (d)dlf        pre-allocated arrays computed by mk_lf_dlf() and
 c                       used within XYZsph_bi0
 c         bc            Estimate of Base function coefficients

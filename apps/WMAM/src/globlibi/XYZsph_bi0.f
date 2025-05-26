@@ -8,6 +8,7 @@ c       input:
 c          shdeg  INTEGER       max SH degree value
 c          nb     INTEGER       number of coefficients
 c          d2a    REAL*8        pre-computed array used by mk_lf_dlf() subroutine
+c          dra    REAL*8        pre-allocated array used to cache powers of the radius
 c          (d)dlf REAL*8        pre-allocated arrays computed by mk_lf_dlf() and
 c                               used within this subroutine
 c          bc     REAL*8        coefficient array
@@ -155,6 +156,7 @@ c       input:
 c          shdeg  INTEGER     max SH degree value
 c          nb     INTEGER     number of coefficients
 c          d2a    REAL*8      pre-computed array used by mk_lf_dlf() subroutine
+c          dra    REAL*8      pre-allocated array used to cache powers of the radius
 c          (d)dlf REAL*8      pre-allocated arrays computed by mk_lf_dlf() and
 c                             used within this function
 c          bc     REAL*8      coefficient array
@@ -263,6 +265,7 @@ c       input:
 c          shdeg    INTEGER     max SH degree value
 c          nb       INTEGER     number of coefficients
 c          d2a      REAL*8      pre-computed array used by mk_lf_dlf() subroutine
+c          dra      REAL*8      pre-allocated array used to cache powers of the radius
 c          (d)dlf   REAL*8      pre-allocated arrays computed by mk_lf_dlf() and
 c                               used within this subroutine
 c          p1       REAL*8      co-latitude

@@ -13,6 +13,7 @@ c         nd            Space dimension
 c         nlocpts       number of data+sampling points local to rank
 c         nlocdatpts    number of data points local to rank
 c         d2a           pre-computed array used by mk_lf_dlf()
+c         dra           pre-allocated array used to cache powers of the radius
 c         (d)dlf        pre-allocated arrays computed by mk_lf_dlf() and
 c                       used within XYZsph_bi0
 c         bc            base coefficients
