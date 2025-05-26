@@ -1,15 +1,14 @@
 #!/bin/bash
 
 #SBATCH --job-name=WMAM
-#SBATCH --time=04:00:00
-#SBATCH --nodes=16
+#SBATCH --time=12:00:00
+#SBATCH --nodes=8
 #SBATCH --ntasks-per-node=32
 #SBATCH --cpus-per-task=1
 #SBATCH --account=z01
 #SBATCH --partition=gpu-a100-40
 #SBATCH --qos=standard
 #SBATCH --gres=gpu:4
-#SBATCH --gpu-freq=1000
 
 
 cat $0
@@ -20,28 +19,21 @@ ulimit -S -s unlimited
 
 
 module load gcc/12.2.0
-module load nvhpc/23.5-nompi
-module load openmpi/4.1.5-nvhpc235-cuda12
+module load openmpi/4.1.5-gcc12-cpu
 
 
 # setup resource-related environment
 NNODES=${SLURM_JOB_NUM_NODES}
-NCORESPN=`expr ${SLURM_CPUS_ON_NODE} \/ 2`
-NGPUSPN=${SLURM_GPUS_ON_NODE}
+NCORESPN=${SLURM_CPUS_ON_NODE}
+NTASKSPN=4
+NCORESPT=8
 
-NTASKSPN=${NGPUSPN}
-NTASKSPG=`expr ${NTASKSPN} \/ ${NGPUSPN}`
-NCORESPT=`expr ${NCORESPN} \/ ${NTASKSPN}`
-
-NCORES=`expr ${NNODES} \* ${NCORESPN}`
 NTASKS=`expr ${NNODES} \* ${NTASKSPN}`
-
-export OMP_NUM_THREADS=1
-export OMP_PLACES=cores
+NCORES=`expr ${NNODES} \* ${NTASKSPN} \* ${NCORESPT}`
 
 
 PE_NAME=GNU
-PE_RELEASE=12.2.0-nvfortran
+PE_RELEASE=12.2.0
 
 ROOT=${HOME}
 DEGREE=2000
@@ -57,11 +49,14 @@ APP_MPI_LABEL=ompi4
 APP_COMMS_LABEL=ucx
 APP_COMPILER_LABEL=gnu10
 APP_RUN_ROOT=${ROOT}/tests/${APP_NAME}
-APP_RUN_PATH=${APP_RUN_ROOT}/results/${DEGREE}/${PE_RELEASE}/${APP_COMPILER_LABEL}/${APP_MPI_LABEL}-${APP_COMMS_LABEL}/n${NNODES}/tpn${NTASKSPN}/tpg${NTASKSPG}/tpt${OMP_NUM_THREADS}/${SLURM_JOB_ID}
+APP_RUN_PATH=${APP_RUN_ROOT}/results/${DEGREE}/${PE_RELEASE}/${APP_COMPILER_LABEL}/${APP_MPI_LABEL}-${APP_COMMS_LABEL}/n${NNODES}/tpn${NTASKSPN}/tpt${NCORESPT}/${SLURM_JOB_ID}
 APP_PARAMS="${DEGREE} ${RESOLUTION} ${SCHEME} ${DAMPFAC} ${SERIALRD}"
 
 
-SRUN_PARAMS="--nodes=${NNODES} --tasks-per-node=${NTASKSPN} --cpus-per-task=${NCORESPT} --hint=nomultithread --distribution=block:block --unbuffered --chdir=${APP_RUN_PATH}"
+SRUN_PARAMS="--nodes=${NNODES} --ntasks-per-node=${NTASKSPN} --cpus-per-task=${NCORESPT} --hint=nomultithread --distribution=block:block --unbuffered --chdir=${APP_RUN_PATH}"
+
+export OMP_NUM_THREADS=${NCORESPT}
+export OMP_PLACES=cores
 
 
 # setup app run directory and input folder
@@ -77,10 +72,9 @@ lfs setstripe -c -1 ${APP_RUN_PATH}/Results
 
 # run app
 RUN_START=$(date +%s.%N)
-echo -e "\n\nLaunching ${APP_EXE_NAME} ${APP_VERSION} (${PE_RELEASE},${APP_COMPILER_LABEL},${APP_MPI_LABEL}-${APP_COMMS_LABEL}) with l=${DEGREE} across ${NNODES} node(s), ${NTASKSPN} task(s) per node, ${NTASKSPG} task(s) per GPU and ${OMP_NUM_THREADS} thread(s) per task.\n"
+echo -e "\n\nLaunching ${APP_EXE_NAME} ${APP_VERSION} (${PE_RELEASE},${APP_COMPILER_LABEL},${APP_MPI_LABEL}-${APP_COMMS_LABEL}) with l=${DEGREE} across ${NNODES} node(s), ${NTASKSPN} task(s) per node and ${OMP_NUM_THREADS} thread(s) per task.\n"
 
-srun ${SRUN_PARAMS} \
-    ${APP_RUN_ROOT}/submit/${DEGREE}/tursa/wmam.sh ${NTASKSPN} 1 "${APP_RUN_PATH}" "${APP_EXE}" "${APP_PARAMS}"
+srun ${SRUN_PARAMS} ${APP_EXE} ${APP_PARAMS}
 
 RUN_STOP=$(date +%s.%N)
 RUN_TIME=$(echo "${RUN_STOP} - ${RUN_START}" | bc)

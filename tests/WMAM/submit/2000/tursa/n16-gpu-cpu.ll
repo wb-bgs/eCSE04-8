@@ -1,13 +1,13 @@
 #!/bin/bash
 
 #SBATCH --job-name=WMAM
-#SBATCH --time=00:20:00
+#SBATCH --time=12:00:00
 #SBATCH --nodes=16
 #SBATCH --ntasks-per-node=32
 #SBATCH --cpus-per-task=1
 #SBATCH --account=z01
 #SBATCH --partition=gpu-a100-40
-#SBATCH --qos=dev
+#SBATCH --qos=standard
 #SBATCH --gres=gpu:4
 
 

@@ -7,7 +7,7 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --account=z01
 #SBATCH --partition=gpu-a100-40
-#SBATCH --qos=dev
+#SBATCH --qos=standard
 #SBATCH --gres=gpu:4
 
 

@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #SBATCH --job-name=WMAM
-#SBATCH --time=04:00:00
-#SBATCH --nodes=16
+#SBATCH --time=06:00:00
+#SBATCH --nodes=8
 #SBATCH --ntasks-per-node=32
 #SBATCH --cpus-per-task=1
 #SBATCH --account=z01
