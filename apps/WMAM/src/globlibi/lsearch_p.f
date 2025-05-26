@@ -47,7 +47,7 @@ c         xyzf          Forward modelling for given BC+stp*DS
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine lsearch_p(iunit, itm, shdeg, nb, nd,
      >                       npts, nlocpts, nlocdatpts,
-     >                       d2a, dlf, ddlf,
+     >                       d2a, dra, dlf, ddlf,
      >                       bc, ppos, ddat,
      >                       src_stat, MPI_SEARCH_STATUS,
      >                       dl, cov, jcov,
@@ -60,7 +60,7 @@ c
 c
         integer iunit, itm, shdeg, nb, nd
         integer npts, nlocpts, nlocdatpts
-        real*8 d2a(0:shdeg)
+        real*8 d2a(0:shdeg), dra(1:shdeg)
         real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
         real*8 bc(1:nb)
         real*8 ppos(1:nd+1,1:nlocpts)
@@ -122,7 +122,7 @@ c
 c
                 call cpt_dat_vals_p(shdeg, nb, nd,
      >                              nlocpts, nlocdatpts,
-     >                              d2a, dlf, ddlf,
+     >                              d2a, dra, dlf, ddlf,
      >                              bcn, ppos, xyzf)
 c
                 call cptstd_dp(npts, nlocpts,
@@ -161,7 +161,7 @@ c
 c
                         call cpt_dat_vals_p(shdeg, nb, nd,
      >                                      nlocpts, nlocdatpts,
-     >                                      d2a, dlf, ddlf,
+     >                                      d2a, dra, dlf, ddlf,
      >                                      bcn, ppos, xyzf)
 c
                         call cptstd_dp(npts, nlocpts,
@@ -198,7 +198,7 @@ c
 c
                         call cpt_dat_vals_p(shdeg, nb, nd,
      >                                      nlocpts, nlocdatpts,
-     >                                      d2a, dlf, ddlf,
+     >                                      d2a, dra, dlf, ddlf,
      >                                      bcn, ppos, xyzf)
 c
                         call cptstd_dp(npts, nlocpts,
@@ -285,7 +285,7 @@ c
 c
                     call cpt_dat_vals_p(shdeg, nb, nd,
      >                                  nlocpts, nlocdatpts,
-     >                                  d2a, dlf, ddlf,
+     >                                  d2a, dra, dlf, ddlf,
      >                                  bcn, ppos, xyzf)
 c
                     call cptstd_dp(npts, nlocpts,
@@ -352,7 +352,7 @@ c
 c
             call cpt_dat_vals_p(shdeg, nb, nd,
      >                          nlocpts, nlocdatpts,
-     >                          d2a, dlf, ddlf,
+     >                          d2a, dra, dlf, ddlf,
      >                          bcn, ppos, xyzf)
 c
             call cptstd_dp(npts, nlocpts,
@@ -375,7 +375,7 @@ c  SP do the work
 c
                 call cpt_dat_vals_p(shdeg, nb, nd,
      >                              nlocpts, nlocdatpts,
-     >                              d2a, dlf, ddlf,
+     >                              d2a, dra, dlf, ddlf,
      >                              bcn, ppos, xyzf)
 c
                 call cptstd_dp(npts, nlocpts,
@@ -392,7 +392,7 @@ c  SP receive final stp from master & does the final piece of work
 c
             call cpt_dat_vals_p(shdeg, nb, nd,
      >                          nlocpts, nlocdatpts,
-     >                          d2a, dlf, ddlf,
+     >                          d2a, dra, dlf, ddlf,
      >                          bcn, ppos, xyzf)
 c
             call cptstd_dp(npts, nlocpts,

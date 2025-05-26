@@ -33,7 +33,7 @@ c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine ssqgh_dp(shdeg, nb, nd,
      >                      nlocpts, nlocdatpts,
-     >                      d2a, dlf, ddlf, bc, ppos,
+     >                      d2a, dra, dlf, ddlf, bc, ppos,
      >                      cov, jcov, ddat, xyzf,
      >                      gj, dh)
 c
@@ -42,7 +42,7 @@ c
         include 'mpif.h'
 c
         integer shdeg, nb, nd, nlocpts, nlocdatpts
-        real*8 d2a(0:shdeg)
+        real*8 d2a(0:shdeg), dra(1:shdeg)
         real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
         real*8 bc(1:nb)
         real*8 ppos(1:nd+1,1:nlocpts)
@@ -81,7 +81,7 @@ c
 !$OMP PARALLEL DO
 #endif
 !$omp& default(shared)
-!$omp& private(dlf, ddlf)
+!$omp& private(dra, dlf, ddlf)
 !$omp& private(p1, p2, ra)
 !$omp& private(bex, bey, bez)
 !$omp& private(dw_dh, dw_gj)
@@ -108,7 +108,7 @@ c
           dw_gj = dw_dh*(ddat(i)-xyzf(i))
 c      
           call XYZsph_bi0_sub(shdeg, nb, d2a,
-     >                        dlf, ddlf,
+     >                        dra, dlf, ddlf,
      >                        p1, p2, ra,
      >                        bex, bey, bez,
      >                        dw_gj, dw_dh,
@@ -128,7 +128,7 @@ c
 !$OMP PARALLEL DO
 #endif
 !$omp& default(shared)
-!$omp& private(dlf, ddlf)
+!$omp& private(dra, dlf, ddlf)
 !$omp& private(p1, p2, ra)
 !$omp& private(bex, bey, bez)
 !$omp& private(dw_dh, dw_gj)
@@ -149,7 +149,7 @@ c
           bez = ppos(7,i)
 c
           call XYZsph_bi0_sample(shdeg, nb, d2a,
-     >                           dlf, ddlf, bc,
+     >                           dra, dlf, ddlf, bc,
      >                           p1, p2, ra, 
      >                           bex, bey, bez)
 c        
@@ -160,7 +160,7 @@ c
           dw_gj = dw_dh*(ddat(i)-xyzf(i))
 c      
           call XYZsph_bi0_sub(shdeg, nb, d2a,
-     >                        dlf, ddlf,
+     >                        dra, dlf, ddlf,
      >                        p1, p2, ra,
      >                        bex, bey, bez,
      >                        dw_gj, dw_dh,

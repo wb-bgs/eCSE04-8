@@ -23,12 +23,12 @@ c         XYZF(*)       X,Y,Z or F value at point position
 c        
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine cpt_dat_vals_p(shdeg, nb, nd, nlocpts, nlocdatpts,
-     >                            d2a, dlf, ddlf, bc, ppos, xyzf)
+     >                            d2a, dra, dlf, ddlf, bc, ppos, xyzf)
 c
         implicit none
 c
         integer shdeg, nb, nd, nlocpts, nlocdatpts
-        real*8  d2a(0:shdeg)
+        real*8  d2a(0:shdeg), dra(1:shdeg)
         real*8  dlf(1:shdeg+1), ddlf(1:shdeg+1)
         real*8  bc(1:nb), ppos(nd+1,nlocpts)
         real*8  xyzf(1:nlocpts)
@@ -56,7 +56,7 @@ c
 !$OMP PARALLEL DO
 #endif
 !$omp& default(shared)
-!$omp& private(dlf, ddlf)
+!$omp& private(dra, dlf, ddlf)
 !$omp& private(p1, p2, ra)
 !$omp& private(bex, bey, bez)
 #if defined(OMP_OFFLOAD_CPTP)
@@ -75,7 +75,7 @@ c
            bez = ppos(7,i)
 c
            xyzf(i) = XYZsph_bi0_fun(shdeg, nb, d2a,
-     >                              dlf, ddlf,
+     >                              dra, dlf, ddlf,
      >                              bc, p1, p2, ra,
      >                              bex, bey, bez)
 c
@@ -93,7 +93,7 @@ c
 !$OMP PARALLEL DO
 #endif
 !$omp& default(shared)
-!$omp& private(dlf, ddlf)
+!$omp& private(dra, dlf, ddlf)
 !$omp& private(p1, p2, ra)
 !$omp& private(bex, bey, bez)
 #if defined(OMP_OFFLOAD_CPTP)
@@ -112,13 +112,13 @@ c
           bez = ppos(7,i)
 c
           call XYZsph_bi0_sample(shdeg, nb, d2a,
-     >                           dlf, ddlf, bc,
-     >                           p1, p2, ra, 
+     >                           dra, dlf, ddlf,
+     >                           bc, p1, p2, ra, 
      >                           bex, bey, bez)
 c
           xyzf(i) = XYZsph_bi0_fun(shdeg, nb, d2a,
-     >                             dlf, ddlf, bc,
-     >                             p1, p2, ra,
+     >                             dra, dlf, ddlf,
+     >                             bc, p1, p2, ra,
      >                             bex, bey, bez)
 c
         enddo

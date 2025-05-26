@@ -22,14 +22,14 @@ c          bez    REAL*8        z component of magnetic field
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine XYZsph_bi0_sample(shdeg, nb, d2a,
-     >                               dlf, ddlf, bc,
+     >                               dra, dlf, ddlf, bc,
      >                               p1, p2, ra,
      >                               bex, bey, bez)
 c
         implicit none
 c
         integer shdeg, nb
-        real*8 d2a(0:shdeg)
+        real*8 d2a(0:shdeg), dra(1:shdeg)
         real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
         real*8 bc(1:nb)
         real*8 p1, p2, ra
@@ -53,10 +53,6 @@ c
 c
         real*8 bex2, bey2, bez2
 c
-#if !(defined(OMP_OFFLOAD_CPTP) || defined(OMP_OFFLOAD_SSQGH))
-        real*8, allocatable :: dra(:)
-#endif
-c        
 c 
 #if defined(OMP_OFFLOAD_CPTP) || defined(OMP_OFFLOAD_SSQGH)
 !$omp declare target
@@ -70,17 +66,12 @@ c
         rc = dcos(p1)
         rs = dsin(p1)
 c
-#if !(defined(OMP_OFFLOAD_CPTP) || defined(OMP_OFFLOAD_SSQGH))
-        allocate(dra(1:shdeg))
-#endif
 c
         call mk_lf_dlf(0, shdeg, rs, rc,
      >                 d2a(0), dlf, ddlf)
         do il = 1,shdeg
           dr = ra**(il+2)
-#if !(defined(OMP_OFFLOAD_CPTP) || defined(OMP_OFFLOAD_SSQGH))
           dra(il) = dr
-#endif
 c          
           ik = il+1
 c          
@@ -104,11 +95,7 @@ c
 c
             ik = il-im+1
 c
-#if defined(OMP_OFFLOAD_CPTP) || defined(OMP_OFFLOAD_SSQGH)
-            dr = ra**(il+2)
-#else
             dr = dra(il)
-#endif
 c
             dw   = ddlf(ik) * dr
             bx   = dc * bc_nu
@@ -129,9 +116,6 @@ c
           enddo
         enddo
 c
-#if !(defined(OMP_OFFLOAD_CPTP) || defined(OMP_OFFLOAD_SSQGH))
-        deallocate(dra)
-#endif
 c
         dxbey = dx*bey
         dxbez = dx*bez
@@ -186,14 +170,14 @@ c          YZsph_bi0_fun  REAL*8
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         real*8 function XYZsph_bi0_fun(shdeg, nb, d2a,
-     >                                 dlf, ddlf, bc,
+     >                                 dra, dlf, ddlf, bc,
      >                                 p1, p2, ra,
      >                                 bex, bey, bez)
 c
         implicit none
 c
         integer shdeg, nb
-        real*8 d2a(0:shdeg)
+        real*8 d2a(0:shdeg), dra(1:shdeg)
         real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
         real*8 bc(1:nb)
         real*8 p1, p2, ra
@@ -205,10 +189,6 @@ c
         real*8 bx, by, bz
         real*8 bxp1, byp1, bzp1
 c
-#if !defined(OMP_OFFLOAD_CPTP)
-        real*8, allocatable :: dra(:)
-#endif
-c 
 c
 #if defined(OMP_OFFLOAD_CPTP)
 !$omp declare target
@@ -220,17 +200,12 @@ c
         rc = dcos(p1)
         rs = dsin(p1)
 c
-#if !defined(OMP_OFFLOAD_CPTP)
-        allocate(dra(1:shdeg))
-#endif
 c
         call mk_lf_dlf(0, shdeg, rs, rc,
      >                 d2a(0), dlf, ddlf)
         do il = 1,shdeg
           dr = ra**(il+2)
-#if !defined(OMP_OFFLOAD_CPTP)
           dra(il) = dr
-#endif
 c          
           ik = il+1
 c          
@@ -251,11 +226,7 @@ c
           do il = im,shdeg
             ik = il-im+1
 c
-#if defined(OMP_OFFLOAD_CPTP)
-            dr = ra**(il+2)
-#else
             dr = dra(il)
-#endif
 c
             dw   = ddlf(ik) * dr * bex
             bx   = dw*dc
@@ -277,9 +248,6 @@ c
           enddo
         enddo
 c
-#if !defined(OMP_OFFLOAD_CPTP)
-        deallocate(dra)
-#endif
 c
         return
         end function XYZsph_bi0_fun
@@ -312,7 +280,7 @@ c          dh       REAL*8      diagonal of the Hessian (nb)
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine XYZsph_bi0_sub(shdeg, nb, d2a,
-     >                            dlf, ddlf,
+     >                            dra, dlf, ddlf,
      >                            p1, p2, ra,
      >                            bex, bey, bez,
      >                            dw_gj, dw_dh,
@@ -321,7 +289,7 @@ c
         implicit none
 c
         integer shdeg, nb
-        real*8 d2a(0:shdeg)
+        real*8 d2a(0:shdeg), dra(1:shdeg)
         real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
         real*8 p1, p2, ra
         real*8 bex, bey, bez 
@@ -335,10 +303,6 @@ c
         real*8 bxp1, byp1, bzp1
         real*8 be, bep1
 c
-#if !defined(OMP_OFFLOAD_SSQGH)
-        real*8, allocatable :: dra(:)
-#endif
-c 
 c
 #if defined(OMP_OFFLOAD_SSQGH)
 !$omp declare target
@@ -348,17 +312,12 @@ c
         rc = dcos(p1)
         rs = dsin(p1)
 c
-#if !defined(OMP_OFFLOAD_SSQGH)
-        allocate(dra(1:shdeg))
-#endif
 c
         call mk_lf_dlf(0, shdeg, rs, rc,
      >                 d2a(0), dlf, ddlf)
         do il = 1,shdeg
           dr = ra**(il+2)
-#if !defined(OMP_OFFLOAD_SSQGH)
           dra(il) = dr
-#endif
 c          
           ik = il+1
 c          
@@ -389,11 +348,7 @@ c
           do il = im,shdeg
             ik = il-im+1
 c
-#if defined(OMP_OFFLOAD_SSQGH)
-            dr = ra**(il+2)
-#else
             dr = dra(il)
-#endif
 c
             dw   = ddlf(ik) * dr
             bx   = dw*dc
@@ -430,9 +385,6 @@ c
           enddo
         enddo
 c
-#if !defined(OMP_OFFLOAD_SSQGH)
-        deallocate(dra)
-#endif
 c
         return
         end subroutine XYZsph_bi0_sub
