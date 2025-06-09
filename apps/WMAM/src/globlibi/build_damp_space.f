@@ -30,9 +30,11 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >                              ryg, dampfac, bc,
      >                              cov, ijcov, ppos)
 c
+        use mpi
+c
         implicit none
 c
-        include 'mpif.h'
+c       include 'mpif.h'
 c
         real*8, parameter :: RAG = 6371.2d0
 c

@@ -54,9 +54,11 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >                       dl, cov, jcov,
      >                       std, ds, stp, xyzf)
 c
+        use mpi
+c
         implicit none
 c
-        include 'mpif.h'
+c       include 'mpif.h'
         include 'mpi_status_types.h'
 c
         integer iunit, itm, shdeg, nb, nd

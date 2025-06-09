@@ -68,9 +68,11 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >                       bc, ppos, dl, cov, jcov,
      >                       stdt, xyzf)
 c
+        use mpi
+c
         implicit none
 c
-        include 'mpif.h'
+c       include 'mpif.h'
         include 'mpi_status_types.h'
 c
         character path*100 
@@ -197,19 +199,19 @@ c
         enddo
 c
 c
-#if defined(OMP_OFFLOAD_CPTP) || defined(OMP_OFFLOAD_SSQGH)
-!$OMP TARGET DATA
-!$omp& map(to: nb, nd)
-!$omp& map(to: nlocpts, nlocdatpts, shdeg)
-!$omp& map(to: d2a(0:shdeg))
-!$omp& map(to: ppos(1:nd+1,1:nlocpts))
-!$omp& map(to: cov(1:nlocpts))
-!$omp& map(to: jcov(1:nlocpts+2))
+c#if defined(OMP_OFFLOAD_CPTP) || defined(OMP_OFFLOAD_SSQGH)
+c!$OMP TARGET DATA
+c!$omp& map(to: nb, nd)
+c!$omp& map(to: nlocpts, nlocdatpts, shdeg)
+c!$omp& map(to: d2a(0:shdeg))
+c!$omp& map(to: ppos(1:nd+1,1:nlocpts))
+c!$omp& map(to: cov(1:nlocpts))
+c!$omp& map(to: jcov(1:nlocpts+2))
 c
-!$OMP TARGET ENTER DATA
-!$omp& map(alloc: dra(1:shdeg))
-!$omp& map(alloc: dlf(1:shdeg+1), ddlf(1:shdeg+1))
-#endif
+c!$OMP TARGET ENTER DATA
+c!$omp& map(alloc: dra(1:shdeg))
+c!$omp& map(alloc: dlf(1:shdeg+1), ddlf(1:shdeg+1))
+c#endif
 c
 c
 c All start iteration
@@ -462,12 +464,12 @@ c end of <do while (inv_stat%yon(1:1).eq.'y')> loop
         enddo
 c
 c
-#if defined(OMP_OFFLOAD_CPTP) || defined(OMP_OFFLOAD_SSQGH)
-!$OMP TARGET EXIT DATA
-!$omp& map(delete: dra, dlf, ddlf)
+c#if defined(OMP_OFFLOAD_CPTP) || defined(OMP_OFFLOAD_SSQGH)
+c!$OMP TARGET EXIT DATA
+c!$omp& map(delete: dra, dlf, ddlf)
 c
-!$OMP END TARGET DATA
-#endif
+c!$OMP END TARGET DATA
+c#endif
 c
 c
         stdt = std

@@ -21,10 +21,12 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine mpi_write_all_fit_data(fname, nd, nlocpts, np,
      >                                    imin, nmin, nmax,
      >                                    ppos, xyzf, diff)
+c
+        use mpi
 c        
         implicit none
 c
-        include 'mpif.h'
+c       include 'mpif.h'
 c
         integer, parameter :: SIZE_OF_REAL = 8
         integer, parameter :: FIT_VALUES_PER_PT = 10

@@ -36,9 +36,11 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine cptstd_dp(npts, nlocpts, cov,
      >                       jcov, ddat, xyzf, std)
 c
+        use mpi
+c
         implicit none
 c
-        include 'mpif.h'
+c       include 'mpif.h'
 c
         integer npts, nlocpts
         real*8  cov(1:nlocpts)

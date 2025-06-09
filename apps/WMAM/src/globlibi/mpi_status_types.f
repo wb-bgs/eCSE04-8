@@ -3,9 +3,11 @@
      >                                   MPI_INVERSION_STATUS,
      >                                   MPI_SEARCH_STATUS)
 c
+        use mpi
+c
         implicit none
 c
-        include 'mpif.h'
+c       include 'mpif.h'
         include 'mpi_status_types.h'
 c
 	integer :: nb
@@ -74,9 +76,11 @@ c  Commit MPI_SEARCH_STATUS type
      >                                   MPI_INVERSION_STATUS,
      >                                   MPI_SEARCH_STATUS)
 c
+        use mpi
+c
         implicit none
 c
-        include 'mpif.h'
+c       include 'mpif.h'
         include 'mpi_status_types.h'
 c
         integer :: nb

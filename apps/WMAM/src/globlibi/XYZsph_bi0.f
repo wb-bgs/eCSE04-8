@@ -1,3 +1,14 @@
+      module XYZsph_bi0
+c
+          implicit none
+c
+          public
+     >    XYZsph_bi0_sample, XYZsph_bi0_fun,
+     >    XYZsph_bi0_sub
+c
+c
+        contains
+
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c	subroutine XYZsph_bi0_sample
 c		
@@ -23,15 +34,16 @@ c          bez    REAL*8        z component of magnetic field
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine XYZsph_bi0_sample(shdeg, nb, d2a,
-     >                               dra, dlf, ddlf, bc,
+     >                               bc,
      >                               p1, p2, ra,
      >                               bex, bey, bez)
 c
         implicit none
 c
         integer shdeg, nb
-        real*8 d2a(0:shdeg), dra(1:shdeg)
-        real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
+        real*8 d2a(0:shdeg)
+c       , dra(1:shdeg)
+c       real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
         real*8 bc(1:nb)
         real*8 p1, p2, ra
         real*8 bex, bey, bez 
@@ -54,12 +66,19 @@ c
 c
         real*8 bex2, bey2, bez2
 c
+        real*8, allocatable :: dra(:)
+        real*8, allocatable :: dlf(:), ddlf(:)
+c
 c 
 #if defined(OMP_OFFLOAD_CPTP) || defined(OMP_OFFLOAD_SSQGH)
 !$omp declare target
 #endif
 c
 c
+        allocate(dra(1:shdeg))
+        allocate(dlf(1:shdeg+1))
+        allocate(ddlf(1:shdeg+1))
+
         dx = 0.0d0
         dy = 0.0d0 
         dz = 0.0d0 
@@ -142,6 +161,8 @@ c
         bey = bey2
         bez = bez2
 c
+        deallocate(dra, dlf, ddlf)
+c
         return
         end subroutine XYZsph_bi0_sample
 
@@ -172,15 +193,16 @@ c          YZsph_bi0_fun  REAL*8
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         real*8 function XYZsph_bi0_fun(shdeg, nb, d2a,
-     >                                 dra, dlf, ddlf, bc,
+     >                                 bc,
      >                                 p1, p2, ra,
      >                                 bex, bey, bez)
 c
         implicit none
 c
         integer shdeg, nb
-        real*8 d2a(0:shdeg), dra(1:shdeg)
-        real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
+        real*8 d2a(0:shdeg)
+c       , dra(1:shdeg)
+c       real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
         real*8 bc(1:nb)
         real*8 p1, p2, ra
         real*8 bex, bey, bez 
@@ -191,11 +213,18 @@ c
         real*8 bx, by, bz
         real*8 bxp1, byp1, bzp1
 c
+        real*8, allocatable :: dra(:)
+        real*8, allocatable :: dlf(:), ddlf(:)
+c
 c
 #if defined(OMP_OFFLOAD_CPTP)
 !$omp declare target
 #endif
 c
+c
+        allocate(dra(1:shdeg))
+        allocate(dlf(1:shdeg+1))
+        allocate(ddlf(1:shdeg+1))
 c
         XYZsph_bi0_fun = 0.0d0 
 c        
@@ -250,6 +279,8 @@ c
           enddo
         enddo
 c
+        deallocate(dra, dlf, ddlf)
+c
 c
         return
         end function XYZsph_bi0_fun
@@ -283,7 +314,6 @@ c          dh       REAL*8      diagonal of the Hessian (nb)
 c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine XYZsph_bi0_sub(shdeg, nb, d2a,
-     >                            dra, dlf, ddlf,
      >                            p1, p2, ra,
      >                            bex, bey, bez,
      >                            dw_gj, dw_dh,
@@ -292,8 +322,9 @@ c
         implicit none
 c
         integer shdeg, nb
-        real*8 d2a(0:shdeg), dra(1:shdeg)
-        real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
+        real*8 d2a(0:shdeg)
+c       , dra(1:shdeg)
+c       real*8 dlf(1:shdeg+1), ddlf(1:shdeg+1)
         real*8 p1, p2, ra
         real*8 bex, bey, bez 
         real*8 dw_gj, dw_dh
@@ -306,11 +337,18 @@ c
         real*8 bxp1, byp1, bzp1
         real*8 be, bep1
 c
+        real*8, allocatable :: dra(:)
+        real*8, allocatable :: dlf(:), ddlf(:)
+c
 c
 #if defined(OMP_OFFLOAD_SSQGH)
 !$omp declare target
 #endif
 c
+c
+        allocate(dra(1:shdeg))
+        allocate(dlf(1:shdeg+1))
+        allocate(ddlf(1:shdeg+1))
 c
         rc = dcos(p1)
         rs = dsin(p1)
@@ -388,6 +426,11 @@ c
           enddo
         enddo
 c
+        deallocate(dra, dlf, ddlf)
+c
 c
         return
         end subroutine XYZsph_bi0_sub
+c
+c
+        end module XYZsph_bi0

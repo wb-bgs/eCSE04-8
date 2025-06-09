@@ -26,8 +26,11 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine cpt_dat_vals_p(shdeg, nb, nd, nlocpts, nlocdatpts,
      >                            d2a, dra, dlf, ddlf, bc, ppos, xyzf)
 c
+        use XYZsph_bi0, only: XYZsph_bi0_sample, XYZsph_bi0_fun
+c
         implicit none
 c
+
         integer shdeg, nb, nd, nlocpts, nlocdatpts
         real*8  d2a(0:shdeg), dra(1:shdeg)
         real*8  dlf(1:shdeg+1), ddlf(1:shdeg+1)
@@ -41,14 +44,12 @@ c
         real*8 p1, p2, ra
         real*8 bex, bey, bez
 c
-        real*8 XYZsph_bi0_fun
 c
-c
-#if defined(OMP_OFFLOAD_CPTP)
-!$OMP TARGET DATA
-!$omp& map(to: bc(1:nb))
-!$omp& map(tofrom: xyzf(1:nlocpts))
-#endif
+c#if defined(OMP_OFFLOAD_CPTP)
+c!$OMP TARGET DATA
+c!$omp& map(to: bc(1:nb))
+c!$omp& map(tofrom: xyzf(1:nlocpts))
+c#endif
 c
 c
 #if defined(OMP_OFFLOAD_CPTP)
@@ -57,7 +58,7 @@ c
 !$OMP PARALLEL DO
 #endif
 !$omp& default(shared)
-!$omp& private(dra, dlf, ddlf)
+c!$omp& private(dra, dlf, ddlf)
 !$omp& private(p1, p2, ra)
 !$omp& private(bex, bey, bez)
 #if defined(OMP_OFFLOAD_CPTP)
@@ -76,7 +77,6 @@ c
            bez = ppos(7,i)
 c
            xyzf(i) = XYZsph_bi0_fun(shdeg, nb, d2a,
-     >                              dra, dlf, ddlf,
      >                              bc, p1, p2, ra,
      >                              bex, bey, bez)
 c
@@ -94,7 +94,7 @@ c
 !$OMP PARALLEL DO
 #endif
 !$omp& default(shared)
-!$omp& private(dra, dlf, ddlf)
+c!$omp& private(dra, dlf, ddlf)
 !$omp& private(p1, p2, ra)
 !$omp& private(bex, bey, bez)
 #if defined(OMP_OFFLOAD_CPTP)
@@ -113,12 +113,10 @@ c
           bez = ppos(7,i)
 c
           call XYZsph_bi0_sample(shdeg, nb, d2a,
-     >                           dra, dlf, ddlf,
      >                           bc, p1, p2, ra, 
      >                           bex, bey, bez)
 c
           xyzf(i) = XYZsph_bi0_fun(shdeg, nb, d2a,
-     >                             dra, dlf, ddlf,
      >                             bc, p1, p2, ra,
      >                             bex, bey, bez)
 c
@@ -126,7 +124,7 @@ c
 #if defined(OMP_OFFLOAD_CPTP)
 !$OMP END TARGET TEAMS DISTRIBUTE PARALLEL DO
 c
-!$OMP END TARGET DATA
+c!$OMP END TARGET DATA
 #else
 !$OMP END PARALLEL DO
 #endif

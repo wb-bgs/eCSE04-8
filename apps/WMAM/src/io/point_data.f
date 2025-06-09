@@ -21,9 +21,11 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >                               nlocdatpts, imin_locdatpts,
      >                               ryg, ppos)
 c
+        use mpi
+c
         implicit none
 c
-        include 'mpif.h'
+c       include 'mpif.h'
 c
         integer, parameter :: NUM_OF_PTCOMPS = 4
         integer, parameter :: SIZE_OF_REAL = 8
@@ -34,9 +36,12 @@ c
         real*8 ryg, ppos(1:nd+1,1:nlocpts)
 c
         integer i, j, rank, ierr
-        integer fhandle, fsize, npts, nread, nlocreals
+        integer fhandle
         integer (kind=MPI_OFFSET_KIND) :: disp = 0
         integer fstat(MPI_STATUS_SIZE)
+c
+        integer nread, nlocreals
+        integer (kind=8) :: fsize, npts
 c
         logical file_open, buf_allocated
 c       

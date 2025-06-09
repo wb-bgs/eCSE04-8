@@ -38,9 +38,12 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      >                      cov, jcov, ddat, xyzf,
      >                      gj, dh)
 c
+        use mpi
+        use XYZsph_bi0, only: XYZsph_bi0_sample, XYZsph_bi0_sub
+c
         implicit none
 c
-        include 'mpif.h'
+c       include 'mpif.h'
 c
         integer shdeg, nb, nd, nlocpts, nlocdatpts
         real*8 d2a(0:shdeg), dra(1:shdeg)
@@ -67,13 +70,13 @@ c
         dh(1:nb) = 0.0d0
 c
 c       
-#if defined(OMP_OFFLOAD_SSQGH)
-!$OMP TARGET DATA
-!$omp& map(to: ddat(1:nlocpts))
-!$omp& map(to: xyzf(1:nlocpts))
-!$omp& map(to: bc(1:nb))
-!$omp& map(tofrom: gj(1:nb), dh(1:nb))
-#endif
+c#if defined(OMP_OFFLOAD_SSQGH)
+c!$OMP TARGET DATA
+c!$omp& map(to: ddat(1:nlocpts))
+c!$omp& map(to: xyzf(1:nlocpts))
+c!$omp& map(to: bc(1:nb))
+c!$omp& map(tofrom: gj(1:nb), dh(1:nb))
+c#endif
 c
 c
 #if defined(OMP_OFFLOAD_SSQGH)
@@ -82,7 +85,7 @@ c
 !$OMP PARALLEL DO
 #endif
 !$omp& default(shared)
-!$omp& private(dra, dlf, ddlf)
+c!$omp& private(dra, dlf, ddlf)
 !$omp& private(p1, p2, ra)
 !$omp& private(bex, bey, bez)
 !$omp& private(dw_dh, dw_gj)
@@ -109,7 +112,6 @@ c
           dw_gj = dw_dh*(ddat(i)-xyzf(i))
 c      
           call XYZsph_bi0_sub(shdeg, nb, d2a,
-     >                        dra, dlf, ddlf,
      >                        p1, p2, ra,
      >                        bex, bey, bez,
      >                        dw_gj, dw_dh,
@@ -129,7 +131,7 @@ c
 !$OMP PARALLEL DO
 #endif
 !$omp& default(shared)
-!$omp& private(dra, dlf, ddlf)
+c!$omp& private(dra, dlf, ddlf)
 !$omp& private(p1, p2, ra)
 !$omp& private(bex, bey, bez)
 !$omp& private(dw_dh, dw_gj)
@@ -150,7 +152,7 @@ c
           bez = ppos(7,i)
 c
           call XYZsph_bi0_sample(shdeg, nb, d2a,
-     >                           dra, dlf, ddlf, bc,
+     >                           bc,
      >                           p1, p2, ra, 
      >                           bex, bey, bez)
 c        
@@ -161,7 +163,6 @@ c
           dw_gj = dw_dh*(ddat(i)-xyzf(i))
 c      
           call XYZsph_bi0_sub(shdeg, nb, d2a,
-     >                        dra, dlf, ddlf,
      >                        p1, p2, ra,
      >                        bex, bey, bez,
      >                        dw_gj, dw_dh,
@@ -171,7 +172,7 @@ c
 #if defined(OMP_OFFLOAD_SSQGH)
 !$OMP END TARGET TEAMS DISTRIBUTE PARALLEL DO
 c
-!$OMP END TARGET DATA
+c!$OMP END TARGET DATA
 #else
 !$OMP END PARALLEL DO
 #endif

@@ -5,14 +5,12 @@ ARCHER2-eCSE04-8, *Enabling a better global view of the magnetic field of Earth'
 as well as the EPCC-funded project, *Geoscience on GPU*.
 
 
-It contains the (Fortran) source for one code and one library.
+It contains the (Fortran) source for the WMAM code.
 
 1. [World Magnetic Anomaly Model (WMAM)](./apps/WMAM/README.md)
-2. [SLATEC Common Mathematical Library 4.1](./libs/slatec/README.md)
 
 Please note the WMAM code now incorporates the code from the Iterative Globel Model Fitting Library ([GlobLibI](./apps/WMAM/src/globlibi)).
-The WMAM code is statically linked to the SLATEC library. This means you will need to build the SLATEC library
-before you build WMAM. Build instructions for both software components can be found via the links above.
+and the [SLATEC library](./apps/WMAM/src/slatec). 
 
 Example submission scripts can be found under [./tests/WMAM/submit](./tests/WMAM/submit).
 Input data for the *L* = 200, 300 and 720 cases (where *L* is the spherical harmonic degree)

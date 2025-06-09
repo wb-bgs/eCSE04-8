@@ -13,9 +13,11 @@ c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine mpi_read_ini_model(fname, nparams, bc)
 c
+        use mpi
+c
         implicit none
 c
-        include 'mpif.h'
+c       include 'mpif.h'
 c
         integer, parameter :: SIZE_OF_REAL = 8
 c
@@ -24,9 +26,12 @@ c
         real*8 bc(1:nparams)
 c
         integer rank, ierr
-        integer fhandle, fsize, nreals, nread
+        integer fhandle
         integer (kind=MPI_OFFSET_KIND) :: disp = 0
         integer fstat(MPI_STATUS_SIZE)
+c
+        integer nread
+        integer(kind=8) :: fsize, nreals
 c
         logical file_open
 c       
@@ -140,9 +145,11 @@ c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         subroutine mpi_read_all_ini_model(fname, nparams, bc)
 c
+        use mpi
+c
         implicit none
 c
-        include 'mpif.h'
+c       include 'mpif.h'
 c
         integer, parameter :: SIZE_OF_REAL = 8
 c
@@ -158,9 +165,12 @@ c
         integer subarray
 c
         integer rank, ierr
-        integer fhandle, fsize, nreals, nread
+        integer fhandle
         integer (kind=MPI_OFFSET_KIND) :: disp = 0
         integer fstat(MPI_STATUS_SIZE)
+c
+        integer nread
+        integer (kind=8) :: fsize, nreals
 c
         logical file_open
         logical subarray_type_committed

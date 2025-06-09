@@ -30,10 +30,10 @@ c    contiguous sequence of numeric characters from the end of the
 c    processor name.
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc  
         function node_num()
+c
+        use mpi
 c      
         implicit none
-c
-        include 'mpif.h'
 c
         integer, parameter :: AC_0 = iachar('0')
         integer, parameter :: AC_9 = iachar('9')
@@ -49,7 +49,13 @@ c
         node_num = 0
         found_digit = .false.
 c        
-        call MPI_Get_processor_name(node_name, node_name_len, ierr)
+c  Call to MPI_Get_processor_name() generates a compiler error
+c  "Rank of dummy argument is 0, but actual argument has rank 1"
+c       call MPI_Get_processor_name(node_name, node_name_len, ierr)
+c
+        node_name_len = 0
+        node_num = 1
+c
         if (node_name_len .gt. 0) then
           nn_i = node_name_len
           nn_m = 1
@@ -78,6 +84,7 @@ c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         program mod_wmam
 c
+        use mpi
         use coeff_map
 c
 #if defined(OMP_OFFLOAD)
@@ -86,7 +93,7 @@ c
 c
         implicit none
 c
-        include 'mpif.h'
+c       include 'mpif.h'
 c
         character(len=*), parameter :: VERSION = "5.0.0"
 c
