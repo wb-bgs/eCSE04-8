@@ -34,7 +34,8 @@ c
         real*8 ryg, ppos(1:nd+1,1:nlocpts)
 c
         integer i, j, rank, ierr
-        integer fhandle, fsize, npts, nread, nlocreals
+        integer fhandle, npts, nread, nlocreals
+        integer (kind=MPI_OFFSET_KIND) :: fsize
         integer (kind=MPI_OFFSET_KIND) :: disp = 0
         integer fstat(MPI_STATUS_SIZE)
 c

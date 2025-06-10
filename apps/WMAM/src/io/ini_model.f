@@ -24,7 +24,8 @@ c
         real*8 bc(1:nparams)
 c
         integer rank, ierr
-        integer fhandle, fsize, nreals, nread
+        integer fhandle, nreals, nread
+        integer (kind=MPI_OFFSET_KIND) :: fsize
         integer (kind=MPI_OFFSET_KIND) :: disp = 0
         integer fstat(MPI_STATUS_SIZE)
 c
@@ -158,7 +159,8 @@ c
         integer subarray
 c
         integer rank, ierr
-        integer fhandle, fsize, nreals, nread
+        integer fhandle, nreals, nread
+        integer (kind=MPI_OFFSET_KIND) :: fsize
         integer (kind=MPI_OFFSET_KIND) :: disp = 0
         integer fstat(MPI_STATUS_SIZE)
 c
