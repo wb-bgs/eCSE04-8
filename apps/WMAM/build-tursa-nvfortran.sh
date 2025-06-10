@@ -4,13 +4,13 @@
 function set_compile_options {
   MAKEFILE=$1
   if [[ "${BUILD}" == "release" ]]; then
-    sed -i "s:FFLAGS =:FFLAGS = -I${MPI_HOME}/include -O3 -cpp -r8 -DOMP_OFFLOAD -DOMP_OFFLOAD_CPTP -DOMP_OFFLOAD_SSQGH -tp=zen2 -target=gpu -mp=gpu -Minfo=mp -gpu=cuda12.1,cc80 -cuda:g" ${MAKEFILE}
+    sed -i "s:FFLAGS =:FFLAGS = -I${MPI_ROOT}/include -O3 -cpp -r8 -DOMP_OFFLOAD -DOMP_OFFLOAD_CPTP -DOMP_OFFLOAD_SSQGH -tp=zen2 -target=gpu -mp=gpu -Minfo=mp -gpu=cuda12.1,cc80 -cuda:g" ${MAKEFILE}
   elif [[ "${BUILD}" == "debug" ]]; then
-    sed -i "s:FFLAGS =:FFLAGS = -I${MPI_HOME}/include -g -O0 -cpp -r8 -DOMP_OFFLOAD -DOMP_OFFLOAD_CPTP -DOMP_OFFLOAD_SSQGH -tp=zen2 -target=gpu -mp=gpu -Minfo=mp -gpu=cuda12.1,cc80 -cuda -C -Mnobounds -ffpe-trap=invalid,zero,overflow,underflow,inexact -Ktrap=divz,denorm,inexact,inv,ovf,unf:g" ${MAKEFILE}
+    sed -i "s:FFLAGS =:FFLAGS = -I${MPI_ROOT}/include -g -O0 -cpp -r8 -DOMP_OFFLOAD -DOMP_OFFLOAD_CPTP -DOMP_OFFLOAD_SSQGH -tp=zen2 -target=gpu -mp=gpu -Minfo=mp -gpu=cuda12.1,cc80 -cuda -C -Mnobounds -ffpe-trap=invalid,zero,overflow,underflow,inexact -Ktrap=divz,denorm,inexact,inv,ovf,unf:g" ${MAKEFILE}
   elif [[ "${BUILD}" == "cpu" ]]; then
-    sed -i "s:FFLAGS =:FFLAGS = -I${MPI_HOME}/include -O3 -cpp -fopenmp -r8 -tp=cascadelake -Minfo=mp:g" ${MAKEFILE}
+    sed -i "s:FFLAGS =:FFLAGS = -I${MPI_ROOT}/include -O3 -cpp -fopenmp -r8 -tp=cascadelake -Minfo=mp:g" ${MAKEFILE}
   fi
-  sed -i "s:LIBS =:LIBS = -L${MPI_HOME}/lib -lmpi_mpifh:g" ${MAKEFILE}
+  sed -i "s:LIBS =:LIBS = -L${MPI_ROOT}/lib -lmpi_mpifh:g" ${MAKEFILE}
 }
 
 
