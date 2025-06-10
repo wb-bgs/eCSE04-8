@@ -31,7 +31,7 @@ c
         integer fstat(MPI_STATUS_SIZE)
 c
         integer nread
-        integer(kind=8) :: fsize, nreals
+        integer(kind=MPI_OFFSET_KIND) :: fsize, nreals
 c
         logical file_open
 c       
@@ -170,7 +170,7 @@ c
         integer fstat(MPI_STATUS_SIZE)
 c
         integer nread
-        integer (kind=8) :: fsize, nreals
+        integer (kind=MPI_OFFSET_KIND) :: fsize, nreals
 c
         logical file_open
         logical subarray_type_committed

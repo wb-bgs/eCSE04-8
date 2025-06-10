@@ -41,7 +41,7 @@ c
         integer fstat(MPI_STATUS_SIZE)
 c
         integer nread, nlocreals
-        integer (kind=8) :: fsize, npts
+        integer (kind=MPI_OFFSET_KIND) :: fsize, npts
 c
         logical file_open, buf_allocated
 c       
