@@ -73,7 +73,7 @@ PRFX=${HOME/home/work}
 GLOBLIB_LABEL=globlibi
 GLOBLIB_VERSION=${VERSION}
 GLOBLIB_NAME=${GLOBLIB_LABEL}-${GLOBLIB_VERSION}
-GLOBLIB_BUILD_ROOT=${PRFX}/eCSE04-8/libs/${GLOBLIB_LABEL}/src
+GLOBLIB_BUILD_ROOT=${PRFX}/projects/eCSE04-8/libs/${GLOBLIB_LABEL}/src
 GLOBLIB_INSTALL_ROOT=${PRFX}/libs/${GLOBLIB_LABEL}/${GLOBLIB_VERSION}
 
 
@@ -87,7 +87,8 @@ if [[ "${BUILD}" == "craypat" ]]; then
   module -q load perftools-base
   module -q load perftools
 elif [[ "${BUILD}" == "scorep" ]]; then
-  module -q use /work/y23/shared/scalasca/modulefiles
+  module -q load other-software
+  module -q unload perftools-base 
   if [[ "${PRGENV}" == "cray" ]]; then
     module -q load scalasca/2.6.1-cray
   elif [[ "${PRGENV}" == "gnu" ]]; then

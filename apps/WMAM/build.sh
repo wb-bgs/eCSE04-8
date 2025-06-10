@@ -75,7 +75,7 @@ PRFX=${HOME/home/work}
 WMAM_LABEL=WMAM
 WMAM_VERSION=${VERSION}
 WMAM_NAME=${WMAM_LABEL}-${WMAM_VERSION}
-WMAM_BUILD_ROOT=${PRFX}/eCSE04-8/apps/${WMAM_LABEL}/src
+WMAM_BUILD_ROOT=${PRFX}/projects/eCSE04-8/apps/${WMAM_LABEL}/src
 WMAM_INSTALL_ROOT=${PRFX}/apps/${WMAM_LABEL}/${WMAM_VERSION}
 
 
@@ -89,7 +89,8 @@ if [[ "${BUILD}" == "craypat" ]]; then
   module -q load perftools-base
   module -q load perftools
 elif [[ "${BUILD}" == "scorep" ]]; then
-  module -q use /work/y23/shared/scalasca/modulefiles
+  module -q load other-software
+  module -q unload perftools-base
   if [[ "${PRGENV}" == "cray" ]]; then
     module -q load scalasca/2.6.1-cray
   elif [[ "${PRGENV}" == "gnu" ]]; then

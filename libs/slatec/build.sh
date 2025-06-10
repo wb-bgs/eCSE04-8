@@ -67,7 +67,7 @@ fi
 PRFX=${HOME/home/work}
 SLATEC_LABEL=slatec
 SLATEC_VERSION=4.1
-SLATEC_BUILD_ROOT=${PRFX}/eCSE04-8/libs/${SLATEC_LABEL}/src
+SLATEC_BUILD_ROOT=${PRFX}/projects/eCSE04-8/libs/${SLATEC_LABEL}/src
 SLATEC_INSTALL_ROOT=${PRFX}/libs/${SLATEC_LABEL}/${SLATEC_VERSION}
 
 
@@ -81,7 +81,8 @@ if [[ "${BUILD}" == "craypat" ]]; then
   module -q load perftools-base
   module -q load perftools
 elif [[ "${BUILD}" == "scorep" ]]; then
-  module -q use /work/y23/shared/scalasca/modulefiles
+  module -q load other-software
+  module -q unload perftools-base
   if [[ "${PRGENV}" == "cray" ]]; then
     module -q load scalasca/2.6.1-cray
   elif [[ "${PRGENV}" == "gnu" ]]; then
