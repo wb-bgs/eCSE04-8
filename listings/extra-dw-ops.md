@@ -30,9 +30,9 @@ subroutine sub_sph_wmam_l(iof, nb, bc, bp, be)
   
     call XYZsph_bi0(deg, rag, bp, dwx, dwy, dwz)
  
-     be(1:nb) = (dwx(1:nb)*bp(5)
-              +  dwy(1:nb)*bp(6)
-              +  dwz(1:nb)*bp(7)) / dd         
+    be(1:nb) = (dwx(1:nb)*bp(5)
+             +  dwy(1:nb)*bp(6)
+             +  dwz(1:nb)*bp(7)) / dd         
   
   endif
 

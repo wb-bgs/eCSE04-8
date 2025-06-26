@@ -1,4 +1,4 @@
-# Coefficient Map
+# Coefficient map
 
 Initialising an index map for sequentialising the coefficient array.
 

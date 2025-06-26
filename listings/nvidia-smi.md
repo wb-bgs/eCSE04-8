@@ -21,7 +21,7 @@ else
 
   ${APP_EXE} ${APP_PARAMS}
 
-endif
+fi
 
 ...
 
