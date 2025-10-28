@@ -56,7 +56,7 @@ accumulate these directly within the subroutine, returning them as simple scalar
 
 ```fortran
 subroutine XYZsph_bi0_sample(ilg, rag, pos, d2a, bc,
-     >                       dx, dy, dz)
+                             dx, dy, dz)
   
   ...
 
