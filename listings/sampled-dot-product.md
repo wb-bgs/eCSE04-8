@@ -1,6 +1,7 @@
 # Sampled dot product
 
 The dot products performed for each sampled point following a call to `XYZsph_bi0()`, wherein the `dw` arrays are populated.
+The value of the `nb` parameter is the number of parameters in the model.
   
 
 ```fortran
